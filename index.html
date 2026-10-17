@@ -367,10 +367,6 @@ select:focus,button.control-btn:hover,.user-action-btn:hover{border-color:var(--
     <form id="checkoutForm" onsubmit="submitOrder(event)">
       <div class="form-group"><label for="selectedProduct">المنتج المختار والسعر النهائي</label><input type="text" id="selectedProduct" readonly style="opacity:.9;color:var(--accent-neon);font-weight:bold;"></div>
       <div class="form-group">
-        <label for="orderQuantity">الكمية المطلوبة</label>
-        <input type="number" id="orderQuantity" min="1" value="1" required oninput="updateCheckoutTotal()" onchange="updateCheckoutTotal()">
-      </div>
-      <div class="form-group">
         <label for="promoCodeInput">كود الخصم (اختياري)</label>
         <div style="display:flex;gap:8px;">
           <input type="text" id="promoCodeInput" placeholder="مثل: BN10">
@@ -458,7 +454,6 @@ select:focus,button.control-btn:hover,.user-action-btn:hover{border-color:var(--
           <div class="form-group"><label>القسم</label><select id="newProdCat"><option value="games">ألعاب</option><option value="subs">اشتراكات</option><option value="ai">ذكاء اصطناعي</option><option value="software">برامج</option></select></div>
           <div class="form-group"><label>الشارة (Badge)</label><input type="text" id="newProdBadge" placeholder="تسليم فوري"></div>
           <div class="form-group"><label>نص الصورة البديل</label><input type="text" id="newProdImgText" placeholder="PUBG"></div>
-          <div class="form-group"><label>كمية المخزون</label><input type="number" id="newProdStock" min="0" value="10"></div>
         </div>
         <div class="form-group"><label>رابط صورة المنتج (اختياري - HTTPS)</label><input type="text" id="newProdImgUrl" placeholder="https://..."></div>
         <div class="form-group"><label>وصف ومواصفات المنتج</label><textarea id="newProdDesc" rows="2" placeholder="مثال: شحن فوري بالآيدي، ضمان كامل طوال مدة الاشتراك..."></textarea></div>
@@ -476,7 +471,7 @@ select:focus,button.control-btn:hover,.user-action-btn:hover{border-color:var(--
 </div>
 
 <script type="module">
-import { collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, getDoc, query, where, serverTimestamp, limit, orderBy, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, getDoc, query, where, serverTimestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // ==========================================
@@ -486,7 +481,6 @@ const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 const RATES = Object.freeze({ EGP: 1, SAR: 0.077, AED: 0.075, USD: 0.020 });
 const ALLOWED_METHODS = Object.freeze(['instapay', 'vodafone', 'orange', 'crypto']);
 const ALLOWED_CATEGORIES = Object.freeze(['games', 'subs', 'ai', 'software']);
-const LEGACY_DEFAULT_STOCK = 10;
 
 // Strict Admin verification directly against Firebase Auth instance
 const checkIsAdmin = () => Boolean(
@@ -507,30 +501,18 @@ const safeImageUrl = value => {
   } catch (_) { return ''; }
 };
 
-const sanitizeProductPayload = p => {
-  const hasStockField = p.stock !== undefined && p.stock !== null && p.stock !== '' && Number.isFinite(Number(p.stock));
-  const stock = hasStockField ? Math.max(0, Math.floor(Number(p.stock))) : LEGACY_DEFAULT_STOCK;
-  const manualSoldOut = typeof p.manualSoldOut === 'boolean'
-    ? p.manualSoldOut
-    : (p.inStock === false && stock > 0);
-  const inStock = !manualSoldOut && stock > 0;
-  return {
-    id: sanitizeText(p.id, 80),
-    title: sanitizeText(p.title, 120),
-    desc: sanitizeText(p.desc, 2000),
-    price: Number.isFinite(Number(p.price)) && Number(p.price) > 0 ? Number(p.price) : 0,
-    oldPrice: (Number.isFinite(Number(p.oldPrice)) && Number(p.oldPrice) > Number(p.price)) ? Number(p.oldPrice) : 0,
-    category: ALLOWED_CATEGORIES.includes(p.category) ? p.category : 'games',
-    badge: sanitizeText(p.badge || 'متوفر', 60),
-    imgText: sanitizeText(p.imgText || p.title || '', 120),
-    imgUrl: safeImageUrl(p.imgUrl),
-    stock,
-    manualSoldOut,
-    inStock
-  };
-};
-
-const isProductAvailable = p => Boolean(p && !p.manualSoldOut && Number(p.stock) > 0 && p.inStock);
+const sanitizeProductPayload = p => ({
+  id: sanitizeText(p.id, 80),
+  title: sanitizeText(p.title, 120),
+  desc: sanitizeText(p.desc, 2000),
+  price: Number.isFinite(Number(p.price)) && Number(p.price) > 0 ? Number(p.price) : 0,
+  oldPrice: (Number.isFinite(Number(p.oldPrice)) && Number(p.oldPrice) > Number(p.price)) ? Number(p.oldPrice) : 0,
+  category: ALLOWED_CATEGORIES.includes(p.category) ? p.category : 'games',
+  badge: sanitizeText(p.badge || 'متوفر', 60),
+  imgText: sanitizeText(p.imgText || p.title || '', 120),
+  imgUrl: safeImageUrl(p.imgUrl),
+  inStock: Boolean(p.inStock)
+});
 
 // Private Store State (Encapsulated inside module scope to prevent console tampering)
 const defaultData = Object.freeze({
@@ -544,10 +526,10 @@ const defaultData = Object.freeze({
   ],
   payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
   products: [
-    { id: "1", title: "شدات ببجي (600 UC)", desc: "شحن آمن ومباشر لآيدي اللعبة الرسمي، تسليم خلال دقائق.", price: 350, oldPrice: 400, category: "games", badge: "تسليم يدوي", imgText: "PUBG Mobile", imgUrl: "", stock: 10, manualSoldOut: false, inStock: true },
-    { id: "2", title: "حساب نتفليكس (شاشة واحدة)", desc: "حساب خاص عالي الجودة بمدى اشتراك كامل وضمان.", price: 150, oldPrice: 180, category: "subs", badge: "تسليم فوري", imgText: "Netflix", imgUrl: "", stock: 10, manualSoldOut: false, inStock: true },
-    { id: "3", title: "اشتراك ChatGPT Plus", desc: "تفعيل رسمي على إيميلك الشخصي بأعلى سرعة وأحدث موديل ذكاء اصطناعي.", price: 450, oldPrice: 500, category: "ai", badge: "تفعيل رسمي", imgText: "ChatGPT / AI", imgUrl: "", stock: 10, manualSoldOut: false, inStock: true },
-    { id: "4", title: "تفعيل برامج المونتاج والتصميم", desc: "رخصة أصلية وآمنة بالكامل لبرامج التصميم الشهيرة.", price: 300, oldPrice: 350, category: "software", badge: "رخصة مفعلة", imgText: "CapCut / Canva", imgUrl: "", stock: 10, manualSoldOut: false, inStock: true }
+    { id: "1", title: "شدات ببجي (600 UC)", desc: "شحن آمن ومباشر لآيدي اللعبة الرسمي، تسليم خلال دقائق.", price: 350, oldPrice: 400, category: "games", badge: "تسليم يدوي", imgText: "PUBG Mobile", imgUrl: "", inStock: true },
+    { id: "2", title: "حساب نتفليكس (شاشة واحدة)", desc: "حساب خاص عالي الجودة بمدى اشتراك كامل وضمان.", price: 150, oldPrice: 180, category: "subs", badge: "تسليم فوري", imgText: "Netflix", imgUrl: "", inStock: true },
+    { id: "3", title: "اشتراك ChatGPT Plus", desc: "تفعيل رسمي على إيميلك الشخصي بأعلى سرعة وأحدث موديل ذكاء اصطناعي.", price: 450, oldPrice: 500, category: "ai", badge: "تفعيل رسمي", imgText: "ChatGPT / AI", imgUrl: "", inStock: true },
+    { id: "4", title: "تفعيل برامج المونتاج والتصميم", desc: "رخصة أصلية وآمنة بالكامل لبرامج التصميم الشهيرة.", price: 300, oldPrice: 350, category: "software", badge: "رخصة مفعلة", imgText: "CapCut / Canva", imgUrl: "", inStock: true }
   ]
 });
 
@@ -618,7 +600,7 @@ async function initCloudSync() {
     unsubscribePublic.push(onSnapshot(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'products'), snap => {
       const cloudProducts = [];
       snap.forEach(d => cloudProducts.push(sanitizeProductPayload({ ...d.data(), id: d.id })));
-      storeState.products = snap.empty && !storeState.catalogInitialized ? defaultData.products.map(sanitizeProductPayload) : cloudProducts;
+      storeState.products = snap.empty && !storeState.catalogInitialized ? [...defaultData.products] : cloudProducts;
       renderProducts();
       if (checkIsAdmin()) renderAdminProducts();
     }));
@@ -835,7 +817,6 @@ window.renderProducts = function() {
   filtered.forEach(prod => {
     const convertedPrice = Number((Number(prod.price || 0) * rate).toFixed(currency === 'EGP' ? 0 : 2));
     const convertedOld = Number(prod.oldPrice) > Number(prod.price) ? Number((Number(prod.oldPrice) * rate).toFixed(currency === 'EGP' ? 0 : 2)) : '';
-    const available = isProductAvailable(prod);
 
     const card = document.createElement('div');
     card.className = 'product-card';
@@ -843,7 +824,7 @@ window.renderProducts = function() {
     const top = document.createElement('div');
     const badge = document.createElement('span');
     badge.className = 'product-badge';
-    badge.textContent = available ? (prod.badge || '') : 'Sold Out';
+    badge.textContent = prod.badge || '';
     top.appendChild(badge);
 
     const img = document.createElement('div');
@@ -886,9 +867,9 @@ window.renderProducts = function() {
     const buy = document.createElement('button');
     buy.type = 'button';
     buy.className = 'buy-btn';
-    buy.textContent = available ? 'شراء الآن' : 'نفذت الكمية';
-    buy.disabled = !available;
-    if (!available) buy.classList.add('out-of-stock-badge');
+    buy.textContent = prod.inStock ? 'شراء الآن' : 'نفذت الكمية';
+    buy.disabled = !prod.inStock;
+    if (!prod.inStock) buy.classList.add('out-of-stock-badge');
     buy.addEventListener('click', () => window.openCheckout(String(prod.id), currency));
     bottom.appendChild(buy);
 
@@ -1022,8 +1003,7 @@ window.renderUserOrders = function() {
     const heading = document.createElement('div');
     heading.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:5px;gap:8px;flex-wrap:wrap;';
     const title = document.createElement('strong');
-    const qty = Math.max(1, Math.floor(Number(o.quantity) || 1));
-    title.textContent = `${o.product || 'طلب'}${qty > 1 ? ` × ${qty}` : ''} (${Number(o.total ?? o.price ?? 0)} ${o.currency || 'EGP'})`;
+    title.textContent = `${o.product || 'طلب'} (${Number(o.total ?? o.price ?? 0)} ${o.currency || 'EGP'})`;
 
     const status = document.createElement('span');
     if (o.status === 'completed') { status.className = 'order-status-completed'; status.textContent = 'مكتمل ✅'; }
@@ -1080,7 +1060,7 @@ window.openCheckout = function(productId, currency) {
   }
 
   const prod = storeState.products.find(p => String(p.id) === String(productId));
-  if (!isProductAvailable(prod)) {
+  if (!prod || !prod.inStock) {
     showToast('عذراً، هذا المنتج غير متوفر حالياً.', 'error');
     return;
   }
@@ -1093,12 +1073,6 @@ window.openCheckout = function(productId, currency) {
   modal.dataset.currency = validCurrency;
   modal.dataset.openedBasePrice = String(convertedPrice);
 
-  const qtyInput = document.getElementById('orderQuantity');
-  if (qtyInput) {
-    qtyInput.value = '1';
-    qtyInput.max = String(Math.max(1, Number(prod.stock) || 1));
-  }
-
   document.getElementById('selectedProduct').value = `${prod.title} - (${convertedPrice} ${validCurrency})`;
   document.getElementById('promoCodeInput').value = '';
   document.getElementById('promoMsg').textContent = '';
@@ -1108,35 +1082,6 @@ window.openCheckout = function(productId, currency) {
 
 window.closeCheckout = function() { document.getElementById('checkoutModal').style.display = 'none'; };
 
-window.updateCheckoutTotal = function() {
-  const modal = document.getElementById('checkoutModal');
-  const prod = storeState.products.find(p => String(p.id) === modal.dataset.productId);
-  if (!prod) return;
-
-  const qtyInput = document.getElementById('orderQuantity');
-  let qty = Math.floor(Number(qtyInput?.value) || 1);
-  if (qty < 1) qty = 1;
-  if (qty > Number(prod.stock)) {
-    qty = Math.max(1, Number(prod.stock));
-    if (qtyInput) qtyInput.value = String(qty);
-    showToast(`الحد الأقصى المتاح في المخزون هو ${prod.stock}`, 'error');
-  }
-
-  const currency = modal.dataset.currency || 'EGP';
-  const rate = RATES[currency] || 1;
-  const unitPrice = Number((Number(prod.price || 0) * rate).toFixed(currency === 'EGP' ? 0 : 2));
-  const totalBase = Number((unitPrice * qty).toFixed(currency === 'EGP' ? 0 : 2));
-  const code = sanitizeText(document.getElementById('promoCodeInput').value, 40).toUpperCase();
-
-  if (code && code === storeState.promoCode && storeState.promoDiscount > 0) {
-    const disc = Math.max(0, Math.min(90, Number(storeState.promoDiscount) || 0));
-    const discounted = Number((totalBase * (1 - disc / 100)).toFixed(currency === 'EGP' ? 0 : 2));
-    document.getElementById('selectedProduct').value = `${prod.title}${qty > 1 ? ` × ${qty}` : ''} - (${discounted} ${currency} بدلاً من ${totalBase} ${currency})`;
-  } else {
-    document.getElementById('selectedProduct').value = `${prod.title}${qty > 1 ? ` × ${qty}` : ''} - (${totalBase} ${currency})`;
-  }
-};
-
 window.applyPromoCode = function() {
   const modal = document.getElementById('checkoutModal');
   const code = sanitizeText(document.getElementById('promoCodeInput').value, 40).toUpperCase();
@@ -1144,20 +1089,18 @@ window.applyPromoCode = function() {
   const prod = storeState.products.find(p => String(p.id) === modal.dataset.productId);
   if (!prod) return;
 
-  const qty = Math.max(1, Math.floor(Number(document.getElementById('orderQuantity')?.value) || 1));
   const currency = modal.dataset.currency || 'EGP';
   const rate = RATES[currency] || 1;
-  const unitPrice = Number((Number(prod.price || 0) * rate).toFixed(currency === 'EGP' ? 0 : 2));
-  const price = Number((unitPrice * qty).toFixed(currency === 'EGP' ? 0 : 2));
+  const price = Number((Number(prod.price || 0) * rate).toFixed(currency === 'EGP' ? 0 : 2));
 
   if (code && code === storeState.promoCode && storeState.promoDiscount > 0) {
     const disc = Math.max(0, Math.min(90, Number(storeState.promoDiscount) || 0));
     const discounted = Number((price * (1 - disc / 100)).toFixed(currency === 'EGP' ? 0 : 2));
-    document.getElementById('selectedProduct').value = `${prod.title}${qty > 1 ? ` × ${qty}` : ''} - (${discounted} ${currency} بدلاً من ${price} ${currency})`;
+    document.getElementById('selectedProduct').value = `${prod.title} - (${discounted} ${currency} بدلاً من ${price} ${currency})`;
     msg.style.color = 'var(--success)';
     msg.textContent = `✅ تم تطبيق خصم ${disc}% بنجاح! السعر الجديد: ${discounted} ${currency}`;
   } else {
-    document.getElementById('selectedProduct').value = `${prod.title}${qty > 1 ? ` × ${qty}` : ''} - (${price} ${currency})`;
+    document.getElementById('selectedProduct').value = `${prod.title} - (${price} ${currency})`;
     msg.style.color = 'var(--danger)';
     msg.textContent = '❌ كود الخصم غير صحيح أو منتهي!';
   }
@@ -1202,12 +1145,6 @@ window.submitOrder = async function(event) {
     return;
   }
 
-  const reqQty = Math.floor(Number(document.getElementById('orderQuantity')?.value));
-  if (!Number.isFinite(reqQty) || reqQty < 1) {
-    showToast('يرجى تحديد كمية صحيحة (1 على الأقل).', 'error');
-    return;
-  }
-
   const method = document.getElementById('paymentMethod').value;
   const sender = sanitizeText(document.getElementById('senderInfo').value, 120);
   const targetData = sanitizeText(document.getElementById('customerData').value, 500);
@@ -1236,18 +1173,12 @@ window.submitOrder = async function(event) {
     if (prodSnap.exists()) {
       authoritativeProd = sanitizeProductPayload({ ...prodSnap.data(), id: prodSnap.id });
     } else if (!storeState.catalogInitialized) {
-      const defP = defaultData.products.find(p => String(p.id) === productId);
-      authoritativeProd = defP ? sanitizeProductPayload(defP) : null;
+      authoritativeProd = defaultData.products.find(p => String(p.id) === productId) || null;
     }
 
-    if (!isProductAvailable(authoritativeProd)) {
+    if (!authoritativeProd || !authoritativeProd.inStock) {
       showToast('عذراً، هذا المنتج لم يعد متاحاً حالياً.', 'error');
       closeCheckout();
-      return;
-    }
-
-    if (reqQty > authoritativeProd.stock) {
-      showToast(`عذراً، الكمية المطلوبة غير متوفرة. المتاح حالياً: ${authoritativeProd.stock}`, 'error');
       return;
     }
 
@@ -1257,15 +1188,13 @@ window.submitOrder = async function(event) {
       return;
     }
 
-    const unitBasePrice = Number((rawPriceEGP * RATES[currency]).toFixed(currency === 'EGP' ? 0 : 2));
+    const basePrice = Number((rawPriceEGP * RATES[currency]).toFixed(currency === 'EGP' ? 0 : 2));
     const openedBasePrice = Number(modal.dataset.openedBasePrice);
-    if (!Number.isFinite(openedBasePrice) || Math.abs(unitBasePrice - openedBasePrice) > 0.01) {
+    if (!Number.isFinite(openedBasePrice) || Math.abs(basePrice - openedBasePrice) > 0.01) {
       showToast('تغير سعر المنتج أثناء فتح النافذة. يرجى إعادة فتح الطلب.', 'error');
       closeCheckout();
       return;
     }
-
-    const basePrice = Number((unitBasePrice * reqQty).toFixed(currency === 'EGP' ? 0 : 2));
 
     // Verify Promo Code against live Firestore config
     const liveConfig = configSnap.exists() ? configSnap.data() : defaultData;
@@ -1291,7 +1220,6 @@ window.submitOrder = async function(event) {
     const orderFingerprint = [
       authUser.uid,
       String(authoritativeProd.id),
-      reqQty,
       currency,
       basePrice,
       finalTotal,
@@ -1324,7 +1252,6 @@ window.submitOrder = async function(event) {
       userName: currentUserProfile.name || '',
       productId: String(authoritativeProd.id),
       product: authoritativeProd.title,
-      quantity: reqQty,
       basePriceEGP: rawPriceEGP,
       price: basePrice,
       total: finalTotal,
@@ -1335,7 +1262,6 @@ window.submitOrder = async function(event) {
       sender,
       targetData,
       status: 'pending',
-      stockDeducted: false,
       deliveredCode: '',
       createdAt: serverTimestamp()
     };
@@ -1439,12 +1365,8 @@ window.seedDefaultProducts = async function() {
   if (!checkIsAdmin()) return showToast('غير مصرح لك.', 'error');
   try {
     for (const p of defaultData.products) {
-      const ref = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(p.id));
-      const existing = await getDoc(ref);
-      const merged = existing.exists()
-        ? sanitizeProductPayload({ ...p, ...existing.data(), id: p.id })
-        : sanitizeProductPayload(p);
-      await setDoc(ref, merged, { merge: true });
+      const cleanProd = sanitizeProductPayload(p);
+      await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', cleanProd.id), cleanProd, { merge: true });
     }
     storeState.catalogInitialized = true;
     await saveData();
@@ -1528,23 +1450,19 @@ window.addNewProduct = async function() {
   const category = document.getElementById('newProdCat').value;
   const badge = sanitizeText(document.getElementById('newProdBadge').value || 'متوفر', 60);
   const imgText = sanitizeText(document.getElementById('newProdImgText').value || title, 120);
-  const stockVal = Number(document.getElementById('newProdStock').value);
   const rawImgUrl = document.getElementById('newProdImgUrl').value.trim();
   const imgUrl = safeImageUrl(rawImgUrl);
   const desc = sanitizeText(document.getElementById('newProdDesc').value, 2000);
 
   if (!title || !Number.isFinite(price) || price <= 0 || oldPrice < 0) return showToast('تأكد من اسم المنتج والسعر بشكل صحيح!', 'error');
-  if (!Number.isFinite(stockVal) || stockVal < 0) return showToast('يرجى إدخال كمية مخزون صحيحة (0 أو أكثر).', 'error');
   if (oldPrice > 0 && oldPrice <= price) return showToast('⚠️ السعر القديم المشطوب يجب أن يكون أكبر من السعر الحالي!', 'error');
   if (rawImgUrl && !imgUrl) return showToast('رابط الصورة يجب أن يبدأ بـ HTTPS', 'error');
 
-  const stock = Math.floor(stockVal);
   const prodId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
-  const newProd = sanitizeProductPayload({ id: prodId, title, desc, price, oldPrice, category, badge, imgText, imgUrl, stock, manualSoldOut: false, inStock: stock > 0 });
+  const newProd = sanitizeProductPayload({ id: prodId, title, desc, price, oldPrice, category, badge, imgText, imgUrl, inStock: true });
   try {
     await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', prodId), newProd);
     ['newProdTitle', 'newProdPrice', 'newProdOldPrice', 'newProdImgUrl', 'newProdDesc', 'newProdBadge', 'newProdImgText'].forEach(id => { document.getElementById(id).value = ''; });
-    document.getElementById('newProdStock').value = '10';
     showToast('📦 تمت إضافة المنتج للمتجر!', 'success');
   } catch (e) { showToast('فشل حفظ المنتج.', 'error'); }
 };
@@ -1562,17 +1480,12 @@ window.editProduct = async function(id) {
   const oldPrice = Number(oldPriceText);
   if (!Number.isFinite(oldPrice) || oldPrice < 0 || (oldPrice > 0 && oldPrice <= price)) { showToast('⚠️ السعر القديم يجب أن يكون صفراً أو أكبر من السعر الحالي.', 'error'); return; }
 
-  const stockText = prompt('كمية المخزون المتاحة:', String(p.stock ?? LEGACY_DEFAULT_STOCK)); if (stockText === null) return;
-  const stockNum = Number(stockText);
-  if (!Number.isFinite(stockNum) || stockNum < 0) { showToast('كمية المخزون غير صالحة.', 'error'); return; }
-  const stock = Math.floor(stockNum);
-
   const desc = prompt('وصف المنتج:', p.desc || ''); if (desc === null) return;
   const badge = prompt('شارة المنتج:', p.badge || ''); if (badge === null) return;
   const imgUrlInput = prompt('رابط الصورة HTTPS (اتركه فارغاً بدون صورة):', p.imgUrl || ''); if (imgUrlInput === null) return;
   const imgUrl = safeImageUrl(imgUrlInput.trim());
 
-  const updated = sanitizeProductPayload({ ...p, id: String(id), title, price, oldPrice, stock, desc, badge, imgUrl });
+  const updated = sanitizeProductPayload({ ...p, id: String(id), title, price, oldPrice, desc, badge, imgUrl });
   try {
     await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(id)), updated);
     showToast('تم تعديل المنتج بنجاح.', 'success');
@@ -1588,32 +1501,13 @@ window.deleteProduct = async function(id) {
   } catch (e) { showToast('فشل الحذف.', 'error'); }
 };
 
-window.updateProductStock = async function(id, newStockValue) {
-  if (!checkIsAdmin()) return;
-  const p = storeState.products.find(x => String(x.id) === String(id));
-  if (!p) return;
-  const parsed = Number(newStockValue);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    showToast('كمية المخزون يجب أن تكون رقماً صحيحاً (0 أو أكثر).', 'error');
-    return;
-  }
-  const stock = Math.floor(parsed);
-  try {
-    const updated = sanitizeProductPayload({ ...p, id: String(id), stock, manualSoldOut: Boolean(p.manualSoldOut) });
-    await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(id)), updated);
-    showToast('✅ تم حفظ كمية المخزون بنجاح.', 'success');
-  } catch (e) { showToast('فشل تحديث المخزون.', 'error'); }
-};
-
 window.toggleProductStock = async function(id) {
   if (!checkIsAdmin()) return;
   const p = storeState.products.find(x => String(x.id) === String(id));
   if (!p) return;
   try {
-    const nextManualSoldOut = !p.manualSoldOut;
-    const updated = sanitizeProductPayload({ ...p, id: String(id), manualSoldOut: nextManualSoldOut });
-    await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(id)), updated);
-    showToast(nextManualSoldOut ? '⛔ تم تفعيل Sold Out يدويًا.' : '✅ تم إلغاء Sold Out اليدوي.', 'success');
+    await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(id)), sanitizeProductPayload({ ...p, inStock: !p.inStock }));
+    showToast('تم تحديث حالة التوفر.', 'success');
   } catch (e) { showToast('فشل التحديث.', 'error'); }
 };
 
@@ -1625,30 +1519,9 @@ window.renderAdminProducts = function() {
     const row = document.createElement('div');
     row.className = 'admin-item-row';
     row.style.flexWrap = 'wrap';
-
-    const available = isProductAvailable(p);
-    let statusText = 'متاح ✅';
-    if (p.manualSoldOut) statusText = 'Sold Out يدوي ⛔';
-    else if (p.stock <= 0) statusText = 'Sold Out (المخزون 0) ⛔';
-
     const label = document.createElement('span');
     label.style.flex = '1';
-    label.style.minWidth = '200px';
-    label.textContent = `${p.title || ''} (${p.price} EGP) — المخزون: ${p.stock} — ${statusText}`;
-
-    const stockInput = document.createElement('input');
-    stockInput.type = 'number';
-    stockInput.min = '0';
-    stockInput.value = String(p.stock ?? 0);
-    stockInput.style.cssText = 'width:75px;padding:5px 8px;font-size:12px;background:#0b0b10;color:var(--text-main);border:1px solid var(--border-color);border-radius:5px;';
-    stockInput.setAttribute('aria-label', 'كمية المخزون');
-
-    const saveStockBtn = document.createElement('button');
-    saveStockBtn.type = 'button';
-    saveStockBtn.className = 'control-btn';
-    saveStockBtn.style.cssText = 'padding:5px 10px;font-size:12px;border-color:var(--accent-neon);color:var(--accent-neon);';
-    saveStockBtn.textContent = 'حفظ الكمية';
-    saveStockBtn.addEventListener('click', () => updateProductStock(p.id, stockInput.value));
+    label.textContent = `${p.title || ''} (${p.price} EGP) — ${p.inStock ? 'متاح ✅' : 'موقوف ⛔'}`;
 
     const edit = document.createElement('button');
     edit.type = 'button';
@@ -1661,7 +1534,7 @@ window.renderAdminProducts = function() {
     stock.type = 'button';
     stock.className = 'control-btn';
     stock.style.cssText = 'padding:5px 12px;font-size:12px;';
-    stock.textContent = p.manualSoldOut ? 'إلغاء Sold Out اليدوي' : 'تفعيل Sold Out يدوي';
+    stock.textContent = p.inStock ? 'إيقاف البيع' : 'إتاحة البيع';
     stock.addEventListener('click', () => toggleProductStock(p.id));
 
     const btn = document.createElement('button');
@@ -1670,7 +1543,7 @@ window.renderAdminProducts = function() {
     btn.textContent = 'حذف';
     btn.addEventListener('click', () => deleteProduct(p.id));
 
-    row.append(label, stockInput, saveStockBtn, edit, stock, btn);
+    row.append(label, edit, stock, btn);
     list.appendChild(row);
   });
 };
@@ -1695,10 +1568,9 @@ window.renderAdminOrders = function() {
     info.style.fontWeight = 'bold';
     info.textContent = `👤 العميل: ${o.userName || ''} (${o.userEmail || ''})`;
 
-    const qty = Math.max(1, Math.floor(Number(o.quantity) || 1));
     const detail = document.createElement('div');
     detail.style.color = 'var(--text-muted)';
-    detail.textContent = `📦 الطلب: ${o.product || ''} (الكمية: ${qty}) | الإجمالي: ${Number(o.total ?? o.price ?? 0)} ${o.currency || 'EGP'} | الدفع: ${o.payment || ''} | محول من: ${o.sender || ''} | بيانات الاستلام: ${o.targetData || ''} | الحالة: ${o.status || 'pending'}`;
+    detail.textContent = `📦 الطلب: ${o.product || ''} | الإجمالي: ${Number(o.total ?? o.price ?? 0)} ${o.currency || 'EGP'} | الدفع: ${o.payment || ''} | محول من: ${o.sender || ''} | بيانات الاستلام: ${o.targetData || ''} | الحالة: ${o.status || 'pending'}`;
 
     const controls = document.createElement('div');
     controls.style.cssText = 'width:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
@@ -1737,97 +1609,14 @@ window.renderAdminOrders = function() {
 
 window.updateOrderStatus = async function(orderId, status, codeInput) {
   if (!checkIsAdmin()) return;
-  const orderRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'orders', String(orderId));
   try {
-    await runTransaction(window.db, async transaction => {
-      const orderSnap = await transaction.get(orderRef);
-      if (!orderSnap.exists()) throw new Error('ORDER_NOT_FOUND');
-
-      const orderData = orderSnap.data();
-      const qty = Math.max(1, Math.floor(Number(orderData.quantity) || 1));
-      const alreadyDeducted = orderData.stockDeducted === true;
-      const productId = String(orderData.productId || '');
-
-      let prodRef = null;
-      let prodSnap = null;
-      if (productId) {
-        prodRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', productId);
-        prodSnap = await transaction.get(prodRef);
-      }
-
-      if (status === 'completed') {
-        if (!alreadyDeducted) {
-          let currentProd = null;
-          if (prodSnap && prodSnap.exists()) {
-            currentProd = sanitizeProductPayload({ ...prodSnap.data(), id: prodSnap.id });
-          } else {
-            const fallback = defaultData.products.find(p => String(p.id) === productId);
-            if (fallback) currentProd = sanitizeProductPayload(fallback);
-          }
-
-          if (!currentProd) throw new Error('PRODUCT_NOT_FOUND');
-          if (currentProd.stock < qty) throw new Error('INSUFFICIENT_STOCK');
-
-          const newStock = currentProd.stock - qty;
-          const updatedProd = sanitizeProductPayload({
-            ...currentProd,
-            stock: newStock,
-            manualSoldOut: Boolean(currentProd.manualSoldOut)
-          });
-          transaction.set(prodRef, updatedProd, { merge: true });
-        }
-
-        transaction.update(orderRef, {
-          status: 'completed',
-          stockDeducted: true,
-          deliveredCode: sanitizeText(codeInput, 500),
-          updatedAt: serverTimestamp()
-        });
-      } else if (status === 'cancelled') {
-        if (alreadyDeducted && prodRef) {
-          let currentProd = null;
-          if (prodSnap && prodSnap.exists()) {
-            currentProd = sanitizeProductPayload({ ...prodSnap.data(), id: prodSnap.id });
-          } else {
-            const fallback = defaultData.products.find(p => String(p.id) === productId);
-            if (fallback) currentProd = sanitizeProductPayload(fallback);
-          }
-
-          if (currentProd) {
-            const restoredStock = currentProd.stock + qty;
-            const updatedProd = sanitizeProductPayload({
-              ...currentProd,
-              stock: restoredStock,
-              manualSoldOut: Boolean(currentProd.manualSoldOut)
-            });
-            transaction.set(prodRef, updatedProd, { merge: true });
-          }
-        }
-
-        transaction.update(orderRef, {
-          status: 'cancelled',
-          stockDeducted: false,
-          deliveredCode: sanitizeText(codeInput, 500),
-          updatedAt: serverTimestamp()
-        });
-      } else {
-        transaction.update(orderRef, {
-          status,
-          deliveredCode: sanitizeText(codeInput, 500),
-          updatedAt: serverTimestamp()
-        });
-      }
+    await updateDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'orders', String(orderId)), {
+      status,
+      deliveredCode: sanitizeText(codeInput, 500),
+      updatedAt: serverTimestamp()
     });
     showToast('✅ تم تحديث حالة الطلب.', 'success');
-  } catch (e) {
-    if (e && e.message === 'INSUFFICIENT_STOCK') {
-      showToast('❌ لا يمكن إكمال الطلب: الكمية المطلوبة غير متوفرة في المخزون حالياً!', 'error');
-    } else if (e && e.message === 'PRODUCT_NOT_FOUND') {
-      showToast('❌ المنتج المرتبط بهذا الطلب غير موجود.', 'error');
-    } else {
-      showToast('فشل التحديث.', 'error');
-    }
-  }
+  } catch (e) { showToast('فشل التحديث.', 'error'); }
 };
 
 window.deleteOrderAdmin = async function(orderId) {
