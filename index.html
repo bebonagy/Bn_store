@@ -451,6 +451,7 @@ select:focus,button.control-btn:hover,.user-action-btn:hover{border-color:var(--
           <div class="form-group"><label>اسم المنتج</label><input type="text" id="newProdTitle"></div>
           <div class="form-group"><label>السعر (EGP)</label><input type="number" id="newProdPrice" min="1"></div>
           <div class="form-group"><label>السعر القديم (مشطوب - اختياري)</label><input type="number" id="newProdOldPrice" min="0"></div>
+          <div class="form-group"><label>الكمية المتاحة (المخزون)</label><input type="number" id="newProdStock" value="10" min="0"></div>
           <div class="form-group"><label>القسم</label><select id="newProdCat"><option value="games">ألعاب</option><option value="subs">اشتراكات</option><option value="ai">ذكاء اصطناعي</option><option value="software">برامج</option></select></div>
           <div class="form-group"><label>الشارة (Badge)</label><input type="text" id="newProdBadge" placeholder="تسليم فوري"></div>
           <div class="form-group"><label>نص الصورة البديل</label><input type="text" id="newProdImgText" placeholder="PUBG"></div>
@@ -1011,7 +1012,7 @@ window.renderUserOrders = function() {
       const row = document.createElement('div');
       row.className = 'delivered-code-box';
       const span = document.createElement('span');
-      span.textContent = '🎁 الكود/الاستلاستلام: ';
+      span.textContent = '🎁 الكود/الاستلام: ';
       const strong = document.createElement('strong');
       strong.textContent = o.deliveredCode;
       span.appendChild(strong);
@@ -1422,7 +1423,7 @@ window.addNewProduct = async function() {
   const newProd = sanitizeProductPayload({ id: prodId, title, desc, price, oldPrice, category, badge, imgText, imgUrl, stockCount, inStock: stockCount > 0 });
   try {
     await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', prodId), newProd);
-    ['newProdTitle', 'newProdPrice', 'newProdOldPrice', 'newProdImgUrl', 'newProdDesc', 'newProdBadge', 'newProdImgText', 'newProdStock'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    ['newProdTitle', 'newProdPrice', 'newProdOldPrice', 'newProdImgUrl', 'newProdDesc', 'newProdBadge', 'newProdImgText'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
     document.getElementById('newProdStock').value = '10';
     showToast('📦 تمت إضافة المنتج للمتجر!', 'success');
   } catch (e) { showToast('فشل حفظ المنتج.', 'error'); }
@@ -1642,7 +1643,7 @@ window.addEventListener('keydown', e => {
 
 window.initStore = function() {
   document.getElementById('flashBannerText').textContent = storeState.bannerAr;
-  document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=` + encodeURIComponent("مرحباً B.n Store، لدي استفسار:");
+  document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=` + encodeURIComponent("مرحباً بيك يا B.n Store، لدي استفسار:");
   updateAuthHeader();
   renderSlider();
   setupSliderInteractions();
