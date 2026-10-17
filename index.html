@@ -482,7 +482,6 @@ const RATES = Object.freeze({ EGP: 1, SAR: 0.077, AED: 0.075, USD: 0.020 });
 const ALLOWED_METHODS = Object.freeze(['instapay', 'vodafone', 'orange', 'crypto']);
 const ALLOWED_CATEGORIES = Object.freeze(['games', 'subs', 'ai', 'software']);
 
-// Strict Admin verification directly against Firebase Auth instance
 const checkIsAdmin = () => Boolean(
   window.auth &&
   window.auth.currentUser &&
@@ -501,20 +500,24 @@ const safeImageUrl = value => {
   } catch (_) { return ''; }
 };
 
-const sanitizeProductPayload = p => ({
-  id: sanitizeText(p.id, 80),
-  title: sanitizeText(p.title, 120),
-  desc: sanitizeText(p.desc, 2000),
-  price: Number.isFinite(Number(p.price)) && Number(p.price) > 0 ? Number(p.price) : 0,
-  oldPrice: (Number.isFinite(Number(p.oldPrice)) && Number(p.oldPrice) > Number(p.price)) ? Number(p.oldPrice) : 0,
-  category: ALLOWED_CATEGORIES.includes(p.category) ? p.category : 'games',
-  badge: sanitizeText(p.badge || 'متوفر', 60),
-  imgText: sanitizeText(p.imgText || p.title || '', 120),
-  imgUrl: safeImageUrl(p.imgUrl),
-  inStock: Boolean(p.inStock)
-});
+const sanitizeProductPayload = p => {
+  const parsedStock = Number(p.stockCount);
+  const stockCount = Number.isFinite(parsedStock) && parsedStock >= 0 ? parsedStock : (p.inStock ? 10 : 0);
+  return {
+    id: sanitizeText(p.id, 80),
+    title: sanitizeText(p.title, 120),
+    desc: sanitizeText(p.desc, 2000),
+    price: Number.isFinite(Number(p.price)) && Number(p.price) > 0 ? Number(p.price) : 0,
+    oldPrice: (Number.isFinite(Number(p.oldPrice)) && Number(p.oldPrice) > Number(p.price)) ? Number(p.oldPrice) : 0,
+    category: ALLOWED_CATEGORIES.includes(p.category) ? p.category : 'games',
+    badge: sanitizeText(p.badge || 'متوفر', 60),
+    imgText: sanitizeText(p.imgText || p.title || '', 120),
+    imgUrl: safeImageUrl(p.imgUrl),
+    inStock: stockCount > 0,
+    stockCount: stockCount
+  };
+};
 
-// Private Store State (Encapsulated inside module scope to prevent console tampering)
 const defaultData = Object.freeze({
   bannerAr: "⚡ عروض لفترة محدودة: شحن فوري وأمان تام لجميع الألعاب وخدمات الذكاء الاصطناعي!",
   whatsapp: "201200898990",
@@ -526,10 +529,10 @@ const defaultData = Object.freeze({
   ],
   payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
   products: [
-    { id: "1", title: "شدات ببجي (600 UC)", desc: "شحن آمن ومباشر لآيدي اللعبة الرسمي، تسليم خلال دقائق.", price: 350, oldPrice: 400, category: "games", badge: "تسليم يدوي", imgText: "PUBG Mobile", imgUrl: "", inStock: true },
-    { id: "2", title: "حساب نتفليكس (شاشة واحدة)", desc: "حساب خاص عالي الجودة بمدى اشتراك كامل وضمان.", price: 150, oldPrice: 180, category: "subs", badge: "تسليم فوري", imgText: "Netflix", imgUrl: "", inStock: true },
-    { id: "3", title: "اشتراك ChatGPT Plus", desc: "تفعيل رسمي على إيميلك الشخصي بأعلى سرعة وأحدث موديل ذكاء اصطناعي.", price: 450, oldPrice: 500, category: "ai", badge: "تفعيل رسمي", imgText: "ChatGPT / AI", imgUrl: "", inStock: true },
-    { id: "4", title: "تفعيل برامج المونتاج والتصميم", desc: "رخصة أصلية وآمنة بالكامل لبرامج التصميم الشهيرة.", price: 300, oldPrice: 350, category: "software", badge: "رخصة مفعلة", imgText: "CapCut / Canva", imgUrl: "", inStock: true }
+    { id: "1", title: "شدات ببجي (600 UC)", desc: "شحن آمن ومباشر لآيدي اللعبة الرسمي، تسليم خلال دقائق.", price: 350, oldPrice: 400, category: "games", badge: "تسليم يدوي", imgText: "PUBG Mobile", imgUrl: "", inStock: true, stockCount: 25 },
+    { id: "2", title: "حساب نتفليكس (شاشة واحدة)", desc: "حساب خاص عالي الجودة بمدى اشتراك كامل وضمان.", price: 150, oldPrice: 180, category: "subs", badge: "تسليم فوري", imgText: "Netflix", imgUrl: "", inStock: true, stockCount: 15 },
+    { id: "3", title: "اشتراك ChatGPT Plus", desc: "تفعيل رسمي على إيميلك الشخصي بأعلى سرعة وأحدث موديل ذكاء اصطناعي.", price: 450, oldPrice: 500, category: "ai", badge: "تفعيل رسمي", imgText: "ChatGPT / AI", imgUrl: "", inStock: true, stockCount: 10 },
+    { id: "4", title: "تفعيل برامج المونتاج والتصميم", desc: "رخصة أصلية وآمنة بالكامل لبرامج التصميم الشهيرة.", price: 300, oldPrice: 350, category: "software", badge: "رخصة مفعلة", imgText: "CapCut / Canva", imgUrl: "", inStock: true, stockCount: 20 }
   ]
 });
 
@@ -554,9 +557,6 @@ let isSubmittingOrder = false;
 let unsubscribePublic = [];
 let unsubscribeOrders = null;
 
-// ==========================================
-// 2. UI HELPERS & TOAST
-// ==========================================
 window.showToast = function(msg, type = 'normal') {
   const container = document.getElementById('toastContainer');
   if (!container) return;
@@ -567,9 +567,6 @@ window.showToast = function(msg, type = 'normal') {
   setTimeout(() => toast.remove(), 3500);
 };
 
-// ==========================================
-// 3. FIREBASE REALTIME SYNC
-// ==========================================
 async function initCloudSync() {
   if (!window.db || !window.appId) return;
   unsubscribePublic.forEach(fn => { try { fn(); } catch (_) {} });
@@ -659,9 +656,6 @@ onAuthStateChanged(window.auth, async user => {
   }
 });
 
-// ==========================================
-// 4. SLIDER, COUNTDOWN & UX
-// ==========================================
 let countdownInterval = null;
 window.startCountdown = function() {
   if (countdownInterval) return;
@@ -783,9 +777,6 @@ function setupSliderInteractions() {
   }, { passive: true });
 }
 
-// ==========================================
-// 5. PRODUCTS & SEARCH
-// ==========================================
 window.handleSearchInput = function() {
   clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => renderProducts(), 180);
@@ -867,9 +858,10 @@ window.renderProducts = function() {
     const buy = document.createElement('button');
     buy.type = 'button';
     buy.className = 'buy-btn';
-    buy.textContent = prod.inStock ? 'شراء الآن' : 'نفذت الكمية';
-    buy.disabled = !prod.inStock;
-    if (!prod.inStock) buy.classList.add('out-of-stock-badge');
+    const isAvailable = prod.inStock && Number(prod.stockCount) > 0;
+    buy.textContent = isAvailable ? (Number(prod.stockCount) <= 5 ? `شراء الآن (متبقي ${prod.stockCount})` : 'شراء الآن') : 'نفذت الكمية';
+    buy.disabled = !isAvailable;
+    if (!isAvailable) buy.classList.add('out-of-stock-badge');
     buy.addEventListener('click', () => window.openCheckout(String(prod.id), currency));
     bottom.appendChild(buy);
 
@@ -887,9 +879,6 @@ window.filterCategory = function(category, btn) {
   renderProducts();
 };
 
-// ==========================================
-// 6. AUTHENTICATION & USER ACCOUNT
-// ==========================================
 window.updateAuthHeader = function() {
   const c = document.getElementById('authHeaderButtons');
   if (!c) return;
@@ -1022,7 +1011,7 @@ window.renderUserOrders = function() {
       const row = document.createElement('div');
       row.className = 'delivered-code-box';
       const span = document.createElement('span');
-      span.textContent = '🎁 الكود/الاستلام: ';
+      span.textContent = '🎁 الكود/الاستلاستلام: ';
       const strong = document.createElement('strong');
       strong.textContent = o.deliveredCode;
       span.appendChild(strong);
@@ -1048,9 +1037,6 @@ window.renderUserOrders = function() {
   });
 };
 
-// ==========================================
-// 7. SECURE CHECKOUT & ORDER SUBMISSION
-// ==========================================
 window.openCheckout = function(productId, currency) {
   const authUser = window.auth?.currentUser;
   if (!authUser || !currentUserProfile) {
@@ -1060,8 +1046,8 @@ window.openCheckout = function(productId, currency) {
   }
 
   const prod = storeState.products.find(p => String(p.id) === String(productId));
-  if (!prod || !prod.inStock) {
-    showToast('عذراً، هذا المنتج غير متوفر حالياً.', 'error');
+  if (!prod || !prod.inStock || Number(prod.stockCount) <= 0) {
+    showToast('عذراً، هذا المنتج نفذت كميته وغير متوفر حالياً.', 'error');
     return;
   }
 
@@ -1129,7 +1115,6 @@ window.submitOrder = async function(event) {
   event.preventDefault();
   if (isSubmittingOrder) return;
 
-  // 1. Verify Real Authenticated User
   const authUser = window.auth?.currentUser;
   if (!authUser || !currentUserProfile || currentUserProfile.uid !== authUser.uid) {
     showToast('انتهت الجلسة أو بيانات الحساب غير متطابقة. سجّل الدخول مرة أخرى.', 'error');
@@ -1163,7 +1148,6 @@ window.submitOrder = async function(event) {
   confirmBtn.disabled = true;
 
   try {
-    // 2. Authoritative Server-Side Product & Config Verification from Firestore
     const [prodSnap, configSnap] = await Promise.all([
       getDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', productId)),
       getDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'config', 'main'))
@@ -1176,18 +1160,13 @@ window.submitOrder = async function(event) {
       authoritativeProd = defaultData.products.find(p => String(p.id) === productId) || null;
     }
 
-    if (!authoritativeProd || !authoritativeProd.inStock) {
-      showToast('عذراً، هذا المنتج لم يعد متاحاً حالياً.', 'error');
+    if (!authoritativeProd || !authoritativeProd.inStock || Number(authoritativeProd.stockCount) <= 0) {
+      showToast('عذراً، هذا المنتج نفذت كميته ولم يعد متاحاً حالياً.', 'error');
       closeCheckout();
       return;
     }
 
     const rawPriceEGP = Number(authoritativeProd.price);
-    if (!Number.isFinite(rawPriceEGP) || rawPriceEGP <= 0) {
-      showToast('سعر المنتج غير صالح. تواصل مع الإدارة.', 'error');
-      return;
-    }
-
     const basePrice = Number((rawPriceEGP * RATES[currency]).toFixed(currency === 'EGP' ? 0 : 2));
     const openedBasePrice = Number(modal.dataset.openedBasePrice);
     if (!Number.isFinite(openedBasePrice) || Math.abs(basePrice - openedBasePrice) > 0.01) {
@@ -1196,7 +1175,6 @@ window.submitOrder = async function(event) {
       return;
     }
 
-    // Verify Promo Code against live Firestore config
     const liveConfig = configSnap.exists() ? configSnap.data() : defaultData;
     const configuredCode = sanitizeText(liveConfig.promoCode ?? defaultData.promoCode, 40).toUpperCase();
     const configuredDiscount = Math.max(0, Math.min(90, Number(liveConfig.promoDiscount ?? defaultData.promoDiscount) || 0));
@@ -1210,25 +1188,8 @@ window.submitOrder = async function(event) {
     const appliedDiscount = (inputCode && inputCode === configuredCode && configuredDiscount > 0) ? configuredDiscount : 0;
     const finalTotal = Number((basePrice * (1 - appliedDiscount / 100)).toFixed(currency === 'EGP' ? 0 : 2));
 
-    if (!Number.isFinite(finalTotal) || finalTotal <= 0) {
-      showToast('خطأ في احتساب السعر النهائي.', 'error');
-      return;
-    }
-
-    // 3. Anti-Spam / Duplicate Fingerprint (5-minute window)
     const duplicateWindow = Math.floor(Date.now() / (5 * 60 * 1000));
-    const orderFingerprint = [
-      authUser.uid,
-      String(authoritativeProd.id),
-      currency,
-      basePrice,
-      finalTotal,
-      method,
-      sender,
-      targetData,
-      appliedDiscount,
-      duplicateWindow
-    ].join('|');
+    const orderFingerprint = [authUser.uid, String(authoritativeProd.id), currency, basePrice, finalTotal, method, sender, targetData, appliedDiscount, duplicateWindow].join('|');
 
     let orderHash = 2166136261;
     for (let i = 0; i < orderFingerprint.length; i++) {
@@ -1279,9 +1240,6 @@ window.submitOrder = async function(event) {
   }
 };
 
-// ==========================================
-// 8. ADMIN DASHBOARD OPERATIONS
-// ==========================================
 window.saveData = async function() {
   if (!checkIsAdmin()) throw new Error('UNAUTHORIZED_ADMIN');
   await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'config', 'main'), {
@@ -1448,6 +1406,7 @@ window.addNewProduct = async function() {
   const price = parseFloat(document.getElementById('newProdPrice').value);
   const oldPrice = parseFloat(document.getElementById('newProdOldPrice').value) || 0;
   const category = document.getElementById('newProdCat').value;
+  const stockCount = parseInt(document.getElementById('newProdStock').value, 10);
   const badge = sanitizeText(document.getElementById('newProdBadge').value || 'متوفر', 60);
   const imgText = sanitizeText(document.getElementById('newProdImgText').value || title, 120);
   const rawImgUrl = document.getElementById('newProdImgUrl').value.trim();
@@ -1456,13 +1415,15 @@ window.addNewProduct = async function() {
 
   if (!title || !Number.isFinite(price) || price <= 0 || oldPrice < 0) return showToast('تأكد من اسم المنتج والسعر بشكل صحيح!', 'error');
   if (oldPrice > 0 && oldPrice <= price) return showToast('⚠️ السعر القديم المشطوب يجب أن يكون أكبر من السعر الحالي!', 'error');
+  if (!Number.isFinite(stockCount) || stockCount < 0) return showToast('عدد المخزون غير صحيح.', 'error');
   if (rawImgUrl && !imgUrl) return showToast('رابط الصورة يجب أن يبدأ بـ HTTPS', 'error');
 
   const prodId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
-  const newProd = sanitizeProductPayload({ id: prodId, title, desc, price, oldPrice, category, badge, imgText, imgUrl, inStock: true });
+  const newProd = sanitizeProductPayload({ id: prodId, title, desc, price, oldPrice, category, badge, imgText, imgUrl, stockCount, inStock: stockCount > 0 });
   try {
     await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', prodId), newProd);
-    ['newProdTitle', 'newProdPrice', 'newProdOldPrice', 'newProdImgUrl', 'newProdDesc', 'newProdBadge', 'newProdImgText'].forEach(id => { document.getElementById(id).value = ''; });
+    ['newProdTitle', 'newProdPrice', 'newProdOldPrice', 'newProdImgUrl', 'newProdDesc', 'newProdBadge', 'newProdImgText', 'newProdStock'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    document.getElementById('newProdStock').value = '10';
     showToast('📦 تمت إضافة المنتج للمتجر!', 'success');
   } catch (e) { showToast('فشل حفظ المنتج.', 'error'); }
 };
@@ -1480,16 +1441,43 @@ window.editProduct = async function(id) {
   const oldPrice = Number(oldPriceText);
   if (!Number.isFinite(oldPrice) || oldPrice < 0 || (oldPrice > 0 && oldPrice <= price)) { showToast('⚠️ السعر القديم يجب أن يكون صفراً أو أكبر من السعر الحالي.', 'error'); return; }
 
+  const stockText = prompt('عدد الكمية المتاحة (اكتب 0 لتصبح "نفذت الكمية"):', String(p.stockCount ?? 10)); if (stockText === null) return;
+  const stockCount = Number(stockText);
+  if (!Number.isFinite(stockCount) || stockCount < 0) { showToast('كمية المخزون غير صحيحة.', 'error'); return; }
+
   const desc = prompt('وصف المنتج:', p.desc || ''); if (desc === null) return;
   const badge = prompt('شارة المنتج:', p.badge || ''); if (badge === null) return;
   const imgUrlInput = prompt('رابط الصورة HTTPS (اتركه فارغاً بدون صورة):', p.imgUrl || ''); if (imgUrlInput === null) return;
   const imgUrl = safeImageUrl(imgUrlInput.trim());
 
-  const updated = sanitizeProductPayload({ ...p, id: String(id), title, price, oldPrice, desc, badge, imgUrl });
+  const updated = sanitizeProductPayload({ ...p, id: String(id), title, price, oldPrice, stockCount, inStock: stockCount > 0, desc, badge, imgUrl });
   try {
     await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(id)), updated);
     showToast('تم تعديل المنتج بنجاح.', 'success');
   } catch (e) { showToast('فشل التعديل.', 'error'); }
+};
+
+window.setProductSoldOut = async function(id) {
+  if (!checkIsAdmin()) return;
+  const p = storeState.products.find(x => String(x.id) === String(id));
+  if (!p) return;
+  try {
+    const updated = sanitizeProductPayload({ ...p, stockCount: 0, inStock: false });
+    await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(id)), updated);
+    showToast('🔴 تم تحويل المنتج إلى (نفذت الكمية).', 'success');
+  } catch (e) { showToast('فشل التحديث.', 'error'); }
+};
+
+window.setProductAvailable = async function(id) {
+  if (!checkIsAdmin()) return;
+  const p = storeState.products.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const newQty = Number(p.stockCount) > 0 ? Number(p.stockCount) : 10;
+  try {
+    const updated = sanitizeProductPayload({ ...p, stockCount: newQty, inStock: true });
+    await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(id)), updated);
+    showToast('🟢 تم إتاحة المنتج وفتح المخزون.', 'success');
+  } catch (e) { showToast('فشل التحديث.', 'error'); }
 };
 
 window.deleteProduct = async function(id) {
@@ -1501,16 +1489,6 @@ window.deleteProduct = async function(id) {
   } catch (e) { showToast('فشل الحذف.', 'error'); }
 };
 
-window.toggleProductStock = async function(id) {
-  if (!checkIsAdmin()) return;
-  const p = storeState.products.find(x => String(x.id) === String(id));
-  if (!p) return;
-  try {
-    await setDoc(doc(window.db, 'artifacts', window.appId, 'public', 'data', 'products', String(id)), sanitizeProductPayload({ ...p, inStock: !p.inStock }));
-    showToast('تم تحديث حالة التوفر.', 'success');
-  } catch (e) { showToast('فشل التحديث.', 'error'); }
-};
-
 window.renderAdminProducts = function() {
   const list = document.getElementById('adminProductsList');
   if (!list) return;
@@ -1519,23 +1497,36 @@ window.renderAdminProducts = function() {
     const row = document.createElement('div');
     row.className = 'admin-item-row';
     row.style.flexWrap = 'wrap';
+
+    const isAvailable = p.inStock && Number(p.stockCount) > 0;
     const label = document.createElement('span');
     label.style.flex = '1';
-    label.textContent = `${p.title || ''} (${p.price} EGP) — ${p.inStock ? 'متاح ✅' : 'موقوف ⛔'}`;
+    label.style.minWidth = '200px';
+    label.textContent = `${p.title || ''} (${p.price} EGP) — المخزون: [${p.stockCount ?? 0}] — ${isAvailable ? 'متاح ✅' : 'نفذت الكمية ⛔'}`;
+
+    const controlsGroup = document.createElement('div');
+    controlsGroup.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;';
 
     const edit = document.createElement('button');
     edit.type = 'button';
     edit.className = 'submit-btn';
-    edit.style.cssText = 'flex:0;padding:5px 12px;font-size:12px;';
+    edit.style.cssText = 'flex:0;padding:5px 10px;font-size:12px;';
     edit.textContent = 'تعديل';
     edit.addEventListener('click', () => editProduct(p.id));
 
-    const stock = document.createElement('button');
-    stock.type = 'button';
-    stock.className = 'control-btn';
-    stock.style.cssText = 'padding:5px 12px;font-size:12px;';
-    stock.textContent = p.inStock ? 'إيقاف البيع' : 'إتاحة البيع';
-    stock.addEventListener('click', () => toggleProductStock(p.id));
+    const soldOutBtn = document.createElement('button');
+    soldOutBtn.type = 'button';
+    soldOutBtn.className = 'control-btn';
+    soldOutBtn.style.cssText = 'padding:5px 10px;font-size:12px;color:#ff8888;border-color:var(--danger);';
+    soldOutBtn.textContent = 'سولد آوت 🔴';
+    soldOutBtn.addEventListener('click', () => setProductSoldOut(p.id));
+
+    const availBtn = document.createElement('button');
+    availBtn.type = 'button';
+    availBtn.className = 'control-btn';
+    availBtn.style.cssText = 'padding:5px 10px;font-size:12px;color:var(--success);border-color:var(--success);';
+    availBtn.textContent = 'متاح 🟢';
+    availBtn.addEventListener('click', () => setProductAvailable(p.id));
 
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -1543,7 +1534,8 @@ window.renderAdminProducts = function() {
     btn.textContent = 'حذف';
     btn.addEventListener('click', () => deleteProduct(p.id));
 
-    row.append(label, edit, stock, btn);
+    controlsGroup.append(edit, soldOutBtn, availBtn, btn);
+    row.append(label, controlsGroup);
     list.appendChild(row);
   });
 };
@@ -1628,9 +1620,6 @@ window.deleteOrderAdmin = async function(orderId) {
   } catch (e) { showToast('فشل الحذف.', 'error'); }
 };
 
-// ==========================================
-// 9. SHARE & INITIALIZATION
-// ==========================================
 window.shareStore = async function() {
   try {
     if (navigator.share) {
@@ -1642,7 +1631,6 @@ window.shareStore = async function() {
   } catch (e) {}
 };
 
-// Close modals when clicking outside or pressing Escape
 window.addEventListener('click', e => {
   if (e.target.classList.contains('modal')) e.target.style.display = 'none';
 });
