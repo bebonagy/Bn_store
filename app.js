@@ -30,39 +30,29 @@ const formatDate = (timestamp) => {
 };
 
 // ==========================================
-// 🌟 دالة ضغط الصور (مضادة للأخطاء)
+// 🌟 دالة ضغط الصور (النسخة الذكية - تقرأ من المعاينة)
 // ==========================================
-const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+const compressImage = (base64Src, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve, reject) => {
-    if (!file) return reject(new Error('لم يتم العثور على ملف!'));
+    if (!base64Src) return reject(new Error('لم يتم العثور على صورة المعاينة!'));
     
-    // التأكد إن الملف عبارة عن صورة فعلاً
-    if (!file.type.match(/image.*/)) {
-      return reject(new Error('برجاء اختيار صورة صحيحة (JPG أو PNG).'));
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = () => reject(new Error('صيغة الصورة غير مدعومة، برجاء أخذ سكرين شوت للإيصال ورفعه.'));
-      img.src = event.target.result;
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
     };
-    reader.onerror = () => reject(new Error('حدث خطأ في قراءة الصورة من جهازك، جرب صورة أخرى.'));
-    reader.readAsDataURL(file);
+    img.onerror = () => reject(new Error('حدث خطأ أثناء معالجة الصورة.'));
+    img.src = base64Src; 
   });
 };
 
@@ -711,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ==========================================
-  // 🌟 إرسال الطلب (محمي ومحدث بالكامل)
+  // 🌟 إرسال الطلب (ذكي - يستقرأ من المعاينة مباشرة)
   // ==========================================
   const checkoutForm = document.getElementById('checkoutForm');
   if (checkoutForm) {
@@ -725,7 +715,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const receiptFileInput = document.getElementById('receiptFileInput');
       if (!receiptFileInput || !receiptFileInput.files[0]) return window.showToast('برجاء إرفاق صورة إيصال التحويل!', 'error');
       
-      // 🛡️ حماية الحجم: أقصى حد 4 ميجا بايت
       if (receiptFileInput.files[0].size > 4 * 1024 * 1024) return window.showToast('حجم الإيصال كبير جداً (أقصى حد 4 ميجا).', 'error');
 
       const confirmBtn = document.getElementById('confirmOrderBtn');
@@ -734,7 +723,9 @@ document.addEventListener('DOMContentLoaded', () => {
       confirmBtn.disabled = true;
 
       try {
-        const receiptBase64 = await compressImage(receiptFileInput.files[0]);
+        // نأخذ الصورة المعروضة في المعاينة مباشرة لنتفادى أخطاء قراءة المتصفحات
+        const previewImgSrc = document.getElementById('receiptPreview').src;
+        const receiptBase64 = await compressImage(previewImgSrc);
         
         const currency = document.getElementById('currencySelect').value;
         const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
@@ -746,7 +737,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const senderInfo = sanitizeText(document.getElementById('senderInfo').value);
         const customerData = sanitizeText(document.getElementById('customerData').value);
         
-        // توليد معرف جديد للطلب وحفظه
         const newOrderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
         const orderId = newOrderRef.id;
 
@@ -769,7 +759,6 @@ document.addEventListener('DOMContentLoaded', () => {
           createdAt: serverTimestamp()
         });
 
-        // مسح النموذج والإعدادات
         document.getElementById('receiptPreview').style.display = 'none';
         document.getElementById('receiptPreview').src = '';
         document.getElementById('checkoutModal').style.display = 'none';
@@ -778,10 +767,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         window.showToast('🎉 تم إرسال طلبك بنجاح! راجع "حسابي" لمتابعة الحالة.', 'success');
 
-        // تأثير الاحتفال
         if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#00ffcc', '#0099ff', '#ffffff'] });
 
-        // إرسال الإيميل للفاتورة
         if (typeof emailjs !== 'undefined') {
              emailjs.send("service_01wl99f", "template_wxomgzu", {
                to_name: currentUserProfile.name,
@@ -1203,8 +1190,17 @@ window.saveProduct = async () => {
 
   try {
     let imgUrl = '';
-    if (fileInput && fileInput.files[0]) { imgUrl = await compressImage(fileInput.files[0]); } 
-    else if (editingProductId) { const existing = storeState.products.find(p => p.id === editingProductId); if (existing) imgUrl = existing.imgUrl || ''; }
+    // في الإضافة بياخد من الملف عادي لأن مفيش معاينة
+    if (fileInput && fileInput.files[0]) { 
+        const reader = new FileReader();
+        imgUrl = await new Promise((res) => {
+            reader.onload = async (e) => res(await compressImage(e.target.result));
+            reader.readAsDataURL(fileInput.files[0]);
+        });
+    } else if (editingProductId) { 
+        const existing = storeState.products.find(p => p.id === editingProductId); 
+        if (existing) imgUrl = existing.imgUrl || ''; 
+    }
 
     const prodData = { title, desc, price, oldPrice, category, badge, imgUrl, inStock: stockQuantity > 0, stockQuantity };
 
