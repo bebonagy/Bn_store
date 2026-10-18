@@ -247,3 +247,39 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
   .whatsapp-float { inset-inline-end: 14px; bottom: 14px; padding: 10px 16px; font-size: 13px; }
   .modal-content { padding: 18px; }
 }
+
+/* ==========================================
+   🌟 14. اللمسات الإضافية (NEW ENHANCEMENTS)
+   ========================================== */
+/* تأثير الظهور الناعم لكروت المنتجات (Fade-in) */
+@keyframes fadeUpProduct {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.product-card {
+  animation: fadeUpProduct 0.4s ease forwards;
+}
+
+/* توهج وتأثير زر مشاركة المنتج */
+#shareProductBtn:hover {
+  background: #0099ff !important;
+  color: #fff !important;
+  box-shadow: 0 0 15px rgba(0, 153, 255, 0.6);
+  transform: scale(1.05);
+}
+
+/* تأثير النجوم التفاعلية (Hover) */
+.star { transition: transform 0.2s, filter 0.2s; display: inline-block; }
+.star:hover { transform: scale(1.2); filter: grayscale(0%) !important; }
+
+/* نبض مؤشر الإشعارات الأحمر (Notification Pulse) */
+@keyframes pulseDot {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+#notificationDot {
+  animation: pulseDot 1.5s infinite;
+  border-radius: 50%;
+  text-shadow: 0 0 5px red;
+}
