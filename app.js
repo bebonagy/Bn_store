@@ -28,7 +28,7 @@ const sanitizeText = (val, maxLen = 250) => String(val ?? '').replace(/[<>]/g, '
 // ==========================================
 let storeState = {
   bannerAr: "⚡ عروض الكريسماس والخدمات الرقمية!",
-  bannerExpiry: "", // وقت انتهاء العرض
+  bannerExpiry: "", 
   whatsapp: "201200898990",
   rates: { SAR: 0.077, AED: 0.075, USD: 0.020 },
   payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
@@ -39,10 +39,10 @@ let storeState = {
 };
 let currentUserProfile = null;
 let currentProductId = null;
-let editingProductId = null;
+let editingProductId = null; 
 let activeDiscount = 0;
 let unsubscribeOrders = null;
-let countdownInterval = null; // مؤقت العداد
+let countdownInterval = null;
 
 window.showToast = (msg, type = 'normal') => {
   const container = document.getElementById('toastContainer');
@@ -54,19 +54,18 @@ window.showToast = (msg, type = 'normal') => {
 };
 
 // ==========================================
-// 3. نظام العداد التنازلي للشريط (Countdown Logic)
+// 3. نظام العداد التنازلي للشريط
 // ==========================================
 const initCountdown = (expiryString) => {
   const bannerEl = document.getElementById('flashSaleBanner');
   const timerEl = document.getElementById('countdownTimer');
-  const textEl = document.getElementById('flashBannerText');
   
-  if (!bannerEl || !timerEl || !textEl) return;
+  if (!bannerEl || !timerEl) return;
 
   if (countdownInterval) clearInterval(countdownInterval);
 
   if (!expiryString) {
-    bannerEl.style.display = 'none'; // لو مفيش وقت محدد، الشريط يختفي
+    bannerEl.style.display = 'none';
     return;
   }
 
@@ -84,7 +83,6 @@ const initCountdown = (expiryString) => {
 
     if (distance < 0) {
       clearInterval(countdownInterval);
-      // انتهى العرض تماماً! اخفِ الشريط وميرجعش تاني
       bannerEl.style.display = 'none';
       return;
     }
@@ -221,7 +219,7 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 5. الأحداث والمصادقة والشراء
+// 5. الأحداث والمصادقة والشراء (مع تصفير البحث)
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.category-btn').forEach(btn => {
@@ -293,6 +291,11 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
       document.getElementById('authModal').style.display = 'none';
+      
+      // 🌟 تصفير خانة البحث لمنع حشر الإيميل في اللاب توب
+      const searchInput = document.getElementById('searchInput');
+      if(searchInput) searchInput.value = '';
+
       window.showToast('تم تسجيل الدخول بنجاح!', 'success');
     } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
   });
@@ -402,13 +405,13 @@ const initApp = () => {
       storeState.payments = data.payments || { instapay: "", vodafone: "", orange: "", crypto: "" };
       
       storeState.bannerAr = data.bannerAr || "⚡ عروض الكريسماس والخدمات الرقمية!";
-      storeState.bannerExpiry = data.bannerExpiry || ""; // تاريخ ووقت الانتهاء
+      storeState.bannerExpiry = data.bannerExpiry || ""; 
 
       storeState.promoCode = data.promoCode || "";
       storeState.promoDiscount = data.promoDiscount || 0;
       
       document.getElementById('flashBannerText').textContent = storeState.bannerAr;
-      initCountdown(storeState.bannerExpiry); // تشغيل أو إيقاف العداد بناءً على السيرفر
+      initCountdown(storeState.bannerExpiry); 
 
       document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=استفسار:`;
       
@@ -506,12 +509,12 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 7. لوحة التحكم للإدارة (متضمنة التحكم في العرض والوقت)
+// 7. لوحة التحكم للإدارة (متضمنة التعديل والعداد)
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
   container.innerHTML = `
-    <!-- إعدادات شريط العروض والعداد (جديد) -->
+    <!-- إعدادات شريط العروض والعداد -->
     <div class="admin-section" style="border-color: var(--accent-neon);">
       <h4 style="color: var(--accent-neon);">⚡ إعدادات شريط العروض والعداد التنازلي</h4>
       <div class="form-group"><label>نص الإعلان (البانر)</label><input type="text" id="admBannerAr" placeholder="مثال: ⚡ خصومات الكريسماس الفورية!"></div>
@@ -609,7 +612,7 @@ window.saveGeneralSettings = async () => {
   if (!checkIsAdmin()) return;
   const config = {
     bannerAr: document.getElementById('admBannerAr').value,
-    bannerExpiry: document.getElementById('admBannerExpiry').value, // حفظ وقت الانتهاء
+    bannerExpiry: document.getElementById('admBannerExpiry').value, 
     whatsapp: document.getElementById('admWhatsapp').value,
     promoCode: document.getElementById('admPromoCode').value.trim(),
     promoDiscount: Number(document.getElementById('admPromoDiscount').value) || 0,
