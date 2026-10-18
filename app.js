@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
@@ -58,6 +58,7 @@ let slideInterval = null;
 
 window.showToast = (msg, type = 'normal') => {
   const container = document.getElementById('toastContainer');
+  if (!container) return;
   const toast = document.createElement('div');
   toast.className = `toast-msg ${type}`;
   toast.textContent = msg;
@@ -223,21 +224,26 @@ window.renderCategoriesBar = () => {
 };
 
 const showView = (viewName) => {
-  document.getElementById('homeView').style.display = viewName === 'home' ? 'block' : 'none';
-  document.getElementById('productDetailsView').style.display = viewName === 'details' ? 'block' : 'none';
+  const homeView = document.getElementById('homeView');
+  const productDetailsView = document.getElementById('productDetailsView');
+  if (homeView) homeView.style.display = viewName === 'home' ? 'block' : 'none';
+  if (productDetailsView) productDetailsView.style.display = viewName === 'details' ? 'block' : 'none';
   if (viewName === 'home') window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-document.getElementById('logoBtn').addEventListener('click', () => showView('home'));
-document.getElementById('backToHomeBtn').addEventListener('click', () => showView('home'));
+document.getElementById('logoBtn')?.addEventListener('click', () => showView('home'));
+document.getElementById('backToHomeBtn')?.addEventListener('click', () => showView('home'));
 
 window.renderProducts = () => {
   const grid = document.getElementById('productGrid');
-  const currency = document.getElementById('currencySelect').value;
+  const currencySelect = document.getElementById('currencySelect');
+  const searchInput = document.getElementById('searchInput');
+  if(!grid || !currencySelect || !searchInput) return;
+
+  const currency = currencySelect.value;
   const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
-  const searchVal = document.getElementById('searchInput').value.trim().toLowerCase();
+  const searchVal = searchInput.value.trim().toLowerCase();
   
-  if(!grid) return;
   grid.replaceChildren();
   
   const activeCatBtn = document.querySelector('.category-btn.active');
@@ -324,24 +330,28 @@ window.openProductDetails = (id) => {
   }
   
   const imgBox = document.getElementById('detailImageBox');
-  if(prod.imgUrl) { imgBox.style.backgroundImage = `url('${prod.imgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; }
-  else { imgBox.style.backgroundImage = 'none'; imgBox.textContent = prod.imgText || prod.title; }
+  if(imgBox) {
+    if(prod.imgUrl) { imgBox.style.backgroundImage = `url('${prod.imgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; }
+    else { imgBox.style.backgroundImage = 'none'; imgBox.textContent = prod.imgText || prod.title; }
+  }
 
   const stockEl = document.getElementById('detailStock');
   const buyBtn = document.getElementById('detailBuyBtn');
   
-  if (inStock) {
-    stockEl.textContent = (prod.stockQuantity !== undefined) ? `${prod.stockQuantity} قطعة متاحة` : 'متوفر';
-    stockEl.style.color = 'var(--success)';
-    buyBtn.textContent = 'إتمام الشراء الآن';
-    buyBtn.disabled = false;
-    buyBtn.classList.remove('out-of-stock-badge');
-  } else {
-    stockEl.textContent = 'نفذت الكمية (Sold Out)';
-    stockEl.style.color = 'var(--danger)';
-    buyBtn.textContent = 'غير متوفر حالياً';
-    buyBtn.disabled = true;
-    buyBtn.classList.add('out-of-stock-badge');
+  if (stockEl && buyBtn) {
+    if (inStock) {
+      stockEl.textContent = (prod.stockQuantity !== undefined) ? `${prod.stockQuantity} قطعة متاحة` : 'متوفر';
+      stockEl.style.color = 'var(--success)';
+      buyBtn.textContent = 'إتمام الشراء الآن';
+      buyBtn.disabled = false;
+      buyBtn.classList.remove('out-of-stock-badge');
+    } else {
+      stockEl.textContent = 'نفذت الكمية (Sold Out)';
+      stockEl.style.color = 'var(--danger)';
+      buyBtn.textContent = 'غير متوفر حالياً';
+      buyBtn.disabled = true;
+      buyBtn.classList.add('out-of-stock-badge');
+    }
   }
 
   window.loadProductReviews(id);
@@ -351,6 +361,7 @@ window.openProductDetails = (id) => {
 const updateCheckoutPriceDisplay = () => {
   if(!currentProductId) return;
   const prod = storeState.products.find(p => p.id === currentProductId);
+  if(!prod) return;
   const currency = document.getElementById('currencySelect').value;
   const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
   
@@ -360,7 +371,8 @@ const updateCheckoutPriceDisplay = () => {
   }
   const finalPrice = price.toFixed(currency === 'EGP' ? 0 : 2);
   const discountText = activeDiscount > 0 ? ` (بعد خصم ${activeDiscount}%)` : '';
-  document.getElementById('selectedProduct').value = `${prod.title} - (${finalPrice} ${currency})${discountText}`;
+  const selectedProductInput = document.getElementById('selectedProduct');
+  if(selectedProductInput) selectedProductInput.value = `${prod.title} - (${finalPrice} ${currency})${discountText}`;
 };
 
 // ==========================================
@@ -433,8 +445,11 @@ const updatePaymentInfoBox = () => {
 // 8. الأحداث والمصادقة والشراء والتقييمات
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('searchInput').addEventListener('input', window.renderProducts);
-  document.getElementById('currencySelect').addEventListener('change', window.renderProducts);
+  const searchInputEl = document.getElementById('searchInput');
+  if (searchInputEl) searchInputEl.addEventListener('input', window.renderProducts);
+
+  const currencySelectEl = document.getElementById('currencySelect');
+  if (currencySelectEl) currencySelectEl.addEventListener('change', window.renderProducts);
   
   const paymentMethodEl = document.getElementById('paymentMethod');
   if (paymentMethodEl) {
@@ -462,8 +477,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول لإضافة تقييم!', 'error');
       if (!currentProductId) return;
 
-      const comment = sanitizeText(document.getElementById('reviewCommentText').value);
-      const rating = document.getElementById('reviewRating').value;
+      const commentInput = document.getElementById('reviewCommentText');
+      const ratingInput = document.getElementById('reviewRating');
+      if (!commentInput || !ratingInput) return;
+
+      const comment = sanitizeText(commentInput.value);
+      const rating = ratingInput.value;
       if (!comment) return window.showToast('اكتب تعليقاً أولاً!', 'error');
 
       try {
@@ -476,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
           comment,
           createdAt: serverTimestamp()
         });
-        document.getElementById('reviewCommentText').value = '';
+        commentInput.value = '';
         window.showToast('⭐ تم إضافة تقييمك بنجاح!', 'success');
       } catch (e) {
         window.showToast('حدث خطأ أثناء إرسال التقييم', 'error');
@@ -484,34 +503,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  document.getElementById('detailBuyBtn').addEventListener('click', () => {
-    if(currentProductId) {
-      activeDiscount = 0; 
-      document.getElementById('promoCodeInput').value = '';
-      document.getElementById('promoMsg').textContent = '';
-      updateCheckoutPriceDisplay();
-      updatePaymentInfoBox();
-      document.getElementById('checkoutModal').style.display = 'flex';
-    }
-  });
+  const detailBuyBtn = document.getElementById('detailBuyBtn');
+  if (detailBuyBtn) {
+    detailBuyBtn.addEventListener('click', () => {
+      if(currentProductId) {
+        activeDiscount = 0; 
+        const promoInput = document.getElementById('promoCodeInput');
+        const promoMsg = document.getElementById('promoMsg');
+        if(promoInput) promoInput.value = '';
+        if(promoMsg) promoMsg.textContent = '';
+        updateCheckoutPriceDisplay();
+        updatePaymentInfoBox();
+        const checkoutModal = document.getElementById('checkoutModal');
+        if(checkoutModal) checkoutModal.style.display = 'flex';
+      }
+    });
+  }
 
-  document.getElementById('applyPromoBtn').addEventListener('click', () => {
-    const input = document.getElementById('promoCodeInput').value.trim();
-    const msgEl = document.getElementById('promoMsg');
-    if (!input) return;
+  const applyPromoBtn = document.getElementById('applyPromoBtn');
+  if (applyPromoBtn) {
+    applyPromoBtn.addEventListener('click', () => {
+      const inputEl = document.getElementById('promoCodeInput');
+      const msgEl = document.getElementById('promoMsg');
+      if(!inputEl || !msgEl) return;
+      const input = inputEl.value.trim();
+      if (!input) return;
 
-    if (storeState.promoCode && input.toLowerCase() === storeState.promoCode.toLowerCase() && storeState.promoDiscount > 0) {
-      activeDiscount = storeState.promoDiscount;
-      msgEl.textContent = `تم تطبيق خصم ${activeDiscount}% بنجاح! ✅`;
-      msgEl.style.color = 'var(--success)';
-      updateCheckoutPriceDisplay();
-    } else {
-      activeDiscount = 0;
-      msgEl.textContent = 'كود الخصم غير صحيح أو منتهي! ❌';
-      msgEl.style.color = 'var(--danger)';
-      updateCheckoutPriceDisplay();
-    }
-  });
+      if (storeState.promoCode && input.toLowerCase() === storeState.promoCode.toLowerCase() && storeState.promoDiscount > 0) {
+        activeDiscount = storeState.promoDiscount;
+        msgEl.textContent = `تم تطبيق خصم ${activeDiscount}% بنجاح! ✅`;
+        msgEl.style.color = 'var(--success)';
+        updateCheckoutPriceDisplay();
+      } else {
+        activeDiscount = 0;
+        msgEl.textContent = 'كود الخصم غير صحيح أو منتهي! ❌';
+        msgEl.style.color = 'var(--danger)';
+        updateCheckoutPriceDisplay();
+      }
+    });
+  }
 
   document.querySelectorAll('.close-modal-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -519,42 +549,71 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  document.getElementById('loginBtnNav').addEventListener('click', () => {
-    if(currentUserProfile) { document.getElementById('userAccountModal').style.display = 'flex'; } 
-    else { document.getElementById('authModal').style.display = 'flex'; }
-  });
+  const loginBtnNav = document.getElementById('loginBtnNav');
+  if (loginBtnNav) {
+    loginBtnNav.addEventListener('click', () => {
+      if(currentUserProfile) { 
+        const userAccountModal = document.getElementById('userAccountModal');
+        if(userAccountModal) userAccountModal.style.display = 'flex'; 
+      } else { 
+        const authModal = document.getElementById('authModal');
+        if(authModal) authModal.style.display = 'flex'; 
+      }
+    });
+  }
 
-  document.getElementById('showRegisterBtn').addEventListener('click', () => {
-    document.getElementById('authViewLogin').style.display = 'none';
-    document.getElementById('authViewRegister').style.display = 'block';
-    document.getElementById('authModalTitle').textContent = 'إنشاء حساب جديد';
-  });
+  const showRegisterBtn = document.getElementById('showRegisterBtn');
+  if (showRegisterBtn) {
+    showRegisterBtn.addEventListener('click', () => {
+      const authViewLogin = document.getElementById('authViewLogin');
+      const authViewRegister = document.getElementById('authViewRegister');
+      const authModalTitle = document.getElementById('authModalTitle');
+      if(authViewLogin) authViewLogin.style.display = 'none';
+      if(authViewRegister) authViewRegister.style.display = 'block';
+      if(authModalTitle) authModalTitle.textContent = 'إنشاء حساب جديد';
+    });
+  }
   
-  document.getElementById('showLoginBtn').addEventListener('click', () => {
-    document.getElementById('authViewLogin').style.display = 'block';
-    document.getElementById('authViewRegister').style.display = 'none';
-    document.getElementById('authModalTitle').textContent = 'تسجيل الدخول';
-  });
+  const showLoginBtn = document.getElementById('showLoginBtn');
+  if (showLoginBtn) {
+    showLoginBtn.addEventListener('click', () => {
+      const authViewLogin = document.getElementById('authViewLogin');
+      const authViewRegister = document.getElementById('authViewRegister');
+      const authModalTitle = document.getElementById('authModalTitle');
+      if(authViewLogin) authViewLogin.style.display = 'block';
+      if(authViewRegister) authViewRegister.style.display = 'none';
+      if(authModalTitle) authModalTitle.textContent = 'تسجيل الدخول';
+    });
+  }
 
-  document.getElementById('doLoginBtn').addEventListener('click', async () => {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass = document.getElementById('loginPass').value;
-    if (!email || !pass) return window.showToast('أدخل البريد وكلمة المرور!', 'error');
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      document.getElementById('authModal').style.display = 'none';
-      const searchInput = document.getElementById('searchInput');
-      if(searchInput) searchInput.value = '';
-      window.showToast('تم تسجيل الدخول بنجاح!', 'success');
-    } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
-  });
+  const doLoginBtn = document.getElementById('doLoginBtn');
+  if (doLoginBtn) {
+    doLoginBtn.addEventListener('click', async () => {
+      const loginEmail = document.getElementById('loginEmail');
+      const loginPass = document.getElementById('loginPass');
+      if(!loginEmail || !loginPass) return;
+      const email = loginEmail.value.trim();
+      const pass = loginPass.value;
+      if (!email || !pass) return window.showToast('أدخل البريد وكلمة المرور!', 'error');
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        const authModal = document.getElementById('authModal');
+        if(authModal) authModal.style.display = 'none';
+        const searchInput = document.getElementById('searchInput');
+        if(searchInput) searchInput.value = '';
+        window.showToast('تم تسجيل الدخول بنجاح!', 'success');
+      } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
+    });
+  }
 
-  // 🌟 زر استعادة كلمة المرور المحدث
+  // 🌟 زر استعادة كلمة المرور
   const resetPassBtn = document.getElementById('resetPassBtn');
   if (resetPassBtn) {
     resetPassBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('loginEmail').value.trim();
+      const loginEmail = document.getElementById('loginEmail');
+      if(!loginEmail) return;
+      const email = loginEmail.value.trim();
       if (!email) {
         return window.showToast('اكتب بريدك الإلكتروني في خانة البريد أولاً!', 'error');
       }
@@ -567,21 +626,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 🌐 زر تسجيل الدخول بواسطة Google المحسّن (مع معالجة ذكية للأخطاء)
+  // 🌐 زر تسجيل الدخول الذكي (يعمل تلقائياً: Popup للاب توب و Redirect للموبايل لتجنب أي حظر)
   const googleLoginBtn = document.getElementById('googleLoginBtn');
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
       const provider = new GoogleAuthProvider();
       try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
-          uid: user.uid, name: user.displayName || 'مستخدم جوجل', email: user.email, createdAt: serverTimestamp()
-        }, { merge: true });
+        if (isMobile) {
+          await signInWithRedirect(auth, provider);
+        } else {
+          const result = await signInWithPopup(auth, provider);
+          const user = result.user;
+          
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+            uid: user.uid, name: user.displayName || 'مستخدم جوجل', email: user.email, createdAt: serverTimestamp()
+          }, { merge: true });
 
-        document.getElementById('authModal').style.display = 'none';
-        window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
+          const authModal = document.getElementById('authModal');
+          if(authModal) authModal.style.display = 'none';
+          window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
+        }
       } catch (error) {
         console.error("Google Auth Error:", error);
         if (error.code === 'auth/popup-closed-by-user') {
@@ -593,97 +659,117 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  document.getElementById('doRegisterBtn').addEventListener('click', async () => {
-    const name = document.getElementById('regName').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const pass = document.getElementById('regPass').value;
-    const confirm = document.getElementById('regPassConfirm').value;
-    if (!name || !email || !pass) return window.showToast('أكمل جميع البيانات!', 'error');
-    if (pass !== confirm) return window.showToast('كلمة المرور غير متطابقة!', 'error');
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email, pass);
-      await updateProfile(cred.user, { displayName: name });
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), {
-        uid: cred.user.uid, name, email, createdAt: serverTimestamp()
-      });
-      document.getElementById('authModal').style.display = 'none';
-      window.showToast('تم إنشاء الحساب بنجاح!', 'success');
-    } catch (e) { window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); }
-  });
+  const doRegisterBtn = document.getElementById('doRegisterBtn');
+  if (doRegisterBtn) {
+    doRegisterBtn.addEventListener('click', async () => {
+      const regName = document.getElementById('regName');
+      const regEmail = document.getElementById('regEmail');
+      const regPass = document.getElementById('regPass');
+      const regPassConfirm = document.getElementById('regPassConfirm');
+      if(!regName || !regEmail || !regPass || !regPassConfirm) return;
 
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    try {
-      await signOut(auth);
-      document.getElementById('userAccountModal').style.display = 'none';
-      window.showToast('تم تسجيل الخروج بنجاح!', 'success');
-    } catch (e) { window.showToast('حدث خطأ!', 'error'); }
-  });
+      const name = regName.value.trim();
+      const email = regEmail.value.trim();
+      const pass = regPass.value;
+      const confirm = regPassConfirm.value;
+
+      if (!name || !email || !pass) return window.showToast('أكمل جميع البيانات!', 'error');
+      if (pass !== confirm) return window.showToast('كلمة المرور غير متطابقة!', 'error');
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        await updateProfile(cred.user, { displayName: name });
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), {
+          uid: cred.user.uid, name, email, createdAt: serverTimestamp()
+        });
+        const authModal = document.getElementById('authModal');
+        if(authModal) authModal.style.display = 'none';
+        window.showToast('تم إنشاء الحساب بنجاح!', 'success');
+      } catch (e) { window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); }
+    });
+  }
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await signOut(auth);
+        const userAccountModal = document.getElementById('userAccountModal');
+        if(userAccountModal) userAccountModal.style.display = 'none';
+        window.showToast('تم تسجيل الخروج بنجاح!', 'success');
+      } catch (e) { window.showToast('حدث خطأ!', 'error'); }
+    });
+  }
 
   // إرسال الطلب مع إرفاق صورة الإيصال (Base64)
-  document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentUserProfile || !currentProductId) return;
+  const checkoutForm = document.getElementById('checkoutForm');
+  if (checkoutForm) {
+    checkoutForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUserProfile || !currentProductId) return;
 
-    const prod = storeState.products.find(p => p.id === currentProductId);
-    if (!prod || !prod.inStock || prod.stockQuantity <= 0) return window.showToast('الكمية نفذت!', 'error');
+      const prod = storeState.products.find(p => p.id === currentProductId);
+      if (!prod || !prod.inStock || prod.stockQuantity <= 0) return window.showToast('الكمية نفذت!', 'error');
 
-    const paymentMethod = document.getElementById('paymentMethod').value;
-    const senderInfo = sanitizeText(document.getElementById('senderInfo').value);
-    const customerData = sanitizeText(document.getElementById('customerData').value);
-    
-    const receiptFile = document.getElementById('receiptFileInput').files[0];
-    if (!receiptFile) return window.showToast('برجاء إرفاق صورة إيصال التحويل!', 'error');
+      const paymentMethod = document.getElementById('paymentMethod').value;
+      const senderInfo = sanitizeText(document.getElementById('senderInfo').value);
+      const customerData = sanitizeText(document.getElementById('customerData').value);
+      
+      const receiptFileInput = document.getElementById('receiptFileInput');
+      if (!receiptFileInput || !receiptFileInput.files[0]) return window.showToast('برجاء إرفاق صورة إيصال التحويل!', 'error');
+      const receiptFile = receiptFileInput.files[0];
 
-    const receiptBase64 = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => resolve(uploadEvent.target.result);
-      reader.readAsDataURL(receiptFile);
+      const receiptBase64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (uploadEvent) => resolve(uploadEvent.target.result);
+        reader.readAsDataURL(receiptFile);
+      });
+
+      const currency = document.getElementById('currencySelect').value;
+      const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
+      
+      let finalPrice = prod.price * rate;
+      if (activeDiscount > 0) {
+        finalPrice = finalPrice - (finalPrice * (activeDiscount / 100));
+      }
+      finalPrice = Number(finalPrice.toFixed(currency === 'EGP' ? 0 : 2));
+
+      try {
+        const orderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
+        await setDoc(orderRef, {
+          uid: currentUserProfile.uid,
+          userEmail: currentUserProfile.email,
+          productId: prod.id,
+          productName: prod.title,
+          priceEGP: prod.price, 
+          finalPrice: finalPrice, 
+          currency: currency, 
+          discountApplied: activeDiscount,
+          promoCodeUsed: activeDiscount > 0 ? document.getElementById('promoCodeInput').value.trim() : "",
+          paymentMethod,
+          senderInfo,
+          customerData,
+          receiptImage: receiptBase64,
+          status: 'pending',
+          deliveredCode: '',
+          createdAt: serverTimestamp()
+        });
+
+        const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id);
+        await updateDoc(prodRef, {
+          stockQuantity: prod.stockQuantity - 1,
+          inStock: (prod.stockQuantity - 1) > 0
+        });
+
+        const checkoutModal = document.getElementById('checkoutModal');
+        if(checkoutModal) checkoutModal.style.display = 'none';
+        checkoutForm.reset();
+        activeDiscount = 0; 
+        window.showToast('🎉 تم إرسال طلبك وإيصال التحويل بنجاح! راجع "حسابي".', 'success');
+      } catch (err) {
+        window.showToast('حدث خطأ أثناء إرسال الطلب، تأكد من حجم الصورة أو اتصالك.', 'error');
+      }
     });
-
-    const currency = document.getElementById('currencySelect').value;
-    const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
-    
-    let finalPrice = prod.price * rate;
-    if (activeDiscount > 0) {
-      finalPrice = finalPrice - (finalPrice * (activeDiscount / 100));
-    }
-    finalPrice = Number(finalPrice.toFixed(currency === 'EGP' ? 0 : 2));
-
-    try {
-      const orderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
-      await setDoc(orderRef, {
-        uid: currentUserProfile.uid,
-        userEmail: currentUserProfile.email,
-        productId: prod.id,
-        productName: prod.title,
-        priceEGP: prod.price, 
-        finalPrice: finalPrice, 
-        currency: currency, 
-        discountApplied: activeDiscount,
-        promoCodeUsed: activeDiscount > 0 ? document.getElementById('promoCodeInput').value.trim() : "",
-        paymentMethod,
-        senderInfo,
-        customerData,
-        receiptImage: receiptBase64,
-        status: 'pending',
-        deliveredCode: '',
-        createdAt: serverTimestamp()
-      });
-
-      const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id);
-      await updateDoc(prodRef, {
-        stockQuantity: prod.stockQuantity - 1,
-        inStock: (prod.stockQuantity - 1) > 0
-      });
-
-      document.getElementById('checkoutModal').style.display = 'none';
-      document.getElementById('checkoutForm').reset();
-      activeDiscount = 0; 
-      window.showToast('🎉 تم إرسال طلبك وإيصال التحويل بنجاح! راجع "حسابي".', 'success');
-    } catch (err) {
-      window.showToast('حدث خطأ أثناء إرسال الطلب، تأكد من حجم الصورة أو اتصالك.', 'error');
-    }
-  });
+  }
 });
 
 // ==========================================
@@ -717,13 +803,17 @@ const initApp = () => {
       if(data.slides) storeState.slides = data.slides;
       if(data.categories) storeState.categories = data.categories;
 
-      document.getElementById('flashBannerText').textContent = storeState.bannerAr;
+      const flashBannerText = document.getElementById('flashBannerText');
+      if(flashBannerText) flashBannerText.textContent = storeState.bannerAr;
+      
       initCountdown(storeState.bannerExpiry); 
       updatePaymentInfoBox();
       window.renderPromoSlider();
       window.renderCategoriesBar();
 
-      document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=استفسار:`;
+      const whatsappBtn = document.getElementById('whatsappBtn');
+      if(whatsappBtn) whatsappBtn.href = `https://wa.me/${storeState.whatsapp}?text=استفسار:`;
+      
       window.renderProducts(); 
       if(checkIsAdmin()) {
         window.loadAdminData();
@@ -734,6 +824,7 @@ const initApp = () => {
 
   onAuthStateChanged(auth, async (user) => {
     const loginBtn = document.getElementById('loginBtnNav');
+    if(!loginBtn) return;
     
     if (user) {
       currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم' };
@@ -750,17 +841,21 @@ const initApp = () => {
         window.renderAdminStats();
         if (!adminBtnInModal) {
            const accountModalContent = document.querySelector('#userAccountModal .modal-content');
-           const btn = document.createElement('button');
-           btn.id = 'adminBtnInModal';
-           btn.className = 'submit-btn';
-           btn.style.cssText = 'width:100%; margin-bottom:15px; background:#0099ff; color:#fff; font-size:16px; box-shadow:0 0 15px rgba(0,153,255,0.4);';
-           btn.innerHTML = '⚙️ الدخول للوحة تحكم الإدارة';
-           btn.onclick = () => {
-              document.getElementById('userAccountModal').style.display = 'none';
-              document.getElementById('adminModal').style.display = 'flex';
-           };
-           const h4 = accountModalContent.querySelector('h4');
-           accountModalContent.insertBefore(btn, h4);
+           if(accountModalContent) {
+             const btn = document.createElement('button');
+             btn.id = 'adminBtnInModal';
+             btn.className = 'submit-btn';
+             btn.style.cssText = 'width:100%; margin-bottom:15px; background:#0099ff; color:#fff; font-size:16px; box-shadow:0 0 15px rgba(0,153,255,0.4);';
+             btn.innerHTML = '⚙️ الدخول للوحة تحكم الإدارة';
+             btn.onclick = () => {
+                const userAccountModal = document.getElementById('userAccountModal');
+                const adminModal = document.getElementById('adminModal');
+                if(userAccountModal) userAccountModal.style.display = 'none';
+                if(adminModal) adminModal.style.display = 'flex';
+             };
+             const h4 = accountModalContent.querySelector('h4');
+             if(h4) accountModalContent.insertBefore(btn, h4);
+           }
         }
       } else {
          if (adminBtnInModal) adminBtnInModal.remove();
@@ -825,7 +920,7 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 10. لوحة التحكم للإدارة (متضمنة الإحصائيات، السلايدر، والأقسام)
+// 10. لوحة التحكم للإدارة
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
@@ -918,8 +1013,10 @@ window.injectAdminDashboard = () => {
       <div id="adminProductsList"></div>
     </div>
   `;
-  document.getElementById('adminDashboardView').style.display = 'block';
-  document.getElementById('adminLoginView').style.display = 'none';
+  const adminDashboardView = document.getElementById('adminDashboardView');
+  const adminLoginView = document.getElementById('adminLoginView');
+  if(adminDashboardView) adminDashboardView.style.display = 'block';
+  if(adminLoginView) adminLoginView.style.display = 'none';
 };
 
 // ==========================================
@@ -1100,8 +1197,8 @@ window.saveGeneralSettings = async () => {
   };
   try {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), config, { merge: true });
-    showToast('💾 تم حفظ الإعدادات بنجاح!', 'success');
-  } catch (e) { showToast('فشل الحفظ', 'error'); }
+    window.showToast('💾 تم حفظ الإعدادات بنجاح!', 'success');
+  } catch (e) { window.showToast('فشل الحفظ', 'error'); }
 };
 
 window.renderAdminOrders = () => {
@@ -1138,25 +1235,38 @@ window.renderAdminOrders = () => {
 };
 
 window.updateOrderStatus = async (orderId, status) => {
-  const codeInput = document.getElementById(`code_${orderId}`).value;
+  const codeInput = document.getElementById(`code_${orderId}`);
+  if(!codeInput) return;
+  const code = codeInput.value;
   try {
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), { status, deliveredCode: codeInput, updatedAt: serverTimestamp() });
-    showToast('تم تحديث الطلب بنجاح!', 'success');
-  } catch(e) { showToast('خطأ في التحديث', 'error'); }
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), { status, deliveredCode: code, updatedAt: serverTimestamp() });
+    window.showToast('تم تحديث الطلب بنجاح!', 'success');
+  } catch(e) { window.showToast('خطأ في التحديث', 'error'); }
 };
 
 window.saveProduct = async () => {
   if (!checkIsAdmin()) return;
-  const title = document.getElementById('newProdTitle').value;
-  const price = Number(document.getElementById('newProdPrice').value);
-  const oldPrice = Number(document.getElementById('newProdOldPrice').value) || 0;
-  const stockQuantity = Number(document.getElementById('newProdStock').value) || 0;
-  const category = document.getElementById('newProdCat').value;
-  const badge = document.getElementById('newProdBadge').value || 'متوفر';
-  const imgUrl = document.getElementById('newProdImgUrl').value;
-  const desc = document.getElementById('newProdDesc').value;
+  const titleInput = document.getElementById('newProdTitle');
+  const priceInput = document.getElementById('newProdPrice');
+  const oldPriceInput = document.getElementById('newProdOldPrice');
+  const stockInput = document.getElementById('newProdStock');
+  const catInput = document.getElementById('newProdCat');
+  const badgeInput = document.getElementById('newProdBadge');
+  const imgUrlInput = document.getElementById('newProdImgUrl');
+  const descInput = document.getElementById('newProdDesc');
 
-  if (!title || price <= 0) return showToast('تأكد من اسم المنتج والسعر!', 'error');
+  if(!titleInput || !priceInput) return;
+
+  const title = titleInput.value;
+  const price = Number(priceInput.value);
+  const oldPrice = Number(oldPriceInput?.value) || 0;
+  const stockQuantity = Number(stockInput?.value) || 0;
+  const category = catInput?.value || 'games';
+  const badge = badgeInput?.value || 'متوفر';
+  const imgUrl = imgUrlInput?.value || '';
+  const desc = descInput?.value || '';
+
+  if (!title || price <= 0) return window.showToast('تأكد من اسم المنتج والسعر!', 'error');
 
   const prodData = {
     title, desc, price, oldPrice, category, badge, imgUrl, inStock: stockQuantity > 0, stockQuantity
@@ -1165,17 +1275,17 @@ window.saveProduct = async () => {
   try {
     if (editingProductId) {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', editingProductId), prodData);
-      showToast('✏️ تم تعديل المنتج بنجاح!', 'success');
+      window.showToast('✏️ تم تعديل المنتج بنجاح!', 'success');
       window.cancelEdit();
     } else {
       const prodId = Date.now().toString();
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prodId), prodData);
-      showToast('📦 تمت إضافة المنتج!', 'success');
+      window.showToast('📦 تمت إضافة المنتج!', 'success');
       document.querySelectorAll('#productFormSection input, #productFormSection textarea').forEach(el => {
         if(el.id.startsWith('newProd')) el.value = '';
       });
     }
-  } catch (e) { showToast('فشل العملية', 'error'); }
+  } catch (e) { window.showToast('فشل العملية', 'error'); }
 };
 
 window.editProduct = (id) => {
@@ -1228,8 +1338,8 @@ window.renderAdminProducts = () => {
 
 window.deleteProduct = async (id) => {
   if (!checkIsAdmin() || !confirm('تأكيد الحذف؟')) return;
-  try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); showToast('تم الحذف', 'success'); } 
-  catch (e) { showToast('فشل الحذف', 'error'); }
+  try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); window.showToast('تم الحذف', 'success'); } 
+  catch (e) { window.showToast('فشل الحذف', 'error'); }
 };
 
 initApp();
