@@ -201,7 +201,8 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
 .admin-section { border: 1px solid var(--border-color); padding: 16px; border-radius: 10px; margin-bottom: 20px; background: #0b0b10; }
 .admin-section h4 { color: var(--accent-neon); margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
 .admin-item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #14141d; border: 1px solid var(--border-color); border-radius: 7px; margin-bottom: 8px; font-size: 13px; gap: 8px; flex-wrap: wrap; }
-.delete-btn { background: var(--danger); color: #fff; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
+.delete-btn { background: var(--danger); color: #fff; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+.delete-btn:hover { background: #cc0000; box-shadow: 0 0 10px rgba(255, 68, 68, 0.5); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .my-orders-box { background: #14141d; border: 1px solid var(--border-color); border-radius: 9px; padding: 14px; margin-bottom: 12px; }
 .order-status-pending { color: #ffcc00; font-weight: bold; }
@@ -282,4 +283,100 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
   animation: pulseDot 1.5s infinite;
   border-radius: 50%;
   text-shadow: 0 0 5px red;
+}
+
+/* ==========================================
+   🚀 15. إضافات التحديث الجديد (سلة المشتريات، التكبير، والتحميل)
+   ========================================== */
+
+/* أيقونة التحميل (Spinner) */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* تنسيقات عناصر سلة المشتريات */
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #14141d;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.cart-item-info {
+  flex: 1;
+}
+.cart-item-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+.cart-item-price {
+  font-size: 13px;
+  color: var(--accent-neon);
+}
+.remove-cart-btn {
+  background: rgba(255, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.remove-cart-btn:hover {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+}
+
+/* الروابط التفاعلية في الوصف */
+.details-desc a {
+  color: var(--accent-neon);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent-neon);
+  transition: all 0.2s;
+}
+.details-desc a:hover {
+  color: #fff;
+  border-bottom-color: #fff;
+  text-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* تنسيق زر عرض المزيد للإدارة */
+.load-more-btn {
+  background: rgba(0, 255, 204, 0.08);
+  color: var(--accent-neon);
+  border: 1px dashed var(--accent-neon);
+  padding: 10px;
+  width: 100%;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  margin-top: 10px;
+  transition: all 0.2s;
+}
+.load-more-btn:hover {
+  background: var(--accent-neon);
+  color: #000;
+  box-shadow: 0 0 15px var(--accent-glow);
 }
