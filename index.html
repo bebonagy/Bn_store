@@ -12,18 +12,22 @@
 <meta property="og:url" content="https://bn-store-eg.vercel.app/">
 <meta property="og:type" content="website">
 
-<!-- 🛡️ 1. سياسة أمان المحتوى (CSP) لحماية الموقع من السكربتات الخبيثة -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;">
+<!-- 🛡️ سياسة أمان المحتوى (CSP) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
 <!-- SEO Meta Tags -->
 <meta name="description" content="متجر B.n Store - وجهتك الأولى والموثوقة لشحن الألعاب، اشتراكات الذكاء الاصطناعي (ChatGPT, Canva, CapCut)، والخدمات الرقمية.">
 <meta name="theme-color" content="#00ffcc">
 
-<!-- 🔗 2. ربط ملف التصميمات المنفصل -->
+<!-- 🔗 ربط ملف التصميمات المنفصل -->
 <link rel="stylesheet" href="style.css">
 
-<!-- 🛡️ 3. حماية ضد الـ Clickjacking (منع تأطير الموقع) -->
+<!-- 🌟 مكتبات إضافية (Confetti للاحتفال + EmailJS للبريد) -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- 🛡️ حماية ضد الـ Clickjacking -->
 <style id="antiClickjack">body{display:none !important;}</style>
 <script>
   if (self === top) {
@@ -56,7 +60,11 @@
       <option value="USD">USD ($)</option>
     </select>
     <div id="authHeaderButtons">
-      <button type="button" class="user-action-btn" id="loginBtnNav">👤 تسجيل الدخول</button>
+      <!-- 🔴 مؤشر الإشعارات أضيف هنا بجوار تسجيل الدخول -->
+      <button type="button" class="user-action-btn" id="loginBtnNav" style="position: relative;">
+        👤 <span id="loginBtnText">تسجيل الدخول</span>
+        <span id="notificationDot" style="display:none; position:absolute; top:-5px; right:-5px; font-size:10px;">🔴</span>
+      </button>
     </div>
     <button type="button" class="admin-trigger-btn" id="adminBtnNav" style="display:none;">⚙️ الإدارة</button>
   </nav>
@@ -115,7 +123,12 @@
           <!-- زر إضافة للمفضلة -->
           <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">🤍</button>
           
-          <h2 id="detailTitle" class="details-title" style="padding-left: 60px;"></h2>
+          <!-- عنوان المنتج + زر المشاركة الجديد -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-left: 60px; margin-bottom: 10px;">
+            <h2 id="detailTitle" class="details-title" style="margin-bottom: 0;"></h2>
+            <button type="button" id="shareProductBtn" style="background: rgba(0,153,255,.1); color: #0099ff; border: 1px solid #0099ff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 18px; transition: all 0.3s;" title="مشاركة المنتج">📤</button>
+          </div>
+          
           <span class="product-badge" id="detailBadge" style="position:relative; display:inline-block; margin-bottom:15px;"></span>
           
           <div class="product-price-box" style="margin-bottom:20px;">
@@ -133,20 +146,30 @@
         </div>
       </div>
 
+      <!-- المنتجات ذات الصلة (إضافة جديدة) -->
+      <div style="width: 100%; margin-top: 35px;">
+        <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 18px;">🔥 قد يعجبك أيضاً</h3>
+        <div id="relatedProductsGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; min-height: unset; margin-bottom: 0;"></div>
+      </div>
+
       <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 25px;">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;">💬 تقييمات وآراء العملاء</h3>
         <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
           <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">أضف تقييمك للمنتج</h4>
-          <div class="form-group" style="margin-bottom: 10px;">
-            <label>التقييم بالنجوم</label>
-            <select id="reviewRating" style="background: #14141d; color: #fff; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); width: 150px;">
-              <option value="5">⭐⭐⭐⭐⭐ (ممتاز)</option>
-              <option value="4">⭐⭐⭐⭐ (جيد جداً)</option>
-              <option value="3">⭐⭐⭐ (مقبول)</option>
-              <option value="2">⭐⭐ (سيء)</option>
-              <option value="1">⭐ (سيء جداً)</option>
-            </select>
+          
+          <!-- التقييم التفاعلي بالنجوم (إضافة جديدة) -->
+          <div class="form-group" style="margin-bottom: 15px;">
+            <label style="margin-bottom: 8px;">تقييمك بالنجوم</label>
+            <div id="interactiveStars" style="display: inline-flex; gap: 8px; font-size: 24px; cursor: pointer; direction: ltr;">
+              <span class="star" data-value="1" style="filter: grayscale(100%);">⭐</span>
+              <span class="star" data-value="2" style="filter: grayscale(100%);">⭐</span>
+              <span class="star" data-value="3" style="filter: grayscale(100%);">⭐</span>
+              <span class="star" data-value="4" style="filter: grayscale(100%);">⭐</span>
+              <span class="star" data-value="5" style="filter: grayscale(0%);">⭐</span> <!-- افتراضياً 5 نجوم -->
+            </div>
+            <input type="hidden" id="reviewRating" value="5">
           </div>
+
           <div class="form-group" style="margin-bottom: 10px;">
             <textarea id="reviewCommentText" rows="2" placeholder="اكتب تعليقك أو تجربتك بعد شراء المنتج..." style="width: 100%; background: #14141d; color: #fff; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);"></textarea>
           </div>
