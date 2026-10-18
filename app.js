@@ -549,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
   });
 
-  // 🌟 تفعيل زر استعادة كلمة المرور
+  // 🌟 زر استعادة كلمة المرور المحدث
   const resetPassBtn = document.getElementById('resetPassBtn');
   if (resetPassBtn) {
     resetPassBtn.addEventListener('click', async (e) => {
@@ -567,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 🌐 تفعيل زر تسجيل الدخول بواسطة Google
+  // 🌐 زر تسجيل الدخول بواسطة Google المحسّن (مع معالجة ذكية للأخطاء)
   const googleLoginBtn = document.getElementById('googleLoginBtn');
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
@@ -583,7 +583,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('authModal').style.display = 'none';
         window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
       } catch (error) {
-        window.showToast('فشل تسجيل الدخول بـ Google، تأكد من تفعيله في Firebase', 'error');
+        console.error("Google Auth Error:", error);
+        if (error.code === 'auth/popup-closed-by-user') {
+          window.showToast('تم إغلاق نافذة تسجيل الدخول.', 'normal');
+        } else {
+          window.showToast('فشل تسجيل الدخول بـ Google، تأكد من إعدادات النطاق في Firebase', 'error');
+        }
       }
     });
   }
