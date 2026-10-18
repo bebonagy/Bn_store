@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, getDoc, query, where, serverTimestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
 // 1. الإعدادات الأساسية (Firebase)
@@ -33,12 +33,12 @@ let storeState = {
   promoCode: "BN10",
   promoDiscount: 10,
   payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
-  slides: [],
   products: [],
   orders: []
 };
 let currentUserProfile = null;
 let currentProductId = null;
+let unsubscribeOrders = null; // لفصل الاتصال عند تسجيل الخروج
 
 window.showToast = (msg, type = 'normal') => {
   const container = document.getElementById('toastContainer');
@@ -85,7 +85,6 @@ window.renderProducts = () => {
   filtered.forEach(prod => {
     const convertedPrice = (prod.price * rate).toFixed(currency === 'EGP' ? 0 : 2);
     const convertedOld = (prod.oldPrice && prod.oldPrice > prod.price) ? (prod.oldPrice * rate).toFixed(currency === 'EGP' ? 0 : 2) : '';
-    // حساب التوفر بناءً على المخزون (لو موجود)
     const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
     
     const card = document.createElement('div');
@@ -131,14 +130,8 @@ window.openProductDetails = (id) => {
   document.getElementById('detailBadge').textContent = prod.badge;
   
   const imgBox = document.getElementById('detailImageBox');
-  if(prod.imgUrl) {
-    imgBox.style.backgroundImage = `url('${prod.imgUrl}')`;
-    imgBox.style.border = 'none';
-    imgBox.textContent = '';
-  } else {
-    imgBox.style.backgroundImage = 'none';
-    imgBox.textContent = prod.imgText || prod.title;
-  }
+  if(prod.imgUrl) { imgBox.style.backgroundImage = `url('${prod.imgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; }
+  else { imgBox.style.backgroundImage = 'none'; imgBox.textContent = prod.imgText || prod.title; }
 
   const stockEl = document.getElementById('detailStock');
   const buyBtn = document.getElementById('detailBuyBtn');
@@ -160,7 +153,7 @@ window.openProductDetails = (id) => {
 };
 
 // ==========================================
-// 4. ربط الأحداث العامة (Events)
+// 4. ربط الأحداث العامة وأنظمة الدخول
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.category-btn').forEach(btn => {
@@ -173,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('searchInput').addEventListener('input', window.renderProducts);
   document.getElementById('currencySelect').addEventListener('change', window.renderProducts);
+  
   document.getElementById('detailBuyBtn').addEventListener('click', () => {
     if(currentProductId) document.getElementById('checkoutModal').style.display = 'flex';
   });
@@ -191,15 +185,108 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.getElementById('adminBtnNav').addEventListener('click', () => {
-    document.getElementById('adminModal').style.display = 'flex';
+  document.getElementById('showRegisterBtn').addEventListener('click', () => {
+    document.getElementById('authViewLogin').style.display = 'none';
+    document.getElementById('authViewRegister').style.display = 'block';
+    document.getElementById('authModalTitle').textContent = 'إنشاء حساب جديد';
+  });
+  
+  document.getElementById('showLoginBtn').addEventListener('click', () => {
+    document.getElementById('authViewLogin').style.display = 'block';
+    document.getElementById('authViewRegister').style.display = 'none';
+    document.getElementById('authModalTitle').textContent = 'تسجيل الدخول';
+  });
+
+  // أوامر الدخول والخروج (بدون إعادة تحميل الصفحة)
+  document.getElementById('doLoginBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    if (!email || !pass) return window.showToast('أدخل البريد وكلمة المرور!', 'error');
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      document.getElementById('authModal').style.display = 'none';
+      window.showToast('تم تسجيل الدخول بنجاح!', 'success');
+    } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
+  });
+
+  document.getElementById('doRegisterBtn').addEventListener('click', async () => {
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const pass = document.getElementById('regPass').value;
+    const confirm = document.getElementById('regPassConfirm').value;
+    if (!name || !email || !pass) return window.showToast('أكمل جميع البيانات!', 'error');
+    if (pass !== confirm) return window.showToast('كلمة المرور غير متطابقة!', 'error');
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), {
+        uid: cred.user.uid, name, email, createdAt: serverTimestamp()
+      });
+      document.getElementById('authModal').style.display = 'none';
+      window.showToast('تم إنشاء الحساب بنجاح!', 'success');
+    } catch (e) { window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); }
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try {
+      await signOut(auth);
+      document.getElementById('userAccountModal').style.display = 'none';
+      window.showToast('تم تسجيل الخروج بنجاح!', 'success');
+    } catch (e) { window.showToast('حدث خطأ!', 'error'); }
+  });
+
+  // إرسال طلب الشراء (الخانات الفعلية)
+  document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUserProfile || !currentProductId) return;
+
+    const prod = storeState.products.find(p => p.id === currentProductId);
+    if (!prod || !prod.inStock || prod.stockQuantity <= 0) return window.showToast('الكمية نفذت!', 'error');
+
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const senderInfo = sanitizeText(document.getElementById('senderInfo').value);
+    const customerData = sanitizeText(document.getElementById('customerData').value);
+
+    try {
+      const orderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
+      await setDoc(orderRef, {
+        uid: currentUserProfile.uid,
+        userEmail: currentUserProfile.email,
+        productId: prod.id,
+        productName: prod.title,
+        price: prod.price,
+        paymentMethod,
+        senderInfo,
+        customerData,
+        status: 'pending',
+        deliveredCode: '',
+        createdAt: serverTimestamp()
+      });
+
+      // خصم قطعة من المخزون
+      const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id);
+      await updateDoc(prodRef, {
+        stockQuantity: prod.stockQuantity - 1,
+        inStock: (prod.stockQuantity - 1) > 0
+      });
+
+      document.getElementById('checkoutModal').style.display = 'none';
+      document.getElementById('checkoutForm').reset();
+      window.showToast('🎉 تم إرسال طلبك بنجاح! راجع "حسابي" لمتابعته.', 'success');
+    } catch (err) {
+      window.showToast('حدث خطأ أثناء إرسال الطلب، تأكد من اتصالك.', 'error');
+    }
   });
 });
 
 // ==========================================
-// 5. جلب البيانات من السيرفر (Firestore Sync)
+// 5. المزامنة مع السيرفر وتحديث الواجهة
 // ==========================================
 const initApp = () => {
+  // إخفاء زر الإدارة الخارجي نهائياً (حتى لو موجود في الـ HTML بالخطأ)
+  const externalAdminBtn = document.getElementById('adminBtnNav');
+  if(externalAdminBtn) externalAdminBtn.style.display = 'none';
+
   onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), snap => {
     const products = [];
     snap.forEach(doc => products.push({ id: doc.id, ...doc.data() }));
@@ -222,29 +309,101 @@ const initApp = () => {
 
   onAuthStateChanged(auth, async (user) => {
     const loginBtn = document.getElementById('loginBtnNav');
-    const adminBtn = document.getElementById('adminBtnNav');
     
     if (user) {
-      currentUserProfile = { uid: user.uid, email: user.email };
+      currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم' };
       loginBtn.textContent = `👤 حسابي`;
       loginBtn.style.color = 'var(--accent-neon)';
       
+      const accountUserName = document.getElementById('accountUserName');
+      if(accountUserName) accountUserName.textContent = currentUserProfile.name;
+
+      // حقن زر الإدارة المدمج داخل مودال "حسابي" للأدمن فقط
+      let adminBtnInModal = document.getElementById('adminBtnInModal');
       if (checkIsAdmin()) {
-        adminBtn.style.display = 'inline-block';
         window.injectAdminDashboard();
         window.loadAdminData();
+        if (!adminBtnInModal) {
+           const accountModalContent = document.querySelector('#userAccountModal .modal-content');
+           const btn = document.createElement('button');
+           btn.id = 'adminBtnInModal';
+           btn.className = 'submit-btn';
+           btn.style.cssText = 'width:100%; margin-bottom:15px; background:#0099ff; color:#fff; font-size:16px; box-shadow:0 0 15px rgba(0,153,255,0.4);';
+           btn.innerHTML = '⚙️ الدخول للوحة تحكم الإدارة';
+           btn.onclick = () => {
+              document.getElementById('userAccountModal').style.display = 'none';
+              document.getElementById('adminModal').style.display = 'flex';
+           };
+           const h4 = accountModalContent.querySelector('h4');
+           accountModalContent.insertBefore(btn, h4);
+        }
+      } else {
+         if (adminBtnInModal) adminBtnInModal.remove();
       }
+
+      // سحب الطلبات (طلبات العميل لوحدها، وكل الطلبات لو أدمن)
+      if (unsubscribeOrders) unsubscribeOrders();
+      const ordersRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+      const q = checkIsAdmin() ? query(ordersRef, orderBy('createdAt', 'desc'), limit(50)) : query(ordersRef, where('uid', '==', user.uid));
+      
+      unsubscribeOrders = onSnapshot(q, snap => {
+         const ords = [];
+         snap.forEach(d => ords.push({id: d.id, ...d.data()}));
+         storeState.orders = ords.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+         window.renderUserOrders();
+         if(checkIsAdmin()) window.renderAdminOrders();
+      });
+
     } else {
       currentUserProfile = null;
       loginBtn.textContent = '👤 تسجيل الدخول';
       loginBtn.style.color = '';
-      adminBtn.style.display = 'none';
+      
+      let adminBtnInModal = document.getElementById('adminBtnInModal');
+      if (adminBtnInModal) adminBtnInModal.remove();
+      
+      if (unsubscribeOrders) { unsubscribeOrders(); unsubscribeOrders = null; }
+      storeState.orders = [];
+      window.renderUserOrders();
     }
   });
 };
 
 // ==========================================
-// 6. لوحة تحكم الإدارة الكاملة (Admin Dashboard Logic)
+// 6. عرض طلبات المستخدم (User Orders)
+// ==========================================
+window.renderUserOrders = () => {
+  const list = document.getElementById('userOrdersList');
+  if (!list) return;
+  list.replaceChildren();
+  
+  const myOrders = storeState.orders.filter(o => currentUserProfile && o.uid === currentUserProfile.uid);
+  
+  if (!myOrders.length) {
+     list.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">لا توجد طلبات سابقة حتى الآن.</p>';
+     return;
+  }
+  
+  myOrders.forEach(o => {
+     const div = document.createElement('div');
+     div.className = 'my-orders-box';
+     const statusColor = o.status === 'completed' ? 'var(--success)' : o.status === 'cancelled' ? 'var(--danger)' : '#ffcc00';
+     const statusAr = o.status === 'completed' ? 'مكتمل ✅' : o.status === 'cancelled' ? 'ملغي ❌' : 'قيد المراجعة ⏳';
+     
+     div.innerHTML = `
+       <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+         <strong>${o.productName} (${o.price} EGP)</strong>
+         <span style="color:${statusColor}; font-weight:bold; font-size:13px;">${statusAr}</span>
+       </div>
+       <div style="font-size:12px; color:var(--text-muted);">رقم الاستلام: ${o.customerData} | الدفع: ${o.paymentMethod}</div>
+       ${o.status === 'completed' && o.deliveredCode ? `<div class="delivered-code-box">🎁 كود التفعيل: <strong>${o.deliveredCode}</strong></div>` : ''}
+     `;
+     list.appendChild(div);
+  });
+};
+
+// ==========================================
+// 7. لوحة تحكم الإدارة (Admin Dashboard Logic)
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
@@ -262,6 +421,12 @@ window.injectAdminDashboard = () => {
       <button type="button" class="submit-btn" style="width:100%;" onclick="window.saveGeneralSettings()">💾 حفظ الإعدادات</button>
     </div>
 
+    <!-- إدارة طلبات العملاء (جديد) -->
+    <div class="admin-section">
+      <h4>📋 إدارة طلبات العملاء</h4>
+      <div id="adminOrdersList" style="max-height:350px; overflow-y:auto;"></div>
+    </div>
+
     <!-- إضافة منتج جديد -->
     <div class="admin-section">
       <h4>📦 إضافة منتج جديد (بالمخزون)</h4>
@@ -270,24 +435,19 @@ window.injectAdminDashboard = () => {
         <div class="form-group"><label>السعر (EGP)</label><input type="number" id="newProdPrice"></div>
         <div class="form-group"><label>السعر المشطوب</label><input type="number" id="newProdOldPrice"></div>
         <div class="form-group"><label>القسم</label>
-          <select id="newProdCat">
-            <option value="games">ألعاب</option>
-            <option value="subs">اشتراكات</option>
-            <option value="ai">ذكاء اصطناعي</option>
-            <option value="software">برامج</option>
-          </select>
+          <select id="newProdCat"><option value="games">ألعاب</option><option value="subs">اشتراكات</option><option value="ai">ذكاء اصطناعي</option><option value="software">برامج</option></select>
         </div>
-        <div class="form-group"><label>الكمية المتاحة (عدد القطع)</label><input type="number" id="newProdStock" placeholder="أدخل عدد القطع (مثال: 50)"></div>
+        <div class="form-group"><label>الكمية المتاحة (قطع)</label><input type="number" id="newProdStock" placeholder="أدخل عدد القطع (مثال: 50)"></div>
         <div class="form-group"><label>الشارة (Badge)</label><input type="text" id="newProdBadge" placeholder="تسليم فوري"></div>
       </div>
       <div class="form-group"><label>رابط الصورة (HTTPS)</label><input type="text" id="newProdImgUrl"></div>
       <div class="form-group"><label>وصف المنتج</label><textarea id="newProdDesc" rows="2"></textarea></div>
-      <button type="button" class="submit-btn" style="width:100%;" onclick="window.addNewProduct()">➕ إضافة المنتج للمتجر</button>
+      <button type="button" class="submit-btn" style="width:100%;" onclick="window.addNewProduct()">➕ إضافة المنتج</button>
     </div>
 
     <!-- إدارة المنتجات الحالية -->
     <div class="admin-section">
-      <h4>📦 المنتجات الحالية (التحكم)</h4>
+      <h4>📦 المنتجات الحالية</h4>
       <div id="adminProductsList"></div>
     </div>
   `;
@@ -302,6 +462,7 @@ window.loadAdminData = () => {
   document.getElementById('admVodafone').value = storeState.payments?.vodafone || '';
   document.getElementById('admCrypto').value = storeState.payments?.crypto || '';
   window.renderAdminProducts();
+  window.renderAdminOrders();
 };
 
 window.saveGeneralSettings = async () => {
@@ -309,16 +470,48 @@ window.saveGeneralSettings = async () => {
   const config = {
     bannerAr: document.getElementById('admBannerAr').value,
     whatsapp: document.getElementById('admWhatsapp').value,
-    payments: {
-      instapay: document.getElementById('admInstapay').value,
-      vodafone: document.getElementById('admVodafone').value,
-      crypto: document.getElementById('admCrypto').value
-    }
+    payments: { instapay: document.getElementById('admInstapay').value, vodafone: document.getElementById('admVodafone').value, crypto: document.getElementById('admCrypto').value }
   };
   try {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), config, { merge: true });
-    showToast('💾 تم حفظ الإعدادات بنجاح!', 'success');
+    showToast('💾 تم حفظ الإعدادات!', 'success');
   } catch (e) { showToast('فشل الحفظ', 'error'); }
+};
+
+// إدارة الطلبات للأدمن (جديد)
+window.renderAdminOrders = () => {
+  const list = document.getElementById('adminOrdersList');
+  if (!list) return;
+  list.replaceChildren();
+  if (!storeState.orders.length) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">لا توجد طلبات حتى الآن.</p>'; return; }
+  
+  storeState.orders.forEach(o => {
+     const div = document.createElement('div');
+     div.className = 'admin-item-row';
+     div.style.flexDirection = 'column';
+     div.style.alignItems = 'flex-start';
+     div.innerHTML = `
+       <div style="width:100%; margin-bottom:8px; line-height:1.6;">
+         <strong>الطلب:</strong> ${o.productName} | <strong>الإيميل:</strong> ${o.userEmail}<br>
+         <small><strong>المحفظة المحول منها:</strong> ${o.senderInfo} | <strong>بيانات الاستلام للعميل:</strong> ${o.customerData}</small><br>
+         <small><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>
+       </div>
+       <div style="display:flex; gap:8px; width:100%; flex-wrap:wrap;">
+         <input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل للعميل هنا..." value="${o.deliveredCode || ''}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b10; color:#fff; border:1px solid var(--border-color);">
+         <button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button>
+         <button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button>
+       </div>
+     `;
+     list.appendChild(div);
+  });
+};
+
+window.updateOrderStatus = async (orderId, status) => {
+  const codeInput = document.getElementById(`code_${orderId}`).value;
+  try {
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), { status, deliveredCode: codeInput, updatedAt: serverTimestamp() });
+    showToast('تم تحديث الطلب بنجاح!', 'success');
+  } catch(e) { showToast('خطأ في التحديث', 'error'); }
 };
 
 window.addNewProduct = async () => {
@@ -326,7 +519,7 @@ window.addNewProduct = async () => {
   const title = document.getElementById('newProdTitle').value;
   const price = Number(document.getElementById('newProdPrice').value);
   const oldPrice = Number(document.getElementById('newProdOldPrice').value) || 0;
-  const stockQuantity = Number(document.getElementById('newProdStock').value) || 0; // نظام المخزون الجديد
+  const stockQuantity = Number(document.getElementById('newProdStock').value) || 0;
   const category = document.getElementById('newProdCat').value;
   const badge = document.getElementById('newProdBadge').value || 'متوفر';
   const imgUrl = document.getElementById('newProdImgUrl').value;
@@ -335,42 +528,31 @@ window.addNewProduct = async () => {
   if (!title || price <= 0) return showToast('تأكد من اسم المنتج والسعر!', 'error');
 
   const prodId = Date.now().toString();
-  const newProd = {
-    title, desc, price, oldPrice, category, badge, imgUrl,
-    inStock: stockQuantity > 0, // هيكون متوفر بس لو العدد أكبر من صفر
-    stockQuantity: stockQuantity
-  };
-
   try {
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prodId), newProd);
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prodId), {
+      title, desc, price, oldPrice, category, badge, imgUrl, inStock: stockQuantity > 0, stockQuantity
+    });
     showToast('📦 تمت إضافة المنتج!', 'success');
-  } catch (e) { showToast('فشل إضافة المنتج', 'error'); }
+  } catch (e) { showToast('فشل الإضافة', 'error'); }
 };
 
 window.renderAdminProducts = () => {
   const list = document.getElementById('adminProductsList');
   if (!list) return;
   list.replaceChildren();
-  
   storeState.products.forEach(p => {
     const row = document.createElement('div');
     row.className = 'admin-item-row';
     const statusText = p.inStock && p.stockQuantity > 0 ? `متاح ✅ (${p.stockQuantity} قطعة)` : 'نفذت الكمية ⛔';
-    
-    row.innerHTML = `
-      <span style="flex:1;">${p.title} - ${p.price}EGP | <strong>${statusText}</strong></span>
-      <button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button>
-    `;
+    row.innerHTML = `<span style="flex:1; line-height:1.6;">${p.title} - ${p.price}EGP <br><small><strong>${statusText}</strong></small></span> <button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button>`;
     list.appendChild(row);
   });
 };
 
 window.deleteProduct = async (id) => {
   if (!checkIsAdmin() || !confirm('تأكيد الحذف؟')) return;
-  try {
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id));
-    showToast('تم الحذف', 'success');
-  } catch (e) { showToast('فشل الحذف', 'error'); }
+  try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); showToast('تم الحذف', 'success'); } 
+  catch (e) { showToast('فشل الحذف', 'error'); }
 };
 
 initApp();
