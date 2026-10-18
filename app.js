@@ -23,7 +23,7 @@ const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
 const sanitizeText = (val, maxLen = 500) => String(val ?? '').replace(/[<>]/g, '').trim().slice(0, maxLen);
 
-// تنسيق التاريخ والوقت
+// تنسيق التاريخ والوقت ليظهر بشكل مقروء
 const formatDate = (timestamp) => {
   if (!timestamp) return '';
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -130,7 +130,7 @@ const initCountdown = (expiryString) => {
 
     if (distance <= 0) {
       clearInterval(countdownInterval);
-      bannerEl.style.display = 'none'; // يختفي أوتوماتيك لو الوقت خلص
+      bannerEl.style.display = 'none';
       return;
     }
 
@@ -218,37 +218,39 @@ document.getElementById('prevSlideBtn')?.addEventListener('click', () => {
 window.renderCategoriesBar = () => {
   const bar = document.getElementById('categoriesBar');
   const selectCat = document.getElementById('newProdCat');
-  if (!bar) return;
-
-  bar.replaceChildren();
-  if(selectCat) selectCat.replaceChildren();
-
-  const allBtn = document.createElement('button');
-  allBtn.type = 'button';
-  allBtn.className = 'category-btn active';
-  allBtn.dataset.cat = 'all';
-  allBtn.textContent = '⚡ الكل';
-  allBtn.onclick = (e) => {
-    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
-    e.target.classList.add('active');
-    window.renderProducts();
-  };
-  bar.appendChild(allBtn);
-
-  const cats = storeState.categories || [];
-  cats.forEach(c => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'category-btn';
-    btn.dataset.cat = c.id;
-    btn.textContent = c.name;
-    btn.onclick = (e) => {
+  
+  if (bar) {
+    bar.replaceChildren();
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = 'category-btn active';
+    allBtn.dataset.cat = 'all';
+    allBtn.textContent = '⚡ الكل';
+    allBtn.onclick = (e) => {
       document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
       e.target.classList.add('active');
       window.renderProducts();
     };
-    bar.appendChild(btn);
+    bar.appendChild(allBtn);
+  }
 
+  if(selectCat) selectCat.replaceChildren();
+
+  const cats = storeState.categories || [];
+  cats.forEach(c => {
+    if (bar) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'category-btn';
+      btn.dataset.cat = c.id;
+      btn.textContent = c.name;
+      btn.onclick = (e) => {
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        window.renderProducts();
+      };
+      bar.appendChild(btn);
+    }
     if(selectCat) {
       const opt = document.createElement('option');
       opt.value = c.id;
@@ -411,11 +413,12 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 🌟 6. التقييمات والتعليقات (مع التاريخ)
+// 🌟 6. التقييمات والتعليقات (مع التاريخ وإصلاح الفايربيز)
 // ==========================================
 window.loadProductReviews = (prodId) => {
   if (unsubscribeReviews) unsubscribeReviews();
   const reviewsRef = collection(db, 'artifacts', appId, 'public', 'data', 'reviews');
+  // بنشيل orderBy من هنا عشان متعملش إيرور Index
   const q = query(reviewsRef, where('productId', '==', prodId));
   
   unsubscribeReviews = onSnapshot(q, (snap) => {
@@ -426,6 +429,7 @@ window.loadProductReviews = (prodId) => {
     const revs = [];
     snap.forEach(d => revs.push({ id: d.id, ...d.data() }));
 
+    // الترتيب بيتم هنا برمجياً
     revs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
     const detailBadge = document.getElementById('detailBadge');
@@ -516,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     paymentMethodEl.addEventListener('change', updatePaymentInfoBox);
   }
 
-  // 🌟 معاينة صورة الإيصال للعميل قبل الإرسال
+  // 🌟 معاينة صورة الإيصال
   const receiptFileInput = document.getElementById('receiptFileInput');
   const receiptPreview = document.getElementById('receiptPreview');
   if (receiptFileInput && receiptPreview) {
@@ -524,8 +528,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
-          receiptPreview.src = e.target.result;
+        reader.onload = (event) => {
+          receiptPreview.src = event.target.result;
           receiptPreview.style.display = 'block';
         };
         reader.readAsDataURL(file);
@@ -731,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // --- Auth logic ends ---
 
-  // 🌟 إرسال الطلب + زر الدفع الذكي
+  // 🌟 إرسال الطلب + زر التأكيد الذكي والضغط
   const checkoutForm = document.getElementById('checkoutForm');
   if (checkoutForm) {
     checkoutForm.addEventListener('submit', async (e) => {
@@ -748,7 +752,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const receiptFileInput = document.getElementById('receiptFileInput');
       if (!receiptFileInput || !receiptFileInput.files[0]) return window.showToast('برجاء إرفاق صورة إيصال التحويل!', 'error');
 
-      // زرار التأكيد الذكي (لمنع التكرار)
       const confirmBtn = document.getElementById('confirmOrderBtn');
       const originalBtnText = confirmBtn.textContent;
       confirmBtn.textContent = 'جاري الإرسال ⏳...';
@@ -784,7 +787,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // إخفاء المعاينة وتنظيف الفورم
-        document.getElementById('receiptPreview').style.display = 'none';
+        const previewEl = document.getElementById('receiptPreview');
+        if(previewEl) { previewEl.style.display = 'none'; previewEl.src = ''; }
+        
         document.getElementById('checkoutModal').style.display = 'none';
         checkoutForm.reset();
         activeDiscount = 0; 
@@ -945,7 +950,7 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 🌟 10. لوحة التحكم للإدارة (النسخة المنظمة بالتبويبات)
+// 🌟 10. لوحة التحكم للإدارة (بالتبويبات والأرشيف)
 // ==========================================
 window.initAdminTabs = () => {
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -1068,7 +1073,11 @@ window.injectAdminDashboard = () => {
       </div>
     </div>
   `;
+  
   window.initAdminTabs();
+  
+  // السر هنا عشان القائمة المنسدلة تتملي ومتبقاش فاضية
+  window.renderCategoriesBar();
 };
 
 window.renderAdminStats = () => {
@@ -1160,6 +1169,7 @@ window.updateOrderStatus = async (orderId, status) => {
 
   try {
     const orderRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId);
+    
     // لو الطلب اتلغى، نرجع الكمية للمخزون
     if (status === 'cancelled') {
       const order = storeState.orders.find(o => o.id === orderId);
@@ -1171,6 +1181,7 @@ window.updateOrderStatus = async (orderId, status) => {
         }
       }
     }
+    
     await updateDoc(orderRef, { status, deliveredCode: code, updatedAt: serverTimestamp() });
     window.showToast('تم تحديث الطلب ونقله للأرشيف!', 'success');
   } catch(e) { window.showToast('خطأ في التحديث', 'error'); }
