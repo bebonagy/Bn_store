@@ -21,7 +21,7 @@ const appId = "bn-store-main-app";
 
 const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
-const sanitizeText = (val, maxLen = 250) => String(val ?? '').replace(/[<>]/g, '').trim().slice(0, maxLen);
+const sanitizeText = (val, maxLen = 500) => String(val ?? '').replace(/[<>]/g, '').trim().slice(0, maxLen);
 
 // ==========================================
 // 2. حالة المتجر الأساسية
@@ -35,13 +35,15 @@ let storeState = {
   promoCode: "",
   promoDiscount: 0,
   products: [],
-  orders: []
+  orders: [],
+  reviews: []
 };
 let currentUserProfile = null;
 let currentProductId = null;
 let editingProductId = null; 
 let activeDiscount = 0;
 let unsubscribeOrders = null;
+let unsubscribeReviews = null;
 let countdownInterval = null;
 
 window.showToast = (msg, type = 'normal') => {
@@ -61,7 +63,6 @@ const initCountdown = (expiryString) => {
   const timerEl = document.getElementById('countdownTimer');
   
   if (!bannerEl || !timerEl) return;
-
   if (countdownInterval) clearInterval(countdownInterval);
 
   if (!expiryString) {
@@ -101,7 +102,7 @@ const initCountdown = (expiryString) => {
 };
 
 // ==========================================
-// 4. التنقل وعرض المنتجات
+// 4. التنقل وعرض المنتجات والوصف المنظم
 // ==========================================
 const showView = (viewName) => {
   document.getElementById('homeView').style.display = viewName === 'home' ? 'block' : 'none';
@@ -175,10 +176,33 @@ window.openProductDetails = (id) => {
   const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
 
   document.getElementById('detailTitle').textContent = prod.title;
-  document.getElementById('detailDesc').textContent = prod.desc;
   document.getElementById('detailPrice').textContent = `${convertedPrice} ${currency}`;
   document.getElementById('detailOldPrice').textContent = convertedOld ? `${convertedOld} ${currency}` : '';
   document.getElementById('detailBadge').textContent = prod.badge;
+  
+  // 🌟 معالجة الوصف ليظهر في نقاط منظمة (Bullet Points)
+  const descContainer = document.getElementById('detailDescContainer');
+  if (descContainer) {
+    descContainer.replaceChildren();
+    const rawDesc = prod.desc || '';
+    const descLines = rawDesc.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+    if (descLines.length > 1 || (descLines.length === 1 && descLines[0].startsWith('-'))) {
+      const ul = document.createElement('ul');
+      ul.style.cssText = 'padding-right: 20px; line-height: 1.8; color: var(--text-muted);';
+      descLines.forEach(line => {
+        const li = document.createElement('li');
+        li.textContent = line.replace(/^[-*•]\s*/, '');
+        ul.appendChild(li);
+      });
+      descContainer.appendChild(ul);
+    } else {
+      const p = document.createElement('p');
+      p.textContent = rawDesc;
+      p.style.cssText = 'color: var(--text-muted); line-height: 1.8;';
+      descContainer.appendChild(p);
+    }
+  }
   
   const imgBox = document.getElementById('detailImageBox');
   if(prod.imgUrl) { imgBox.style.backgroundImage = `url('${prod.imgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; }
@@ -200,6 +224,8 @@ window.openProductDetails = (id) => {
     buyBtn.disabled = true;
     buyBtn.classList.add('out-of-stock-badge');
   }
+
+  window.loadProductReviews(id);
   showView('details');
 };
 
@@ -219,7 +245,45 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 5. دالة تحديث بيانات الدفع وإظهار الرقم للعميل
+// 5. نظام التقييمات والتعليقات للمنتج
+// ==========================================
+window.loadProductReviews = (prodId) => {
+  if (unsubscribeReviews) unsubscribeReviews();
+  const reviewsRef = collection(db, 'artifacts', appId, 'public', 'data', 'reviews');
+  const q = query(reviewsRef, where('productId', '==', prodId), orderBy('createdAt', 'desc'));
+  
+  unsubscribeReviews = onSnapshot(q, (snap) => {
+    const list = document.getElementById('productReviewsList');
+    if (!list) return;
+    list.replaceChildren();
+
+    const revs = [];
+    snap.forEach(d => revs.push({ id: d.id, ...d.data() }));
+
+    if (!revs.length) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تقييمات لهذا المنتج حتى الآن. كن أول المقيّمين!</p>';
+      return;
+    }
+
+    revs.forEach(r => {
+      const revBox = document.createElement('div');
+      revBox.style.cssText = 'background: #14141d; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px;';
+      const stars = '⭐'.repeat(Number(r.rating) || 5);
+      
+      revBox.innerHTML = `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <strong style="color: var(--accent-neon);">${sanitizeText(r.userName || 'مستخدم')}</strong>
+          <span>${stars}</span>
+        </div>
+        <p style="color: var(--text-main); line-height: 1.5;">${sanitizeText(r.comment)}</p>
+      `;
+      list.appendChild(revBox);
+    });
+  });
+};
+
+// ==========================================
+// 6. دالة تحديث بيانات الدفع وإظهار الرقم للعميل
 // ==========================================
 const updatePaymentInfoBox = () => {
   const methodSelect = document.getElementById('paymentMethod');
@@ -247,7 +311,7 @@ const updatePaymentInfoBox = () => {
 };
 
 // ==========================================
-// 6. الأحداث والمصادقة والشراء
+// 7. الأحداث والمصادقة والشراء والتقييمات
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.category-btn').forEach(btn => {
@@ -277,6 +341,35 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.clipboard.writeText(addressText).then(() => {
           window.showToast('📋 تم نسخ رقم الحساب بنجاح!', 'success');
         });
+      }
+    });
+  }
+
+  // إضافة تقييم جديد للمنتج
+  const submitReviewBtn = document.getElementById('submitReviewBtn');
+  if (submitReviewBtn) {
+    submitReviewBtn.addEventListener('click', async () => {
+      if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول لإضافة تقييم!', 'error');
+      if (!currentProductId) return;
+
+      const comment = sanitizeText(document.getElementById('reviewCommentText').value);
+      const rating = document.getElementById('reviewRating').value;
+      if (!comment) return window.showToast('اكتب تعليقاً أولاً!', 'error');
+
+      try {
+        const reviewRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'reviews'));
+        await setDoc(reviewRef, {
+          productId: currentProductId,
+          uid: currentUserProfile.uid,
+          userName: currentUserProfile.name,
+          rating: Number(rating),
+          comment,
+          createdAt: serverTimestamp()
+        });
+        document.getElementById('reviewCommentText').value = '';
+        window.showToast('⭐ تم إضافة تقييمك بنجاح!', 'success');
+      } catch (e) {
+        window.showToast('حدث خطأ أثناء إرسال التقييم', 'error');
       }
     });
   }
@@ -340,10 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
       document.getElementById('authModal').style.display = 'none';
-      
       const searchInput = document.getElementById('searchInput');
       if(searchInput) searchInput.value = '';
-
       window.showToast('تم تسجيل الدخول بنجاح!', 'success');
     } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
   });
@@ -420,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         paymentMethod,
         senderInfo,
         customerData,
-        receiptImage: receiptBase64, // تخزين رابط الصورة المشفر داخل بيانات الطلب
+        receiptImage: receiptBase64,
         status: 'pending',
         deliveredCode: '',
         createdAt: serverTimestamp()
@@ -443,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 7. المزامنة والسحب
+// 8. المزامنة والسحب
 // ==========================================
 const initApp = () => {
   const externalAdminBtn = document.getElementById('adminBtnNav');
@@ -475,7 +566,6 @@ const initApp = () => {
       updatePaymentInfoBox();
 
       document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=استفسار:`;
-      
       window.renderProducts(); 
       if(checkIsAdmin()) window.loadAdminData();
     }
@@ -570,20 +660,18 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 8. لوحة التحكم للإدارة (متضمنة عرض صورة الإيصال للأدمن)
+// 9. لوحة التحكم للإدارة (متضمنة رفع الإيصالات وإدارة المنتجات)
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
   container.innerHTML = `
-    <!-- إعدادات شريط العروض والعداد -->
     <div class="admin-section" style="border-color: var(--accent-neon);">
       <h4 style="color: var(--accent-neon);">⚡ إعدادات شريط العروض والعداد التنازلي</h4>
       <div class="form-group"><label>نص الإعلان (البانر)</label><input type="text" id="admBannerAr" placeholder="مثال: ⚡ خصومات الكريسماس الفورية!"></div>
       <div class="form-group"><label>موعد انتهاء العرض (التاريخ والوقت)</label><input type="datetime-local" id="admBannerExpiry" style="background:#0b0b10; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
-      <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">عندما ينتهي هذا الوقت، سيختفي الشريط تلقائياً ولن يعود إلا إذا حددت موعداً جديداً.</p>
+      <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">عندما ينتهي هذا الوقت، سيختفي الشريط تلقائياً.</p>
     </div>
 
-    <!-- إعدادات الخصم -->
     <div class="admin-section">
       <h4>🎁 إعدادات كود الخصم (Promo Code)</h4>
       <div class="grid-2">
@@ -592,7 +680,6 @@ window.injectAdminDashboard = () => {
       </div>
     </div>
 
-    <!-- إعدادات أسعار الصرف -->
     <div class="admin-section">
       <h4>💱 إعدادات أسعار الصرف للعملات</h4>
       <div class="grid-2">
@@ -602,7 +689,6 @@ window.injectAdminDashboard = () => {
       </div>
     </div>
 
-    <!-- إعدادات الدفع والتواصل -->
     <div class="admin-section">
       <h4>📢 إعدادات الدفع والواتساب</h4>
       <div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div>
@@ -614,15 +700,13 @@ window.injectAdminDashboard = () => {
       <button type="button" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ كل الإعدادات والشريط</button>
     </div>
 
-    <!-- إدارة طلبات العملاء وإيصالات التحويل -->
     <div class="admin-section">
       <h4>📋 إدارة طلبات العملاء وإيصالات التحويل</h4>
       <div id="adminOrdersList" style="max-height:450px; overflow-y:auto;"></div>
     </div>
 
-    <!-- إضافة وتعديل منتج -->
     <div class="admin-section" id="productFormSection">
-      <h4>📦 إضافة أو تعديل منتج</h4>
+      <h4>📦 إضافة أو تعديل منتج (اكتب كل نقطة وصف في سطر مستقل)</h4>
       <div class="grid-2">
         <div class="form-group"><label>اسم المنتج</label><input type="text" id="newProdTitle"></div>
         <div class="form-group"><label>السعر الأساسي (EGP)</label><input type="number" id="newProdPrice"></div>
@@ -634,12 +718,11 @@ window.injectAdminDashboard = () => {
         <div class="form-group"><label>الشارة (Badge)</label><input type="text" id="newProdBadge" placeholder="تسليم فوري"></div>
       </div>
       <div class="form-group"><label>رابط الصورة (HTTPS)</label><input type="text" id="newProdImgUrl"></div>
-      <div class="form-group"><label>وصف المنتج</label><textarea id="newProdDesc" rows="2"></textarea></div>
+      <div class="form-group"><label>وصف المنتج (اضغط Enter بين كل نقطة والأخرى)</label><textarea id="newProdDesc" rows="4" placeholder="- ميزة أولى&#10;- ميزة ثانية"></textarea></div>
       <button type="button" class="submit-btn" id="saveProductBtn" style="width:100%;" onclick="window.saveProduct()">➕ إضافة المنتج</button>
       <button type="button" class="cancel-btn" id="cancelEditBtn" style="width:100%; margin-top:10px; display:none;" onclick="window.cancelEdit()">إلغاء التعديل</button>
     </div>
 
-    <!-- إدارة المنتجات الحالية -->
     <div class="admin-section">
       <h4>📦 المنتجات الحالية</h4>
       <div id="adminProductsList"></div>
@@ -686,7 +769,7 @@ window.saveGeneralSettings = async () => {
   };
   try {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), config, { merge: true });
-    showToast('💾 تم حفظ إعدادات العروض والشريط بنجاح!', 'success');
+    showToast('💾 تم حفظ الإعدادات بنجاح!', 'success');
   } catch (e) { showToast('فشل الحفظ', 'error'); }
 };
 
