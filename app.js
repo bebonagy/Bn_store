@@ -219,7 +219,7 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 5. دالة تحديث بيانات الدفع ديناميكياً للعميل (جديد ومحسن)
+// 5. دالة تحديث بيانات الدفع وإظهار الرقم للعميل (تم التعديل للربط الصحيح)
 // ==========================================
 const updatePaymentInfoBox = () => {
   const methodSelect = document.getElementById('paymentMethod');
@@ -228,26 +228,22 @@ const updatePaymentInfoBox = () => {
   const payments = storeState.payments || {};
   let targetVal = "";
 
-  if (method.includes('فودافون') || method.toLowerCase().includes('vodafone')) {
+  if (method.includes('vodafone') || method === 'vodafone') {
     targetVal = payments.vodafone || "رقم فودافون كاش غير مضاف حالياً";
-  } else if (method.includes('إنستا') || method.toLowerCase().includes('instapay')) {
+  } else if (method.includes('instapay') || method === 'instapay') {
     targetVal = payments.instapay || "حساب إنستا باي غير مضاف حالياً";
-  } else if (method.includes('أورنج') || method.toLowerCase().includes('orange')) {
+  } else if (method.includes('orange') || method === 'orange') {
     targetVal = payments.orange || payments.vodafone || "رقم أورنج كاش غير مضاف حالياً";
-  } else if (method.includes('كريبتو') || method.toLowerCase().includes('crypto') || method.includes('usdt')) {
+  } else if (method.includes('crypto') || method === 'crypto') {
     targetVal = payments.crypto || "عنوان محفظة الكريبتو غير مضاف حالياً";
   } else {
     targetVal = "اختر وسيلة دفع صحيحة";
   }
 
-  // البحث عن الحلبة المخصصة لعرض التعليمات وتحديثها بالرقم الصحيح
-  let infoBox = document.getElementById('paymentInstructionText');
-  if (!infoBox) {
-    infoBox = document.querySelector('.payment-instructions-box') || document.querySelector('#checkoutModal .form-group:nth-of-type(4) div');
-  }
-  
-  if (infoBox) {
-    infoBox.innerHTML = `يرجى تحويل المبلغ إلى الحساب التالي: <br><strong style="color:var(--accent-neon); font-size:15px; user-select:all; display:inline-block; margin-top:5px;">${targetVal}</strong>`;
+  // الربط المباشر بالعنصر الصحيح الموجود في الـ HTML
+  const addressDisplay = document.getElementById('paymentAddressDisplay');
+  if (addressDisplay) {
+    addressDisplay.textContent = targetVal;
   }
 };
 
@@ -272,13 +268,29 @@ document.addEventListener('DOMContentLoaded', () => {
     paymentMethodEl.addEventListener('change', updatePaymentInfoBox);
   }
 
+  // تفعيل زر النسخ السريع لرقم المحفظة
+  const copyBtn = document.getElementById('copyBtnText');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const addressText = document.getElementById('paymentAddressDisplay')?.textContent;
+      if (addressText && addressText.includes('غير مضاف')) {
+        return window.showToast('لا يوجد رقم للنسخ حالياً', 'error');
+      }
+      if (addressText) {
+        navigator.clipboard.writeText(addressText).then(() => {
+          window.showToast('📋 تم نسخ رقم الحساب بنجاح!', 'success');
+        });
+      }
+    });
+  }
+
   document.getElementById('detailBuyBtn').addEventListener('click', () => {
     if(currentProductId) {
       activeDiscount = 0; 
       document.getElementById('promoCodeInput').value = '';
       document.getElementById('promoMsg').textContent = '';
       updateCheckoutPriceDisplay();
-      updatePaymentInfoBox(); // تحديث بيانات الدفع عند فتح نافذة الشراء
+      updatePaymentInfoBox(); // تحديث أرقام المحافظ عند فتح نافذة الشراء
       document.getElementById('checkoutModal').style.display = 'flex';
     }
   });
