@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>B.n Store | شحن ألعاب، اشتراكات الذكاء الاصطناعي، والخدمات الرقمية بأفضل سعر</title>
 
+<!-- 🌐 تخصيص روابط المشاركة (Open Graph SEO) -->
+<meta property="og:title" content="B.n Store | المتجر الرقمي الأول">
+<meta property="og:description" content="وجهتك الأولى لشحن الألعاب، اشتراكات الذكاء الاصطناعي، والخدمات الرقمية بأفضل وأرخص الأسعار.">
+<meta property="og:image" content="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200">
+<meta property="og:url" content="https://bn-store-eg.vercel.app/">
+<meta property="og:type" content="website">
+
 <!-- 🛡️ 1. سياسة أمان المحتوى (CSP) لحماية الموقع من السكربتات الخبيثة -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -74,8 +81,14 @@
       <div class="stat-card"><div class="stat-number">🛡️ 100%</div><div class="stat-label">أمان وتسليم فوري</div></div>
     </section>
 
-    <div class="search-bar-container">
-      <input type="search" class="search-input" id="searchInput" placeholder="🔍 ابحث عن لعبة، اشتراك، أو خدمة تصميم بالذكاء الاصطناعي..." autocomplete="off">
+    <!-- شريط البحث وفلتر الترتيب -->
+    <div class="search-bar-container" style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <input type="search" class="search-input" id="searchInput" placeholder="🔍 ابحث عن لعبة، اشتراك، أو خدمة تصميم..." autocomplete="off" style="flex: 1; min-width: 250px;">
+      <select id="sortSelect" class="search-input" style="flex: 0 1 200px; padding: 10px 15px;">
+        <option value="default">الترتيب الافتراضي</option>
+        <option value="price_asc">الأرخص أولاً</option>
+        <option value="price_desc">الأغلى أولاً</option>
+      </select>
     </div>
 
     <!-- شريط التصنيفات الديناميكي -->
@@ -84,7 +97,9 @@
     </div>
 
     <h2 class="section-title">المنتجات المميزة</h2>
-    <div class="product-grid" id="productGrid"></div>
+    <div class="product-grid" id="productGrid">
+      <!-- شاشة التحميل الوهمية (Skeleton) هتظهر هنا برمجياً -->
+    </div>
   </div>
 
   <!-- ========================================== -->
@@ -95,8 +110,12 @@
     <div class="product-details-container" style="flex-direction: column;">
       <div style="display: flex; flex-wrap: wrap; gap: 30px; width: 100%;">
         <div class="details-image-box" id="detailImageBox" style="flex: 1; min-width: 300px; height: 350px;"></div>
-        <div class="details-info-box" style="flex: 1.5; min-width: 300px;">
-          <h2 id="detailTitle" class="details-title"></h2>
+        <div class="details-info-box" style="flex: 1.5; min-width: 300px; position: relative;">
+          
+          <!-- زر إضافة للمفضلة -->
+          <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">🤍</button>
+          
+          <h2 id="detailTitle" class="details-title" style="padding-left: 60px;"></h2>
           <span class="product-badge" id="detailBadge" style="position:relative; display:inline-block; margin-bottom:15px;"></span>
           
           <div class="product-price-box" style="margin-bottom:20px;">
@@ -108,17 +127,14 @@
             الكمية المتاحة: <span id="detailStock" style="color: var(--accent-neon);"></span>
           </div>
           
-          <!-- الوصف المنظم في نقاط -->
           <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
           
           <button type="button" id="detailBuyBtn" class="buy-btn" style="padding:15px; font-size:16px; margin-top:10px;">إتمام الشراء الآن</button>
         </div>
       </div>
 
-      <!-- قسم التقييمات والتعليقات -->
       <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 25px;">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;">💬 تقييمات وآراء العملاء</h3>
-        
         <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
           <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">أضف تقييمك للمنتج</h4>
           <div class="form-group" style="margin-bottom: 10px;">
@@ -136,7 +152,6 @@
           </div>
           <button type="button" class="submit-btn" id="submitReviewBtn" style="padding: 8px 20px; font-size: 13px; flex: 0;">إرسال التقييم</button>
         </div>
-
         <div id="productReviewsList"></div>
       </div>
     </div>
@@ -160,10 +175,7 @@
         <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="loginEmail" placeholder="example@gmail.com"></div>
         <div class="form-group"><label>كلمة المرور</label><input type="password" id="loginPass" placeholder="••••••••"></div>
         <button type="button" class="submit-btn" id="doLoginBtn" style="width:100%;">تسجيل الدخول</button>
-        
-        <!-- 🌟 زر تسجيل الدخول السريع بـ Google -->
         <button type="button" id="googleLoginBtn" style="width:100%; margin-top:10px; background:#db4437; color:#fff; padding:10px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px;">🌐 الدخول بواسطة Google</button>
-
         <a href="#" id="resetPassBtn" style="color:var(--accent-neon); display:block; text-align:center; margin-top:10px; font-size:13px;">نسيت كلمة المرور؟</a>
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);">ليس لديك حساب؟ <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);">إنشاء حساب جديد</a></p>
       </div>
@@ -184,8 +196,23 @@
     <div class="modal-content large-modal">
       <h3><span>👤 حسابي الشخصي</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">إغلاق ✕</button></h3>
       <div style="margin-bottom:20px;font-size:15px;color:var(--accent-neon);">مرحباً بك، <span id="accountUserName" style="font-weight:bold;"></span>!</div>
-      <h4 style="margin-bottom:12px;font-size:16px;border-bottom:1px solid var(--border-color);padding-bottom:5px;">📦 طلباتي والأكواد المستلمة</h4>
-      <div id="userOrdersList" style="max-height:350px;overflow-y:auto;"></div>
+      
+      <!-- تبويبات حساب العميل (الطلبات / المفضلة) -->
+      <div class="user-tabs-container" style="display:flex; gap:10px; margin-bottom:15px;">
+        <button class="tab-btn active" id="tabBtnOrders">📦 طلباتي</button>
+        <button class="tab-btn" id="tabBtnWishlist">🤍 المفضلة</button>
+      </div>
+
+      <div id="userOrdersSection">
+        <h4 style="margin-bottom:12px;font-size:16px;border-bottom:1px solid var(--border-color);padding-bottom:5px;">📦 طلباتي والأكواد المستلمة</h4>
+        <div id="userOrdersList" style="max-height:350px;overflow-y:auto;"></div>
+      </div>
+
+      <div id="userWishlistSection" style="display:none;">
+        <h4 style="margin-bottom:12px;font-size:16px;border-bottom:1px solid var(--border-color);padding-bottom:5px;">🤍 قائمة المفضلة</h4>
+        <div id="userWishlistGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; min-height: 100px;"></div>
+      </div>
+
       <button type="button" class="cancel-btn" id="logoutBtn" style="width:100%;margin-top:15px;background:var(--danger);color:#fff;border:none;">تسجيل الخروج</button>
     </div>
   </div>
@@ -226,7 +253,6 @@
         <div class="form-group">
           <label>صورة إيصال التحويل (سكرين شوت)</label>
           <input type="file" id="receiptFileInput" accept="image/*" required style="padding: 7px; background: #0b0b10; color: #fff; border: 1px solid var(--border-color); border-radius: 7px; width: 100%;">
-          <!-- معاينة الصورة هتظهر هنا -->
           <img id="receiptPreview" src="" alt="معاينة الإيصال" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:8px; border:1px solid var(--border-color);">
         </div>
 
