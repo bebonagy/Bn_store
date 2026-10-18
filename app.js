@@ -27,7 +27,8 @@ const sanitizeText = (val, maxLen = 250) => String(val ?? '').replace(/[<>]/g, '
 // 2. حالة المتجر الأساسية
 // ==========================================
 let storeState = {
-  bannerAr: "⚡ جاري التحميل...",
+  bannerAr: "⚡ عروض الكريسماس والخدمات الرقمية!",
+  bannerExpiry: "", // وقت انتهاء العرض
   whatsapp: "201200898990",
   rates: { SAR: 0.077, AED: 0.075, USD: 0.020 },
   payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
@@ -38,9 +39,10 @@ let storeState = {
 };
 let currentUserProfile = null;
 let currentProductId = null;
-let editingProductId = null; // تتبع المنتج الجاري تعديله
+let editingProductId = null;
 let activeDiscount = 0;
 let unsubscribeOrders = null;
+let countdownInterval = null; // مؤقت العداد
 
 window.showToast = (msg, type = 'normal') => {
   const container = document.getElementById('toastContainer');
@@ -52,7 +54,56 @@ window.showToast = (msg, type = 'normal') => {
 };
 
 // ==========================================
-// 3. التنقل وعرض المنتجات
+// 3. نظام العداد التنازلي للشريط (Countdown Logic)
+// ==========================================
+const initCountdown = (expiryString) => {
+  const bannerEl = document.getElementById('flashSaleBanner');
+  const timerEl = document.getElementById('countdownTimer');
+  const textEl = document.getElementById('flashBannerText');
+  
+  if (!bannerEl || !timerEl || !textEl) return;
+
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  if (!expiryString) {
+    bannerEl.style.display = 'none'; // لو مفيش وقت محدد، الشريط يختفي
+    return;
+  }
+
+  const expiryTime = new Date(expiryString).getTime();
+  if (isNaN(expiryTime)) {
+    bannerEl.style.display = 'none';
+    return;
+  }
+
+  bannerEl.style.display = 'flex';
+
+  countdownInterval = setInterval(() => {
+    const now = new Date().getTime();
+    const distance = expiryTime - now;
+
+    if (distance < 0) {
+      clearInterval(countdownInterval);
+      // انتهى العرض تماماً! اخفِ الشريط وميرجعش تاني
+      bannerEl.style.display = 'none';
+      return;
+    }
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    let timeString = "⏳ ";
+    if (days > 0) timeString += `${days} يوم `;
+    timeString += `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    
+    timerEl.textContent = timeString;
+  }, 1000);
+};
+
+// ==========================================
+// 4. التنقل وعرض المنتجات
 // ==========================================
 const showView = (viewName) => {
   document.getElementById('homeView').style.display = viewName === 'home' ? 'block' : 'none';
@@ -170,7 +221,7 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 4. الأحداث والمصادقة وتأكيد الشراء
+// 5. الأحداث والمصادقة والشراء
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.category-btn').forEach(btn => {
@@ -272,7 +323,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { window.showToast('حدث خطأ!', 'error'); }
   });
 
-  // تأكيد الشراء
   document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserProfile || !currentProductId) return;
@@ -330,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 5. المزامنة والسحب
+// 6. المزامنة والسحب
 // ==========================================
 const initApp = () => {
   const externalAdminBtn = document.getElementById('adminBtnNav');
@@ -350,12 +400,16 @@ const initApp = () => {
       storeState.whatsapp = data.whatsapp || "201200898990";
       if(data.rates) storeState.rates = data.rates; 
       storeState.payments = data.payments || { instapay: "", vodafone: "", orange: "", crypto: "" };
-      storeState.bannerAr = data.bannerAr || "⚡ مرحباً بك في المتجر";
       
+      storeState.bannerAr = data.bannerAr || "⚡ عروض الكريسماس والخدمات الرقمية!";
+      storeState.bannerExpiry = data.bannerExpiry || ""; // تاريخ ووقت الانتهاء
+
       storeState.promoCode = data.promoCode || "";
       storeState.promoDiscount = data.promoDiscount || 0;
       
       document.getElementById('flashBannerText').textContent = storeState.bannerAr;
+      initCountdown(storeState.bannerExpiry); // تشغيل أو إيقاف العداد بناءً على السيرفر
+
       document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=استفسار:`;
       
       window.renderProducts(); 
@@ -452,19 +506,26 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 7. لوحة التحكم للإدارة (متضمنة التعديل)
+// 7. لوحة التحكم للإدارة (متضمنة التحكم في العرض والوقت)
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
   container.innerHTML = `
-    <!-- إعدادات الخصم -->
+    <!-- إعدادات شريط العروض والعداد (جديد) -->
     <div class="admin-section" style="border-color: var(--accent-neon);">
-      <h4 style="color: var(--accent-neon);">🎁 إعدادات كود الخصم (Promo Code)</h4>
+      <h4 style="color: var(--accent-neon);">⚡ إعدادات شريط العروض والعداد التنازلي</h4>
+      <div class="form-group"><label>نص الإعلان (البانر)</label><input type="text" id="admBannerAr" placeholder="مثال: ⚡ خصومات الكريسماس الفورية!"></div>
+      <div class="form-group"><label>موعد انتهاء العرض (التاريخ والوقت)</label><input type="datetime-local" id="admBannerExpiry" style="background:#0b0b10; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
+      <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">عندما ينتهي هذا الوقت، سيختفي الشريط تلقائياً ولن يعود إلا إذا حددت موعداً جديداً.</p>
+    </div>
+
+    <!-- إعدادات الخصم -->
+    <div class="admin-section">
+      <h4>🎁 إعدادات كود الخصم (Promo Code)</h4>
       <div class="grid-2">
         <div class="form-group"><label>كود الخصم (الكلمة)</label><input type="text" id="admPromoCode" placeholder="مثال: BN10"></div>
         <div class="form-group"><label>نسبة الخصم (%)</label><input type="number" id="admPromoDiscount" placeholder="مثال: 10" min="0" max="100"></div>
       </div>
-      <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">لو مش عايز خصم، امسح الكود وخلي النسبة صفر.</p>
     </div>
 
     <!-- إعدادات أسعار الصرف -->
@@ -479,15 +540,14 @@ window.injectAdminDashboard = () => {
 
     <!-- إعدادات الدفع والتواصل -->
     <div class="admin-section">
-      <h4>📢 إعدادات الإعلان والدفع</h4>
-      <div class="form-group"><label>نص الإعلان (الـ Banner)</label><input type="text" id="admBannerAr"></div>
+      <h4>📢 إعدادات الدفع والواتساب</h4>
+      <div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div>
       <div class="grid-2">
-        <div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div>
         <div class="form-group"><label>إنستا باي</label><input type="text" id="admInstapay"></div>
         <div class="form-group"><label>فودافون كاش</label><input type="text" id="admVodafone"></div>
         <div class="form-group"><label>USDT (كريبتو)</label><input type="text" id="admCrypto"></div>
       </div>
-      <button type="button" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ كل الإعدادات (صرف، خصم، دفع)</button>
+      <button type="button" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ كل الإعدادات والشريط</button>
     </div>
 
     <!-- إدارة طلبات العملاء -->
@@ -527,6 +587,8 @@ window.injectAdminDashboard = () => {
 
 window.loadAdminData = () => {
   document.getElementById('admBannerAr').value = storeState.bannerAr || '';
+  document.getElementById('admBannerExpiry').value = storeState.bannerExpiry || '';
+  
   document.getElementById('admWhatsapp').value = storeState.whatsapp || '';
   document.getElementById('admInstapay').value = storeState.payments?.instapay || '';
   document.getElementById('admVodafone').value = storeState.payments?.vodafone || '';
@@ -547,6 +609,7 @@ window.saveGeneralSettings = async () => {
   if (!checkIsAdmin()) return;
   const config = {
     bannerAr: document.getElementById('admBannerAr').value,
+    bannerExpiry: document.getElementById('admBannerExpiry').value, // حفظ وقت الانتهاء
     whatsapp: document.getElementById('admWhatsapp').value,
     promoCode: document.getElementById('admPromoCode').value.trim(),
     promoDiscount: Number(document.getElementById('admPromoDiscount').value) || 0,
@@ -559,7 +622,7 @@ window.saveGeneralSettings = async () => {
   };
   try {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), config, { merge: true });
-    showToast('💾 تم حفظ الإعدادات بنجاح!', 'success');
+    showToast('💾 تم حفظ إعدادات العروض والشريط بنجاح!', 'success');
   } catch (e) { showToast('فشل الحفظ', 'error'); }
 };
 
@@ -602,9 +665,6 @@ window.updateOrderStatus = async (orderId, status) => {
   } catch(e) { showToast('خطأ في التحديث', 'error'); }
 };
 
-// ==========================================
-// 8. نظام حفظ وإضافة وتعديل المنتجات (الجديد)
-// ==========================================
 window.saveProduct = async () => {
   if (!checkIsAdmin()) return;
   const title = document.getElementById('newProdTitle').value;
@@ -631,7 +691,6 @@ window.saveProduct = async () => {
       const prodId = Date.now().toString();
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prodId), prodData);
       showToast('📦 تمت إضافة المنتج!', 'success');
-      // تفريغ الخانات
       document.querySelectorAll('#productFormSection input, #productFormSection textarea').forEach(el => {
         if(el.id.startsWith('newProd')) el.value = '';
       });
@@ -655,8 +714,6 @@ window.editProduct = (id) => {
   editingProductId = id;
   document.getElementById('saveProductBtn').innerHTML = '💾 حفظ التعديلات';
   document.getElementById('cancelEditBtn').style.display = 'block';
-  
-  // رفع الشاشة لقسم التعديل
   document.getElementById('productFormSection').scrollIntoView({behavior: 'smooth'});
 };
 
