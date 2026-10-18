@@ -30,15 +30,20 @@ const formatDate = (timestamp) => {
 };
 
 // ==========================================
-// 🌟 دالة ضغط الصور (المحدثة لاكتشاف الأخطاء)
+// 🌟 دالة ضغط الصور (مضادة للأخطاء)
 // ==========================================
 const compressImage = (file, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error('لم يتم العثور على ملف!'));
+    
+    // التأكد إن الملف عبارة عن صورة فعلاً
+    if (!file.type.match(/image.*/)) {
+      return reject(new Error('برجاء اختيار صورة صحيحة (JPG أو PNG).'));
+    }
+
     const reader = new FileReader();
-    reader.readAsDataURL(file);
     reader.onload = (event) => {
       const img = new Image();
-      img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
@@ -53,9 +58,11 @@ const compressImage = (file, maxWidth = 800, quality = 0.7) => {
         ctx.drawImage(img, 0, 0, width, height);
         resolve(canvas.toDataURL('image/jpeg', quality));
       };
-      img.onerror = () => reject(new Error('الملف المرفق ليس صورة صالحة!'));
+      img.onerror = () => reject(new Error('صيغة الصورة غير مدعومة، برجاء أخذ سكرين شوت للإيصال ورفعه.'));
+      img.src = event.target.result;
     };
-    reader.onerror = () => reject(new Error('حدث خطأ أثناء قراءة الملف.'));
+    reader.onerror = () => reject(new Error('حدث خطأ في قراءة الصورة من جهازك، جرب صورة أخرى.'));
+    reader.readAsDataURL(file);
   });
 };
 
