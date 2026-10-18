@@ -24,6 +24,37 @@ const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === 
 const sanitizeText = (val, maxLen = 500) => String(val ?? '').replace(/[<>]/g, '').trim().slice(0, maxLen);
 
 // ==========================================
+// 🌟 دالة ضغط الصور (لحل مشكلة فشل الرفع للأحجام الكبيرة)
+// ==========================================
+const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+    };
+  });
+};
+
+// ==========================================
 // 2. حالة المتجر الأساسية
 // ==========================================
 let storeState = {
@@ -376,12 +407,13 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 6. نظام التقييمات والتعليقات (مع حساب متوسط النجوم)
+// 🌟 6. نظام التقييمات والتعليقات (متعدل ومظبوط بدون مشاكل)
 // ==========================================
 window.loadProductReviews = (prodId) => {
   if (unsubscribeReviews) unsubscribeReviews();
   const reviewsRef = collection(db, 'artifacts', appId, 'public', 'data', 'reviews');
-  const q = query(reviewsRef, where('productId', '==', prodId), orderBy('createdAt', 'desc'));
+  // شيلنا orderBy عشان مايضربش إيرور الفايربيز
+  const q = query(reviewsRef, where('productId', '==', prodId));
   
   unsubscribeReviews = onSnapshot(q, (snap) => {
     const list = document.getElementById('productReviewsList');
@@ -390,6 +422,9 @@ window.loadProductReviews = (prodId) => {
 
     const revs = [];
     snap.forEach(d => revs.push({ id: d.id, ...d.data() }));
+
+    // الترتيب من الأحدث للأقدم شغال برمجياً هنا
+    revs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
     const detailBadge = document.getElementById('detailBadge');
     if (revs.length > 0) {
@@ -407,19 +442,34 @@ window.loadProductReviews = (prodId) => {
 
     revs.forEach(r => {
       const revBox = document.createElement('div');
-      revBox.style.cssText = 'background: #14141d; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px;';
+      revBox.style.cssText = 'background: #14141d; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; position: relative;';
       const stars = '⭐'.repeat(Number(r.rating) || 5);
       
+      // زرار الحذف للأدمن
+      const deleteBtnStr = checkIsAdmin() ? `<button onclick="window.deleteReview('${r.id}')" style="position:absolute; left:10px; top:10px; background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; z-index:10;">حذف 🗑️</button>` : '';
+
       revBox.innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: ${checkIsAdmin() ? '50px' : '0'};">
           <strong style="color: var(--accent-neon);">${sanitizeText(r.userName || 'مستخدم')}</strong>
           <span>${stars}</span>
         </div>
         <p style="color: var(--text-main); line-height: 1.5;">${sanitizeText(r.comment)}</p>
+        ${deleteBtnStr}
       `;
       list.appendChild(revBox);
     });
   });
+};
+
+// دالة حذف التقييم للأدمن
+window.deleteReview = async (reviewId) => {
+  if (!checkIsAdmin() || !confirm('متأكد إنك عايز تحذف التقييم ده؟')) return;
+  try { 
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reviews', reviewId)); 
+    window.showToast('تم حذف التقييم بنجاح', 'success'); 
+  } catch (e) { 
+    window.showToast('فشل حذف التقييم', 'error'); 
+  }
 };
 
 // ==========================================
@@ -635,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 🌐 زر تسجيل الدخول الذكي (يعمل تلقائياً: Popup للاب توب و Redirect للموبايل لتجنب أي حظر)
+  // 🌐 زر تسجيل الدخول الذكي
   const googleLoginBtn = document.getElementById('googleLoginBtn');
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
@@ -709,7 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // إرسال الطلب مع إرفاق صورة الإيصال (Base64)
+  // إرسال الطلب مع إرفاق صورة الإيصال (وضغطناها عشان لو العميل رفع صورة كبيرة)
   const checkoutForm = document.getElementById('checkoutForm');
   if (checkoutForm) {
     checkoutForm.addEventListener('submit', async (e) => {
@@ -727,11 +777,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!receiptFileInput || !receiptFileInput.files[0]) return window.showToast('برجاء إرفاق صورة إيصال التحويل!', 'error');
       const receiptFile = receiptFileInput.files[0];
 
-      const receiptBase64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (uploadEvent) => resolve(uploadEvent.target.result);
-        reader.readAsDataURL(receiptFile);
-      });
+      // ضغطنا صورة إيصال العميل هنا أوتوماتيك
+      const receiptBase64 = await compressImage(receiptFile);
 
       const currency = document.getElementById('currencySelect').value;
       const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
@@ -775,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeDiscount = 0; 
         window.showToast('🎉 تم إرسال طلبك وإيصال التحويل بنجاح! راجع "حسابي".', 'success');
       } catch (err) {
-        window.showToast('حدث خطأ أثناء إرسال الطلب، تأكد من حجم الصورة أو اتصالك.', 'error');
+        window.showToast('حدث خطأ أثناء إرسال الطلب، تأكد من اتصالك.', 'error');
       }
     });
   }
@@ -929,7 +976,7 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 10. لوحة التحكم للإدارة (مع دعم رفع صور السلايدر والمنتجات من الجهاز)
+// 10. لوحة التحكم للإدارة
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
@@ -1065,6 +1112,7 @@ window.renderAdminStats = () => {
   `;
 };
 
+// 🌟 تعديل رفع السلايدر عشان نضغط صوره هو كمان
 window.addSlide = async () => {
   if (!checkIsAdmin()) return;
   const title = document.getElementById('slideTitleInput').value.trim();
@@ -1073,11 +1121,7 @@ window.addSlide = async () => {
 
   if (!title || !fileInput || !fileInput.files[0]) return window.showToast('أدخل عنوان البانر واختر صورة من الجهاز!', 'error');
 
-  const imgBase64 = await new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
-    reader.readAsDataURL(fileInput.files[0]);
-  });
+  const imgBase64 = await compressImage(fileInput.files[0]);
 
   const slides = storeState.slides ? [...storeState.slides] : [];
   slides.push({ title, desc, imgUrl: imgBase64 });
@@ -1257,6 +1301,7 @@ window.updateOrderStatus = async (orderId, status) => {
   } catch(e) { window.showToast('خطأ في التحديث', 'error'); }
 };
 
+// 🌟 تعديل حفظ المنتج عشان نضغط صورته ونمنع الفشل
 window.saveProduct = async () => {
   if (!checkIsAdmin()) return;
   const titleInput = document.getElementById('newProdTitle');
@@ -1282,11 +1327,8 @@ window.saveProduct = async () => {
 
   let imgUrl = '';
   if (fileInput && fileInput.files[0]) {
-    imgUrl = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(fileInput.files[0]);
-    });
+    // استخدمنا الدالة السحرية للضغط هنا
+    imgUrl = await compressImage(fileInput.files[0]);
   } else if (editingProductId) {
     const existing = storeState.products.find(p => p.id === editingProductId);
     if (existing) imgUrl = existing.imgUrl || '';
