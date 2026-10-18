@@ -376,7 +376,7 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 6. نظام التقييمات والتعليقات (مع حساب متوسط النجوم)
+// 6. نظام التقييمات والتعليقات المحدث (يعرض التقييمات والنجوم فوراً)
 // ==========================================
 window.loadProductReviews = (prodId) => {
   if (unsubscribeReviews) unsubscribeReviews();
@@ -397,6 +397,11 @@ window.loadProductReviews = (prodId) => {
       const avgRating = (totalRating / revs.length).toFixed(1);
       if(detailBadge) {
         detailBadge.textContent = `⭐ ${avgRating} (${revs.length} تقييم)`;
+      }
+    } else {
+      if(detailBadge) {
+        const prod = storeState.products.find(p => p.id === prodId);
+        if(prod) detailBadge.textContent = prod.badge || 'متوفر';
       }
     }
 
@@ -615,7 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 🌟 زر استعادة كلمة المرور
   const resetPassBtn = document.getElementById('resetPassBtn');
   if (resetPassBtn) {
     resetPassBtn.addEventListener('click', async (e) => {
@@ -635,7 +639,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 🌐 زر تسجيل الدخول الذكي (يعمل تلقائياً: Popup للاب توب و Redirect للموبايل لتجنب أي حظر)
   const googleLoginBtn = document.getElementById('googleLoginBtn');
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
@@ -709,7 +712,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // إرسال الطلب مع إرفاق صورة الإيصال (Base64)
   const checkoutForm = document.getElementById('checkoutForm');
   if (checkoutForm) {
     checkoutForm.addEventListener('submit', async (e) => {
@@ -929,7 +931,7 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 10. لوحة التحكم للإدارة (مع دعم رفع صور السلايدر والمنتجات من الجهاز)
+// 10. لوحة التحكم للإدارة
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
@@ -943,9 +945,11 @@ window.injectAdminDashboard = () => {
 
     <div class="admin-section">
       <h4>🖼️ إدارة سلايدر البانرات الإعلانية</h4>
-      <div class="form-group"><label>عنوان البانر</label><input type="text" id="slideTitleInput" placeholder="عنوان جذاب"></div>
+      <div class="grid-2">
+        <div class="form-group"><label>عنوان البانر</label><input type="text" id="slideTitleInput" placeholder="عنوان جذاب"></div>
+        <div class="form-group"><label>رابط صورة البانر (HTTPS)</label><input type="text" id="slideImgInput" placeholder="رابط مباشر للصورة"></div>
+      </div>
       <div class="form-group"><label>وصف البانر</label><input type="text" id="slideDescInput" placeholder="وصف قصير للعرض"></div>
-      <div class="form-group"><label>صورة البانر (اختر من الجهاز)</label><input type="file" id="slideImgFileInput" accept="image/*" style="background:#0b0b10; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
       <button type="button" class="submit-btn" style="width:100%; margin-bottom:15px;" onclick="window.addSlide()">➕ إضافة بانر جديد للسلايدر</button>
       <div id="adminSlidesList"></div>
     </div>
@@ -1009,7 +1013,7 @@ window.injectAdminDashboard = () => {
         <div class="form-group"><label>الكمية المتاحة (قطع)</label><input type="number" id="newProdStock"></div>
         <div class="form-group"><label>الشارة (Badge)</label><input type="text" id="newProdBadge" placeholder="تسليم فوري"></div>
       </div>
-      <div class="form-group"><label>صورة المنتج (اختر من الجهاز)</label><input type="file" id="newProdImgFileInput" accept="image/*" style="background:#0b0b10; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
+      <div class="form-group"><label>رابط الصورة (HTTPS)</label><input type="text" id="newProdImgUrl"></div>
       <div class="form-group"><label>وصف المنتج (كل نقطة في سطر مستقل)</label><textarea id="newProdDesc" rows="4" placeholder="- ميزة أولى&#10;- ميزة ثانية"></textarea></div>
       <button type="button" class="submit-btn" id="saveProductBtn" style="width:100%;" onclick="window.saveProduct()">➕ إضافة المنتج</button>
       <button type="button" class="cancel-btn" id="cancelEditBtn" style="width:100%; margin-top:10px; display:none;" onclick="window.cancelEdit()">إلغاء التعديل</button>
@@ -1069,24 +1073,18 @@ window.addSlide = async () => {
   if (!checkIsAdmin()) return;
   const title = document.getElementById('slideTitleInput').value.trim();
   const desc = document.getElementById('slideDescInput').value.trim();
-  const fileInput = document.getElementById('slideImgFileInput');
+  const imgUrl = document.getElementById('slideImgInput').value.trim();
 
-  if (!title || !fileInput || !fileInput.files[0]) return window.showToast('أدخل عنوان البانر واختر صورة من الجهاز!', 'error');
-
-  const imgBase64 = await new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
-    reader.readAsDataURL(fileInput.files[0]);
-  });
+  if (!title || !imgUrl) return window.showToast('أدخل عنوان البانر ورابط الصورة!', 'error');
 
   const slides = storeState.slides ? [...storeState.slides] : [];
-  slides.push({ title, desc, imgUrl: imgBase64 });
+  slides.push({ title, desc, imgUrl });
 
   try {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true });
     document.getElementById('slideTitleInput').value = '';
     document.getElementById('slideDescInput').value = '';
-    fileInput.value = '';
+    document.getElementById('slideImgInput').value = '';
     window.showToast('🖼️ تم إضافة البانر بنجاح!', 'success');
   } catch(e) { window.showToast('فشل إضافة البانر', 'error'); }
 };
@@ -1248,49 +1246,25 @@ window.renderAdminOrders = () => {
 };
 
 window.updateOrderStatus = async (orderId, status) => {
-  const codeInput = document.getElementById(`code_${orderId}`);
-  if(!codeInput) return;
-  const code = codeInput.value;
+  const codeInput = document.getElementById(`code_${orderId}`).value;
   try {
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), { status, deliveredCode: code, updatedAt: serverTimestamp() });
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), { status, deliveredCode: codeInput, updatedAt: serverTimestamp() });
     window.showToast('تم تحديث الطلب بنجاح!', 'success');
   } catch(e) { window.showToast('خطأ في التحديث', 'error'); }
 };
 
 window.saveProduct = async () => {
   if (!checkIsAdmin()) return;
-  const titleInput = document.getElementById('newProdTitle');
-  const priceInput = document.getElementById('newProdPrice');
-  const oldPriceInput = document.getElementById('newProdOldPrice');
-  const stockInput = document.getElementById('newProdStock');
-  const catInput = document.getElementById('newProdCat');
-  const badgeInput = document.getElementById('newProdBadge');
-  const fileInput = document.getElementById('newProdImgFileInput');
-  const descInput = document.getElementById('newProdDesc');
-
-  if(!titleInput || !priceInput) return;
-
-  const title = titleInput.value;
-  const price = Number(priceInput.value);
-  const oldPrice = Number(oldPriceInput?.value) || 0;
-  const stockQuantity = Number(stockInput?.value) || 0;
-  const category = catInput?.value || 'games';
-  const badge = badgeInput?.value || 'متوفر';
-  const desc = descInput?.value || '';
+  const title = document.getElementById('newProdTitle').value;
+  const price = Number(document.getElementById('newProdPrice').value);
+  const oldPrice = Number(document.getElementById('newProdOldPrice').value) || 0;
+  const stockQuantity = Number(document.getElementById('newProdStock').value) || 0;
+  const category = document.getElementById('newProdCat').value;
+  const badge = document.getElementById('newProdBadge').value || 'متوفر';
+  const imgUrl = document.getElementById('newProdImgUrl').value;
+  const desc = document.getElementById('newProdDesc').value;
 
   if (!title || price <= 0) return window.showToast('تأكد من اسم المنتج والسعر!', 'error');
-
-  let imgUrl = '';
-  if (fileInput && fileInput.files[0]) {
-    imgUrl = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(fileInput.files[0]);
-    });
-  } else if (editingProductId) {
-    const existing = storeState.products.find(p => p.id === editingProductId);
-    if (existing) imgUrl = existing.imgUrl || '';
-  }
 
   const prodData = {
     title, desc, price, oldPrice, category, badge, imgUrl, inStock: stockQuantity > 0, stockQuantity
@@ -1322,6 +1296,7 @@ window.editProduct = (id) => {
   document.getElementById('newProdCat').value = p.category || 'games';
   document.getElementById('newProdStock').value = p.stockQuantity !== undefined ? p.stockQuantity : '';
   document.getElementById('newProdBadge').value = p.badge || '';
+  document.getElementById('newProdImgUrl').value = p.imgUrl || '';
   document.getElementById('newProdDesc').value = p.desc || '';
 
   editingProductId = id;
