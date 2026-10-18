@@ -219,7 +219,40 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 5. الأحداث والمصادقة والشراء (مع تصفير البحث)
+// 5. دالة تحديث بيانات الدفع ديناميكياً للعميل (جديد ومحسن)
+// ==========================================
+const updatePaymentInfoBox = () => {
+  const methodSelect = document.getElementById('paymentMethod');
+  if (!methodSelect) return;
+  const method = methodSelect.value;
+  const payments = storeState.payments || {};
+  let targetVal = "";
+
+  if (method.includes('فودافون') || method.toLowerCase().includes('vodafone')) {
+    targetVal = payments.vodafone || "رقم فودافون كاش غير مضاف حالياً";
+  } else if (method.includes('إنستا') || method.toLowerCase().includes('instapay')) {
+    targetVal = payments.instapay || "حساب إنستا باي غير مضاف حالياً";
+  } else if (method.includes('أورنج') || method.toLowerCase().includes('orange')) {
+    targetVal = payments.orange || payments.vodafone || "رقم أورنج كاش غير مضاف حالياً";
+  } else if (method.includes('كريبتو') || method.toLowerCase().includes('crypto') || method.includes('usdt')) {
+    targetVal = payments.crypto || "عنوان محفظة الكريبتو غير مضاف حالياً";
+  } else {
+    targetVal = "اختر وسيلة دفع صحيحة";
+  }
+
+  // البحث عن الحلبة المخصصة لعرض التعليمات وتحديثها بالرقم الصحيح
+  let infoBox = document.getElementById('paymentInstructionText');
+  if (!infoBox) {
+    infoBox = document.querySelector('.payment-instructions-box') || document.querySelector('#checkoutModal .form-group:nth-of-type(4) div');
+  }
+  
+  if (infoBox) {
+    infoBox.innerHTML = `يرجى تحويل المبلغ إلى الحساب التالي: <br><strong style="color:var(--accent-neon); font-size:15px; user-select:all; display:inline-block; margin-top:5px;">${targetVal}</strong>`;
+  }
+};
+
+// ==========================================
+// 6. الأحداث والمصادقة والشراء
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.category-btn').forEach(btn => {
@@ -233,12 +266,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('searchInput').addEventListener('input', window.renderProducts);
   document.getElementById('currencySelect').addEventListener('change', window.renderProducts);
   
+  // ربط حدث تغيير وسيلة الدفع لتحديث الرقم فوراً
+  const paymentMethodEl = document.getElementById('paymentMethod');
+  if (paymentMethodEl) {
+    paymentMethodEl.addEventListener('change', updatePaymentInfoBox);
+  }
+
   document.getElementById('detailBuyBtn').addEventListener('click', () => {
     if(currentProductId) {
       activeDiscount = 0; 
       document.getElementById('promoCodeInput').value = '';
       document.getElementById('promoMsg').textContent = '';
       updateCheckoutPriceDisplay();
+      updatePaymentInfoBox(); // تحديث بيانات الدفع عند فتح نافذة الشراء
       document.getElementById('checkoutModal').style.display = 'flex';
     }
   });
@@ -383,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 6. المزامنة والسحب
+// 7. المزامنة والسحب
 // ==========================================
 const initApp = () => {
   const externalAdminBtn = document.getElementById('adminBtnNav');
@@ -412,6 +452,7 @@ const initApp = () => {
       
       document.getElementById('flashBannerText').textContent = storeState.bannerAr;
       initCountdown(storeState.bannerExpiry); 
+      updatePaymentInfoBox(); // تحديث أرقام المحافظ عند تحديث السيرفر
 
       document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=استفسار:`;
       
@@ -509,7 +550,7 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 7. لوحة التحكم للإدارة (متضمنة التعديل والعداد)
+// 8. لوحة التحكم للإدارة (متضمنة التعديل والعداد)
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
