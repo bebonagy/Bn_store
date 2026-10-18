@@ -26,6 +26,10 @@
 <!-- 🌟 مكتبات إضافية (Confetti للاحتفال + EmailJS للبريد) -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- 🔑 تفعيل EmailJS باستخدام Public Key الخاص بك -->
+<script type="text/javascript">
+   emailjs.init("t5Irys8GSHX5X1a63");
+</script>
 
 <!-- 🛡️ حماية ضد الـ Clickjacking -->
 <style id="antiClickjack">body{display:none !important;}</style>
@@ -146,7 +150,7 @@
         </div>
       </div>
 
-      <!-- المنتجات ذات الصلة (إضافة جديدة) -->
+      <!-- المنتجات ذات الصلة -->
       <div style="width: 100%; margin-top: 35px;">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 18px;">🔥 قد يعجبك أيضاً</h3>
         <div id="relatedProductsGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; min-height: unset; margin-bottom: 0;"></div>
@@ -157,7 +161,7 @@
         <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
           <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">أضف تقييمك للمنتج</h4>
           
-          <!-- التقييم التفاعلي بالنجوم (إضافة جديدة) -->
+          <!-- التقييم التفاعلي بالنجوم -->
           <div class="form-group" style="margin-bottom: 15px;">
             <label style="margin-bottom: 8px;">تقييمك بالنجوم</label>
             <div id="interactiveStars" style="display: inline-flex; gap: 8px; font-size: 24px; cursor: pointer; direction: ltr;">
@@ -165,7 +169,7 @@
               <span class="star" data-value="2" style="filter: grayscale(100%);">⭐</span>
               <span class="star" data-value="3" style="filter: grayscale(100%);">⭐</span>
               <span class="star" data-value="4" style="filter: grayscale(100%);">⭐</span>
-              <span class="star" data-value="5" style="filter: grayscale(0%);">⭐</span> <!-- افتراضياً 5 نجوم -->
+              <span class="star" data-value="5" style="filter: grayscale(0%);">⭐</span>
             </div>
             <input type="hidden" id="reviewRating" value="5">
           </div>
