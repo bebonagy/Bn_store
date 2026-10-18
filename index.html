@@ -94,24 +94,54 @@
   <!-- ========================================== -->
   <div id="productDetailsView" style="display:none;">
     <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;">🔙 العودة للمتجر</button>
-    <div class="product-details-container">
-      <div class="details-image-box" id="detailImageBox"></div>
-      <div class="details-info-box">
-        <h2 id="detailTitle" class="details-title"></h2>
-        <span class="product-badge" id="detailBadge" style="position:relative; display:inline-block; margin-bottom:15px;"></span>
-        
-        <div class="product-price-box" style="margin-bottom:20px;">
-          <span id="detailOldPrice" class="old-price" style="font-size:18px;"></span>
-          <span id="detailPrice" class="product-price" style="font-size:28px;"></span>
+    <div class="product-details-container" style="flex-direction: column;">
+      <div style="display: flex; flex-wrap: wrap; gap: 30px; width: 100%;">
+        <div class="details-image-box" id="detailImageBox" style="flex: 1; min-width: 300px; height: 350px;"></div>
+        <div class="details-info-box" style="flex: 1.5; min-width: 300px;">
+          <h2 id="detailTitle" class="details-title"></h2>
+          <span class="product-badge" id="detailBadge" style="position:relative; display:inline-block; margin-bottom:15px;"></span>
+          
+          <div class="product-price-box" style="margin-bottom:20px;">
+            <span id="detailOldPrice" class="old-price" style="font-size:18px;"></span>
+            <span id="detailPrice" class="product-price" style="font-size:28px;"></span>
+          </div>
+          
+          <div class="stock-status" style="margin-bottom: 20px; font-weight: bold; font-size: 16px;">
+            الكمية المتاحة: <span id="detailStock" style="color: var(--accent-neon);"></span>
+          </div>
+          
+          <!-- الوصف المنظم في نقاط -->
+          <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
+          
+          <button type="button" id="detailBuyBtn" class="buy-btn" style="padding:15px; font-size:16px; margin-top:10px;">إتمام الشراء الآن</button>
         </div>
+      </div>
+
+      <!-- قسم التقييمات والتعليقات -->
+      <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 25px;">
+        <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;">💬 تقييمات وآراء العملاء</h3>
         
-        <div class="stock-status" style="margin-bottom: 20px; font-weight: bold; font-size: 16px;">
-          الكمية المتاحة: <span id="detailStock" style="color: var(--accent-neon);"></span>
+        <!-- نموذج كتابة تقييم -->
+        <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
+          <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">أضف تقييمك للمنتج</h4>
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label>التقييم بالنجوم</label>
+            <select id="reviewRating" style="background: #14141d; color: #fff; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); width: 150px;">
+              <option value="5">⭐⭐⭐⭐⭐ (ممتاز)</option>
+              <option value="4">⭐⭐⭐⭐ (جيد جداً)</option>
+              <option value="3">⭐⭐⭐ (مقبول)</option>
+              <option value="2">⭐⭐ (سيء)</option>
+              <option value="1">⭐ (سيء جداً)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 10px;">
+            <textarea id="reviewCommentText" rows="2" placeholder="اكتب تعليقك أو تجربتك بعد شراء المنتج..." style="width: 100%; background: #14141d; color: #fff; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);"></textarea>
+          </div>
+          <button type="button" class="submit-btn" id="submitReviewBtn" style="padding: 8px 20px; font-size: 13px; flex: 0;">إرسال التقييم</button>
         </div>
-        
-        <p id="detailDesc" class="details-desc"></p>
-        
-        <button type="button" id="detailBuyBtn" class="buy-btn" style="padding:15px; font-size:16px; margin-top:20px;">إتمام الشراء الآن</button>
+
+        <!-- قائمة التعليقات -->
+        <div id="productReviewsList"></div>
       </div>
     </div>
   </div>
