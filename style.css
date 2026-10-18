@@ -204,3 +204,14 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
   .whatsapp-float { inset-inline-end: 14px; bottom: 14px; padding: 10px 16px; font-size: 13px; }
   .modal-content { padding: 18px; }
 }
+
+/* ==========================================
+   12. تبويبات الإدارة (ADMIN TABS) - الإضافة الجديدة
+   ========================================== */
+.admin-tabs::-webkit-scrollbar { height: 4px; }
+.admin-tabs::-webkit-scrollbar-thumb { background: var(--accent-neon); border-radius: 4px; }
+.tab-btn { background: var(--card-bg); color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; white-space: nowrap; transition: all .2s ease; }
+.tab-btn.active, .tab-btn:hover { background: rgba(0,255,204,.1); color: var(--accent-neon); border-color: var(--accent-neon); box-shadow: 0 0 10px var(--accent-glow); }
+.tab-content { display: none; animation: fadeIn .3s ease forwards; }
+.tab-content.active-tab { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
