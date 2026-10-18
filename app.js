@@ -30,7 +30,7 @@ const formatDate = (timestamp) => {
 };
 
 // ==========================================
-// 🌟 دالة ضغط الصور (Base64) - طريقتك الأصلية
+// 🌟 دالة ضغط الصور (Base64) - طريقتك الأصلية والآمنة
 // ==========================================
 const compressImage = (file, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve) => {
@@ -92,7 +92,6 @@ let currentSlideIndex = 0;
 let slideInterval = null;
 let isDataLoaded = false;
 
-// 🌟 حفظ العملة المفضلة (Currency Memory)
 const initCurrency = () => {
   const savedCurrency = localStorage.getItem('bn_store_currency') || 'EGP';
   const currencySelect = document.getElementById('currencySelect');
@@ -192,7 +191,7 @@ document.getElementById('prevSlideBtn')?.addEventListener('click', () => {
 });
 
 // ==========================================
-// 4. التصنيفات وعرض المنتجات + Skeletons
+// 4. التصنيفات وعرض المنتجات
 // ==========================================
 window.renderCategoriesBar = () => {
   const bar = document.getElementById('categoriesBar');
@@ -287,7 +286,7 @@ window.renderProducts = () => {
     const isWished = storeState.wishlist.includes(prod.id);
     
     const card = document.createElement('div');
-    card.className = 'product-card';
+    card.className = 'product-card fade-up';
     card.onclick = (e) => {
       if(e.target.classList.contains('wishlist-icon-btn')) return;
       window.openProductDetails(prod.id);
@@ -325,7 +324,6 @@ const showView = (viewName) => {
   if (viewName === 'home') window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// 🌟 العودة للرئيسية وإرجاع العنوان والواتساب للطبيعي
 const resetToHome = () => {
   showView('home');
   document.title = 'B.n Store | شحن ألعاب، اشتراكات الذكاء الاصطناعي، والخدمات الرقمية بأفضل سعر';
@@ -336,7 +334,7 @@ document.getElementById('backToHomeBtn')?.addEventListener('click', resetToHome)
 document.getElementById('sortSelect')?.addEventListener('change', window.renderProducts);
 
 // ==========================================
-// 🌟 5. المفضلة وتفاصيل المنتج
+// 5. المفضلة وتفاصيل المنتج
 // ==========================================
 window.toggleWishlist = (prodId, event) => {
   if (event) event.stopPropagation();
@@ -375,7 +373,6 @@ window.openProductDetails = (id) => {
   currentProductId = id;
   window.updateDetailWishlistBtn();
 
-  // 🌟 ديناميكية العنوان والواتساب
   document.title = `${prod.title} | B.n Store`;
   document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=استفسار بخصوص منتج: ${encodeURIComponent(prod.title)}`;
 
@@ -390,7 +387,6 @@ window.openProductDetails = (id) => {
   document.getElementById('detailOldPrice').textContent = convertedOld ? `${convertedOld} ${currency}` : '';
   document.getElementById('detailBadge').textContent = prod.badge;
 
-  // 🌟 زر مشاركة المنتج الذكي
   const shareProductBtn = document.getElementById('shareProductBtn');
   if(shareProductBtn) {
     shareProductBtn.onclick = async () => {
@@ -451,7 +447,6 @@ window.openProductDetails = (id) => {
     }
   }
 
-  // 🌟 إظهار المنتجات ذات الصلة
   window.renderRelatedProducts(prod);
   window.loadProductReviews(id);
   showView('details');
@@ -471,7 +466,7 @@ window.renderRelatedProducts = (currentProd) => {
   related.forEach(prod => {
     const convertedPrice = (prod.price * rate).toFixed(currency === 'EGP' ? 0 : 2);
     const card = document.createElement('div');
-    card.className = 'product-card';
+    card.className = 'product-card fade-up';
     card.style.padding = '15px';
     card.onclick = () => window.openProductDetails(prod.id);
     card.innerHTML = `
@@ -583,7 +578,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const paymentMethodEl = document.getElementById('paymentMethod');
   if (paymentMethodEl) paymentMethodEl.addEventListener('change', updatePaymentInfoBox);
 
-  // 🌟 تفعيل النجوم التفاعلية في التقييم
   const interactiveStars = document.querySelectorAll('#interactiveStars .star');
   interactiveStars.forEach(star => {
     star.addEventListener('click', (e) => {
@@ -595,7 +589,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // معاينة الإيصال
   const receiptFileInput = document.getElementById('receiptFileInput');
   const receiptPreview = document.getElementById('receiptPreview');
   if (receiptFileInput && receiptPreview) {
@@ -611,7 +604,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 🌟 مشاركة المتجر
   document.getElementById('shareBtn')?.addEventListener('click', async () => {
     const shareData = { title: 'B.n Store', text: 'أفضل متجر لشحن الألعاب والخدمات الرقمية! 🔥', url: window.location.href };
     if (navigator.share) { try { await navigator.share(shareData); } catch (e) {} }
@@ -693,7 +685,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'));
   });
 
-  // إخفاء نقطة الإشعارات عند فتح الطلبات
   document.getElementById('tabBtnOrders')?.addEventListener('click', () => {
     document.getElementById('tabBtnOrders').classList.add('active');
     document.getElementById('tabBtnWishlist').classList.remove('active');
@@ -723,7 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // المصادقة
   document.getElementById('doLoginBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value.trim();
     const pass = document.getElementById('loginPass').value;
@@ -771,7 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { await signOut(auth); document.getElementById('userAccountModal').style.display = 'none'; window.showToast('تم تسجيل الخروج!', 'success'); } catch (e) {}
   });
 
-  // 🌟 إرسال الطلب (Base64) + حماية الرفع + Anti-Spam + Confetti + EmailJS
+  // 🌟 إرسال الطلب (Base64) + تفعيل الإيميلات EmailJS
   const checkoutForm = document.getElementById('checkoutForm');
   if (checkoutForm) {
     checkoutForm.addEventListener('submit', async (e) => {
@@ -784,16 +774,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const file = document.getElementById('receiptFileInput').files[0];
       if (!file) return window.showToast('برجاء إرفاق صورة إيصال التحويل!', 'error');
       
-      // 🛡️ حماية الرفع: أقصى حد للصورة قبل الضغط 4 ميجا (توفيراً للنت والمساحة)
+      // 🛡️ حماية: أقصى حد 4 ميجا
       if (file.size > 4 * 1024 * 1024) return window.showToast('حجم الإيصال كبير جداً (أقصى حد 4 ميجا)، يرجى تقليل الجودة.', 'error');
 
       const confirmBtn = document.getElementById('confirmOrderBtn');
       const originalBtnText = confirmBtn.textContent;
       confirmBtn.textContent = 'جاري إرسال الطلب ⏳...';
-      confirmBtn.disabled = true; // Anti-Spam
+      confirmBtn.disabled = true;
 
       try {
-        // ضغط الصورة وحفظها كـ Base64 بالطريقة الأصلية
         const receiptBase64 = await compressImage(file);
 
         const currency = document.getElementById('currencySelect').value;
@@ -824,16 +813,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // 🎉 إطلاق تأثير الاحتفال (Confetti)
         if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#00ffcc', '#0099ff', '#ffffff'] });
 
-        // ✉️ إرسال إشعار EmailJS (قم بوضع بياناتك لتفعيله)
-        /* if (typeof emailjs !== 'undefined') {
-             emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+        // ✉️ إرسال إشعار EmailJS بالفاتورة الاحترافية للعميل
+        if (typeof emailjs !== 'undefined') {
+             emailjs.send("service_01wl99f", "template_wxomgzu", {
                to_name: currentUserProfile.name,
                to_email: currentUserProfile.email,
                order_id: orderId,
                product_name: prod.title,
                price: finalPrice + ' ' + currency
+             }).then(() => {
+                 console.log("تم إرسال فاتورة الإيميل للعميل بنجاح");
+             }).catch((err) => {
+                 console.error("خطأ في إرسال الإيميل:", err);
              });
-           } */
+        }
       } catch (err) {
         window.showToast('حدث خطأ أثناء إرسال الطلب، تأكد من اتصالك.', 'error');
       } finally {
@@ -925,7 +918,6 @@ const initApp = () => {
          window.renderUserOrders();
          if(checkIsAdmin()) { window.renderAdminOrders(); window.renderAdminStats(); }
 
-         // 🌟 إظهار نقطة الإشعارات الحمراء للطلبات المكتملة حديثاً
          if (!checkIsAdmin() && currentUserProfile) {
            const seenOrders = JSON.parse(localStorage.getItem('bn_seen_orders')) || [];
            const myCompleted = ords.filter(o => o.status === 'completed' && o.uid === currentUserProfile.uid);
@@ -955,7 +947,7 @@ window.renderUserOrders = () => {
   
   myOrders.forEach(o => {
      const div = document.createElement('div');
-     div.className = 'my-orders-box';
+     div.className = 'my-orders-box fade-up';
      const statusColor = o.status === 'completed' ? 'var(--success)' : o.status === 'cancelled' ? 'var(--danger)' : '#ffcc00';
      const statusAr = o.status === 'completed' ? 'مكتمل ✅' : o.status === 'cancelled' ? 'ملغي ❌' : 'قيد المراجعة ⏳';
      div.innerHTML = `
@@ -987,7 +979,7 @@ window.renderUserWishlist = () => {
   wishedProducts.forEach(prod => {
     const convertedPrice = (prod.price * rate).toFixed(currency === 'EGP' ? 0 : 2);
     const card = document.createElement('div');
-    card.className = 'product-card';
+    card.className = 'product-card fade-up';
     card.style.padding = '15px';
     card.onclick = (e) => {
       if(e.target.classList.contains('wishlist-icon-btn')) return;
@@ -1007,7 +999,7 @@ window.renderUserWishlist = () => {
 };
 
 // ==========================================
-// 8. لوحة التحكم للإدارة (بالطريقة الأصلية Base64)
+// 8. لوحة التحكم للإدارة
 // ==========================================
 window.initAdminTabs = () => {
   const tabBtns = document.querySelectorAll('#adminTabs .tab-btn');
@@ -1136,7 +1128,6 @@ window.addSlide = async () => {
 
   const origText = btn.textContent; btn.textContent = 'جاري الإضافة ⏳...'; btn.disabled = true;
   try {
-    // ضغط الصورة وحفظها كـ Base64 بالطريقة الأصلية
     const imgBase64 = await compressImage(fileInput.files[0]);
     const slides = storeState.slides ? [...storeState.slides] : [];
     slides.push({ title, desc, imgUrl: imgBase64 });
@@ -1248,7 +1239,6 @@ window.saveProduct = async () => {
 
   try {
     let imgUrl = '';
-    // ضغط الصورة وحفظها كـ Base64 بالطريقة الأصلية
     if (fileInput && fileInput.files[0]) {
       imgUrl = await compressImage(fileInput.files[0]);
     } 
