@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
@@ -187,7 +187,6 @@ window.renderCategoriesBar = () => {
   bar.replaceChildren();
   if(selectCat) selectCat.replaceChildren();
 
-  // زر الكل ثابت
   const allBtn = document.createElement('button');
   allBtn.type = 'button';
   allBtn.className = 'category-btn active';
@@ -550,6 +549,45 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
   });
 
+  // 🌟 تفعيل زر استعادة كلمة المرور
+  const resetPassBtn = document.getElementById('resetPassBtn');
+  if (resetPassBtn) {
+    resetPassBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      if (!email) {
+        return window.showToast('اكتب بريدك الإلكتروني في خانة البريد أولاً!', 'error');
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        window.showToast('📧 تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح!', 'success');
+      } catch (error) {
+        window.showToast('حدث خطأ، تأكد من صحة البريد الإلكتروني المدخل.', 'error');
+      }
+    });
+  }
+
+  // 🌐 تفعيل زر تسجيل الدخول بواسطة Google
+  const googleLoginBtn = document.getElementById('googleLoginBtn');
+  if (googleLoginBtn) {
+    googleLoginBtn.addEventListener('click', async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+          uid: user.uid, name: user.displayName || 'مستخدم جوجل', email: user.email, createdAt: serverTimestamp()
+        }, { merge: true });
+
+        document.getElementById('authModal').style.display = 'none';
+        window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
+      } catch (error) {
+        window.showToast('فشل تسجيل الدخول بـ Google، تأكد من تفعيله في Firebase', 'error');
+      }
+    });
+  }
+
   document.getElementById('doRegisterBtn').addEventListener('click', async () => {
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
@@ -789,13 +827,11 @@ window.injectAdminDashboard = () => {
   if(!container) return;
   
   container.innerHTML = `
-    <!-- إحصائيات المبيعات السريعة -->
     <div class="admin-section" style="border-color: var(--accent-neon);">
       <h4 style="color: var(--accent-neon); margin-bottom: 15px;">📊 إحصائيات المبيعات السريعة</h4>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;" id="adminStatsGrid"></div>
     </div>
 
-    <!-- إدارة السلايدر (البانرات الإعلانية) -->
     <div class="admin-section">
       <h4>🖼️ إدارة سلايدر البانرات الإعلانية</h4>
       <div class="grid-2">
@@ -807,7 +843,6 @@ window.injectAdminDashboard = () => {
       <div id="adminSlidesList"></div>
     </div>
 
-    <!-- إدارة الأقسام والتصنيفات -->
     <div class="admin-section">
       <h4>🏷️ إدارة أقسام المتجر</h4>
       <div class="grid-2">
@@ -818,7 +853,6 @@ window.injectAdminDashboard = () => {
       <div id="adminCategoriesList"></div>
     </div>
 
-    <!-- إعدادات شريط العروض والعداد -->
     <div class="admin-section">
       <h4>⚡ إعدادات شريط العروض والعداد التنازلي</h4>
       <div class="form-group"><label>نص الإعلان (البانر)</label><input type="text" id="admBannerAr" placeholder="مثال: ⚡ خصومات الكريسماس الفورية!"></div>
