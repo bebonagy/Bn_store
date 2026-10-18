@@ -219,7 +219,7 @@ const updateCheckoutPriceDisplay = () => {
 };
 
 // ==========================================
-// 5. دالة تحديث بيانات الدفع وإظهار الرقم للعميل (تم التعديل للربط الصحيح)
+// 5. دالة تحديث بيانات الدفع وإظهار الرقم للعميل
 // ==========================================
 const updatePaymentInfoBox = () => {
   const methodSelect = document.getElementById('paymentMethod');
@@ -240,7 +240,6 @@ const updatePaymentInfoBox = () => {
     targetVal = "اختر وسيلة دفع صحيحة";
   }
 
-  // الربط المباشر بالعنصر الصحيح الموجود في الـ HTML
   const addressDisplay = document.getElementById('paymentAddressDisplay');
   if (addressDisplay) {
     addressDisplay.textContent = targetVal;
@@ -262,13 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('searchInput').addEventListener('input', window.renderProducts);
   document.getElementById('currencySelect').addEventListener('change', window.renderProducts);
   
-  // ربط حدث تغيير وسيلة الدفع لتحديث الرقم فوراً
   const paymentMethodEl = document.getElementById('paymentMethod');
   if (paymentMethodEl) {
     paymentMethodEl.addEventListener('change', updatePaymentInfoBox);
   }
 
-  // تفعيل زر النسخ السريع لرقم المحفظة
   const copyBtn = document.getElementById('copyBtnText');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
@@ -290,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('promoCodeInput').value = '';
       document.getElementById('promoMsg').textContent = '';
       updateCheckoutPriceDisplay();
-      updatePaymentInfoBox(); // تحديث أرقام المحافظ عند فتح نافذة الشراء
+      updatePaymentInfoBox();
       document.getElementById('checkoutModal').style.display = 'flex';
     }
   });
@@ -344,7 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
       await signInWithEmailAndPassword(auth, email, pass);
       document.getElementById('authModal').style.display = 'none';
       
-      // 🌟 تصفير خانة البحث لمنع حشر الإيميل في اللاب توب
       const searchInput = document.getElementById('searchInput');
       if(searchInput) searchInput.value = '';
 
@@ -378,6 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { window.showToast('حدث خطأ!', 'error'); }
   });
 
+  // إرسال الطلب مع إرفاق صورة الإيصال (Base64)
   document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserProfile || !currentProductId) return;
@@ -389,6 +386,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const senderInfo = sanitizeText(document.getElementById('senderInfo').value);
     const customerData = sanitizeText(document.getElementById('customerData').value);
     
+    // التحقق من رفع صورة الإيصال وقراءتها
+    const receiptFile = document.getElementById('receiptFileInput').files[0];
+    if (!receiptFile) return window.showToast('برجاء إرفاق صورة إيصال التحويل!', 'error');
+
+    const receiptBase64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => resolve(uploadEvent.target.result);
+      reader.readAsDataURL(receiptFile);
+    });
+
     const currency = document.getElementById('currencySelect').value;
     const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
     
@@ -413,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         paymentMethod,
         senderInfo,
         customerData,
+        receiptImage: receiptBase64, // تخزين رابط الصورة المشفر داخل بيانات الطلب
         status: 'pending',
         deliveredCode: '',
         createdAt: serverTimestamp()
@@ -427,9 +435,9 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('checkoutModal').style.display = 'none';
       document.getElementById('checkoutForm').reset();
       activeDiscount = 0; 
-      window.showToast('🎉 تم إرسال طلبك بنجاح! راجع "حسابي" لمتابعته.', 'success');
+      window.showToast('🎉 تم إرسال طلبك وإيصال التحويل بنجاح! راجع "حسابي".', 'success');
     } catch (err) {
-      window.showToast('حدث خطأ أثناء إرسال الطلب، تأكد من اتصالك.', 'error');
+      window.showToast('حدث خطأ أثناء إرسال الطلب، تأكد من حجم الصورة أو اتصالك.', 'error');
     }
   });
 });
@@ -464,7 +472,7 @@ const initApp = () => {
       
       document.getElementById('flashBannerText').textContent = storeState.bannerAr;
       initCountdown(storeState.bannerExpiry); 
-      updatePaymentInfoBox(); // تحديث أرقام المحافظ عند تحديث السيرفر
+      updatePaymentInfoBox();
 
       document.getElementById('whatsappBtn').href = `https://wa.me/${storeState.whatsapp}?text=استفسار:`;
       
@@ -562,7 +570,7 @@ window.renderUserOrders = () => {
 };
 
 // ==========================================
-// 8. لوحة التحكم للإدارة (متضمنة التعديل والعداد)
+// 8. لوحة التحكم للإدارة (متضمنة عرض صورة الإيصال للأدمن)
 // ==========================================
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer');
@@ -606,10 +614,10 @@ window.injectAdminDashboard = () => {
       <button type="button" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ كل الإعدادات والشريط</button>
     </div>
 
-    <!-- إدارة طلبات العملاء -->
+    <!-- إدارة طلبات العملاء وإيصالات التحويل -->
     <div class="admin-section">
-      <h4>📋 إدارة طلبات العملاء</h4>
-      <div id="adminOrdersList" style="max-height:350px; overflow-y:auto;"></div>
+      <h4>📋 إدارة طلبات العملاء وإيصالات التحويل</h4>
+      <div id="adminOrdersList" style="max-height:450px; overflow-y:auto;"></div>
     </div>
 
     <!-- إضافة وتعديل منتج -->
@@ -695,15 +703,17 @@ window.renderAdminOrders = () => {
      div.style.alignItems = 'flex-start';
      
      const discountBadge = o.discountApplied > 0 ? `<span style="color:var(--success); font-weight:bold;">[تم خصم ${o.discountApplied}% بكود ${o.promoCodeUsed}]</span>` : '';
+     const receiptView = o.receiptImage ? `<div style="margin-top:8px;"><a href="${o.receiptImage}" target="_blank" style="color:var(--accent-neon); text-decoration:underline; font-weight:bold; display:inline-flex; align-items:center; gap:5px;">📄 عرض صورة إيصال التحويل</a></div>` : '';
 
      div.innerHTML = `
        <div style="width:100%; margin-bottom:8px; line-height:1.6;">
          <strong>الطلب:</strong> ${o.productName} | <strong>الإيميل:</strong> ${o.userEmail}<br>
          <small><strong>السعر للعميل:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${discountBadge}</small><br>
-         <small><strong>المحفظة:</strong> ${o.senderInfo} | <strong>بيانات الاستلام:</strong> ${o.customerData}</small><br>
-         <small><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>
+         <small><strong>المحفظة المحول منها:</strong> ${o.senderInfo} | <strong>بيانات الاستلام:</strong> ${o.customerData}</small><br>
+         ${receiptView}
+         <small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>
        </div>
-       <div style="display:flex; gap:8px; width:100%; flex-wrap:wrap;">
+       <div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px;">
          <input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل للعميل هنا..." value="${o.deliveredCode || ''}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b10; color:#fff; border:1px solid var(--border-color);">
          <button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button>
          <button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button>
