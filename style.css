@@ -123,7 +123,13 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; margin-bottom: 45px; min-height: 200px; }
 .product-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; text-align: center; position: relative; display: flex; flex-direction: column; justify-content: space-between; transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease; cursor: pointer; }
 .product-card:hover { transform: translateY(-6px); border-color: var(--accent-neon); box-shadow: 0 8px 25px var(--accent-glow), inset 0 0 15px rgba(0,255,204,.05); }
-.product-badge { position: absolute; top: 14px; inset-inline-end: 14px; background: rgba(6,6,8,.88); color: var(--accent-neon); border: 1px solid rgba(0,255,204,.4); padding: 3px 9px; font-size: 11px; border-radius: 5px; font-weight: 600; z-index: 2; }
+
+/* زر الإضافة للمفضلة في الكارت */
+.wishlist-icon-btn { position: absolute; top: 12px; left: 12px; background: rgba(6,6,8,.8); border: 1px solid var(--border-color); color: #fff; font-size: 16px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; transition: all .2s; }
+.wishlist-icon-btn:hover { border-color: var(--danger); transform: scale(1.1); }
+.wishlist-icon-btn.active { color: var(--danger); text-shadow: 0 0 8px rgba(255,68,68,.5); }
+
+.product-badge { position: absolute; top: 14px; right: 14px; background: rgba(6,6,8,.88); color: var(--accent-neon); border: 1px solid rgba(0,255,204,.4); padding: 3px 9px; font-size: 11px; border-radius: 5px; font-weight: 600; z-index: 2; }
 .product-img { width: 100%; height: 145px; background: #14141d; border-radius: 8px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; color: var(--accent-neon); font-size: 17px; font-weight: bold; border: 1px dashed #262638; box-shadow: inset 0 0 10px rgba(0,0,0,.5); overflow: hidden; background-size: cover; background-position: center; }
 .product-title { font-size: 17px; margin-bottom: 6px; font-weight: 600; }
 .product-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; min-height: 40px; }
@@ -136,7 +142,30 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
 .empty-products-msg { grid-column: 1/-1; text-align: center; padding: 40px 20px; color: var(--text-muted); background: var(--card-bg); border: 1px dashed var(--border-color); border-radius: 12px; }
 
 /* ==========================================
-   8. صفحة تفاصيل المنتج الجديدة (PRODUCT DETAILS VIEW)
+   🌟 8. شاشات التحميل الوهمية (SKELETON LOADERS)
+   ========================================== */
+.skeleton {
+  background: linear-gradient(90deg, #1c1c28 25%, #2c2c3d 50%, #1c1c28 75%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes skeleton-loading {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+.skeleton-card {
+  background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; height: 350px; display: flex; flex-direction: column; gap: 12px;
+}
+.skel-img { height: 145px; width: 100%; }
+.skel-title { height: 20px; width: 70%; margin: 0 auto; }
+.skel-desc { height: 12px; width: 90%; margin: 0 auto; }
+.skel-desc-2 { height: 12px; width: 60%; margin: 0 auto; }
+.skel-price { height: 25px; width: 40%; margin: 15px auto; }
+.skel-btn { height: 40px; width: 100%; border-radius: 7px; margin-top: auto; }
+
+/* ==========================================
+   9. صفحة تفاصيل المنتج (PRODUCT DETAILS VIEW)
    ========================================== */
 .product-details-container { display: flex; flex-wrap: wrap; gap: 30px; background: var(--card-bg); padding: 30px; border-radius: 14px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,.4); }
 .details-image-box { flex: 1; min-width: 300px; height: 350px; background: #14141d; border-radius: 12px; border: 1px dashed #262638; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--accent-neon); background-size: cover; background-position: center; box-shadow: inset 0 0 20px rgba(0,0,0,.6); }
@@ -145,7 +174,7 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
 .details-desc { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; }
 
 /* ==========================================
-   9. النوافذ المنبثقة والنماذج (MODALS & FORMS)
+   10. النوافذ المنبثقة والنماذج (MODALS & FORMS)
    ========================================== */
 .modal { display: none; position: fixed; inset: 0; width: 100%; height: 100%; background: rgba(0,0,0,.85); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
 .modal-content { background: var(--card-bg); border: 1px solid var(--accent-neon); box-shadow: 0 0 30px var(--accent-glow); padding: 26px; border-radius: 14px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
@@ -167,7 +196,7 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
 .cancel-btn:hover { border-color: var(--text-main); color: var(--text-main); }
 
 /* ==========================================
-   10. لوحة تحكم الإدارة والطلبات (ADMIN & ORDERS)
+   11. لوحة تحكم الإدارة والطلبات (ADMIN & ORDERS)
    ========================================== */
 .admin-section { border: 1px solid var(--border-color); padding: 16px; border-radius: 10px; margin-bottom: 20px; background: #0b0b10; }
 .admin-section h4 { color: var(--accent-neon); margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
@@ -181,7 +210,21 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
 .delivered-code-box { background: rgba(0,255,100,.07); border: 1px solid var(--success); padding: 10px; border-radius: 7px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-family: monospace; font-size: 14px; color: var(--success); gap: 10px; word-break: break-all; }
 
 /* ==========================================
-   11. زر الواتساب والتجاوب مع الموبايل (WHATSAPP & RESPONSIVE)
+   12. تبويبات الإدارة (ADMIN TABS)
+   ========================================== */
+.admin-tabs::-webkit-scrollbar { height: 4px; }
+.admin-tabs::-webkit-scrollbar-thumb { background: var(--accent-neon); border-radius: 4px; }
+.user-tabs-container::-webkit-scrollbar { height: 4px; }
+.user-tabs-container::-webkit-scrollbar-thumb { background: var(--accent-neon); border-radius: 4px; }
+
+.tab-btn { background: var(--card-bg); color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; white-space: nowrap; transition: all .2s ease; }
+.tab-btn.active, .tab-btn:hover { background: rgba(0,255,204,.1); color: var(--accent-neon); border-color: var(--accent-neon); box-shadow: 0 0 10px var(--accent-glow); }
+.tab-content { display: none; animation: fadeIn .3s ease forwards; }
+.tab-content.active-tab { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==========================================
+   13. زر الواتساب والتجاوب مع الموبايل (WHATSAPP & RESPONSIVE)
    ========================================== */
 .whatsapp-float { position: fixed; bottom: 22px; inset-inline-end: 22px; background: #25d366; color: #fff; padding: 12px 20px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px; box-shadow: 0 5px 20px rgba(37,211,102,.4); display: flex; align-items: center; gap: 8px; z-index: 900; transition: transform .25s ease; }
 .whatsapp-float:hover { transform: scale(1.05); }
@@ -204,14 +247,3 @@ select:focus, button.control-btn:hover, .user-action-btn:hover { border-color: v
   .whatsapp-float { inset-inline-end: 14px; bottom: 14px; padding: 10px 16px; font-size: 13px; }
   .modal-content { padding: 18px; }
 }
-
-/* ==========================================
-   12. تبويبات الإدارة (ADMIN TABS) - الإضافة الجديدة
-   ========================================== */
-.admin-tabs::-webkit-scrollbar { height: 4px; }
-.admin-tabs::-webkit-scrollbar-thumb { background: var(--accent-neon); border-radius: 4px; }
-.tab-btn { background: var(--card-bg); color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; white-space: nowrap; transition: all .2s ease; }
-.tab-btn.active, .tab-btn:hover { background: rgba(0,255,204,.1); color: var(--accent-neon); border-color: var(--accent-neon); box-shadow: 0 0 10px var(--accent-glow); }
-.tab-content { display: none; animation: fadeIn .3s ease forwards; }
-.tab-content.active-tab { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
