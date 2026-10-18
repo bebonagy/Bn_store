@@ -6,7 +6,7 @@
 <title>B.n Store | شحن ألعاب، اشتراكات الذكاء الاصطناعي، والخدمات الرقمية بأفضل سعر</title>
 
 <!-- 🛡️ 1. سياسة أمان المحتوى (CSP) لحماية الموقع من السكربتات الخبيثة -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
 <!-- SEO Meta Tags -->
@@ -226,6 +226,8 @@
         <div class="form-group">
           <label>صورة إيصال التحويل (سكرين شوت)</label>
           <input type="file" id="receiptFileInput" accept="image/*" required style="padding: 7px; background: #0b0b10; color: #fff; border: 1px solid var(--border-color); border-radius: 7px; width: 100%;">
+          <!-- معاينة الصورة هتظهر هنا -->
+          <img id="receiptPreview" src="" alt="معاينة الإيصال" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:8px; border:1px solid var(--border-color);">
         </div>
 
         <p style="color:var(--text-muted);font-size:12px;margin-bottom:15px;text-align:center;">📌 برجاء إرفاق صورة الإيصال بوضوح لضمان سرعة تفعيل طلبك.</p>
@@ -240,15 +242,21 @@
 
   <!-- Admin Modal (Dashboard) -->
   <div class="modal" id="adminModal">
-    <div class="modal-content large-modal">
+    <div class="modal-content large-modal" style="max-width: 900px;">
       <h3><span>⚙️ لوحة تحكم B.n Store</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:5px 12px;">إغلاق ✕</button></h3>
-      <div id="adminLoginView">
-        <div class="form-group"><label>بريد الأدمن</label><input type="email" id="adminEmailInput"></div>
-        <div class="form-group"><label>كلمة المرور</label><input type="password" id="adminPasswordInput"></div>
-        <button type="button" class="submit-btn" id="doAdminLoginBtn" style="width:100%;">دخول</button>
+      
+      <!-- تبويبات الإدارة -->
+      <div class="admin-tabs" id="adminTabs" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
+        <button class="tab-btn active" data-target="tab-dashboard">📊 الرئيسية</button>
+        <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
+        <button class="tab-btn" data-target="tab-products">🛒 المنتجات</button>
+        <button class="tab-btn" data-target="tab-settings">⚙️ الإعدادات</button>
       </div>
-      <div id="adminDashboardView" style="display:none;">
-        <div id="adminSectionsContainer"></div>
+
+      <div id="adminDashboardView">
+        <div id="adminSectionsContainer">
+          <!-- محتوى الإدارة هيتم حقنه هنا عن طريق الجافاسكريبت -->
+        </div>
       </div>
     </div>
   </div>
