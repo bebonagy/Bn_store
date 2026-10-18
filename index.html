@@ -60,6 +60,7 @@
   <!-- 🔄 الواجهة الرئيسية (الرئيسية والمنتجات) -->
   <!-- ========================================== -->
   <div id="homeView">
+    <!-- سلايدر البانرات الإعلانية المتحركة -->
     <section class="promo-slider-container" id="promoSlider">
       <div class="slider-track" id="sliderTrack"></div>
       <button type="button" class="slider-btn slider-prev" id="prevSlideBtn">❯</button>
@@ -77,12 +78,9 @@
       <input type="search" class="search-input" id="searchInput" placeholder="🔍 ابحث عن لعبة، اشتراك، أو خدمة تصميم بالذكاء الاصطناعي..." autocomplete="off">
     </div>
 
+    <!-- شريط التصنيفات الديناميكي -->
     <div class="categories-bar" id="categoriesBar">
       <button type="button" class="category-btn active" data-cat="all">⚡ الكل</button>
-      <button type="button" class="category-btn" data-cat="games">🎮 ألعاب</button>
-      <button type="button" class="category-btn" data-cat="subs">📺 اشتراكات</button>
-      <button type="button" class="category-btn" data-cat="ai">✨ ذكاء اصطناعي</button>
-      <button type="button" class="category-btn" data-cat="software">💻 برامج</button>
     </div>
 
     <h2 class="section-title">المنتجات المميزة</h2>
@@ -90,7 +88,7 @@
   </div>
 
   <!-- ========================================== -->
-  <!-- 📦 واجهة تفاصيل المنتج المتقدمة (الجديدة) -->
+  <!-- 📦 واجهة تفاصيل المنتج المتقدمة -->
   <!-- ========================================== -->
   <div id="productDetailsView" style="display:none;">
     <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;">🔙 العودة للمتجر</button>
@@ -121,7 +119,6 @@
       <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 25px;">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;">💬 تقييمات وآراء العملاء</h3>
         
-        <!-- نموذج كتابة تقييم -->
         <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
           <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">أضف تقييمك للمنتج</h4>
           <div class="form-group" style="margin-bottom: 10px;">
@@ -140,7 +137,6 @@
           <button type="button" class="submit-btn" id="submitReviewBtn" style="padding: 8px 20px; font-size: 13px; flex: 0;">إرسال التقييم</button>
         </div>
 
-        <!-- قائمة التعليقات -->
         <div id="productReviewsList"></div>
       </div>
     </div>
@@ -223,7 +219,6 @@
         <div class="form-group"><label>رقم / حساب التحويل</label><input type="text" id="senderInfo" required placeholder="رقم محفظتك أو حسابك"></div>
         <div class="form-group"><label>بيانات الاستلام</label><input type="text" id="customerData" required placeholder="أدخل الآيدي أو الإيميل"></div>
         
-        <!-- 🌟 خانة رفع صورة إيصال التحويل الجديدة والمجهزة -->
         <div class="form-group">
           <label>صورة إيصال التحويل (سكرين شوت)</label>
           <input type="file" id="receiptFileInput" accept="image/*" required style="padding: 7px; background: #0b0b10; color: #fff; border: 1px solid var(--border-color); border-radius: 7px; width: 100%;">
@@ -243,22 +238,18 @@
   <div class="modal" id="adminModal">
     <div class="modal-content large-modal">
       <h3><span>⚙️ لوحة تحكم B.n Store</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:5px 12px;">إغلاق ✕</button></h3>
-      <!-- Admin Login -->
       <div id="adminLoginView">
         <div class="form-group"><label>بريد الأدمن</label><input type="email" id="adminEmailInput"></div>
         <div class="form-group"><label>كلمة المرور</label><input type="password" id="adminPasswordInput"></div>
         <button type="button" class="submit-btn" id="doAdminLoginBtn" style="width:100%;">دخول</button>
       </div>
-      <!-- Admin Dashboard -->
       <div id="adminDashboardView" style="display:none;">
-        <!-- هنا هيتم إدراج أقسام الإدارة (الطلبات، المنتجات، الإعدادات) عبر الجافاسكريبت أو لاحقاً -->
         <div id="adminSectionsContainer"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 🔗 4. ربط ملف الجافاسكريبت المنفصل (المنطق البرمجي والأمان) -->
 <script type="module" src="app.js"></script>
 </body>
 </html>
