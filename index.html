@@ -16,22 +16,19 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
-<!-- SEO Meta Tags -->
 <meta name="description" content="متجر B.n Store - وجهتك الأولى والموثوقة لشحن الألعاب، اشتراكات الذكاء الاصطناعي (ChatGPT, Canva, CapCut)، والخدمات الرقمية.">
 <meta name="theme-color" content="#00ffcc">
 
 <!-- 🔗 ربط ملف التصميمات المنفصل -->
 <link rel="stylesheet" href="style.css">
 
-<!-- 🌟 مكتبات إضافية (Confetti للاحتفال + EmailJS للبريد) -->
+<!-- 🌟 مكتبات إضافية -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<!-- 🔑 تفعيل EmailJS باستخدام Public Key الخاص بك -->
 <script type="text/javascript">
    emailjs.init("t5Irys8GSHX5X1a63");
 </script>
 
-<!-- 🛡️ حماية ضد الـ Clickjacking -->
 <style id="antiClickjack">body{display:none !important;}</style>
 <script>
   if (self === top) {
@@ -43,16 +40,13 @@
 </script>
 </head>
 <body>
-<!-- التنبيهات (Toast) -->
 <div id="toastContainer" aria-live="polite"></div>
 
-<!-- شريط العروض -->
 <div class="flash-sale-banner" id="flashSaleBanner">
   <span id="flashBannerText">⚡ جاري تحميل العروض...</span>
   <div class="countdown-timer" id="countdownTimer">⏳ 00:00:00</div>
 </div>
 
-<!-- الهيدر -->
 <header>
   <div class="logo" id="logoBtn">B<span class="dot-accent">.</span>n Store</div>
   <nav class="header-controls">
@@ -64,12 +58,9 @@
       <option value="USD">USD ($)</option>
     </select>
     <div id="authHeaderButtons" style="display: flex; gap: 8px; align-items: center;">
-      <!-- 🛒 زر سلة المشتريات -->
       <button type="button" class="user-action-btn" id="cartBtnNav" style="position: relative;">
         🛒 <span id="cartCountBadge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger); color:#fff; font-size:10px; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center;">0</span>
       </button>
-      
-      <!-- 🔴 مؤشر الإشعارات وتأكيد الدخول -->
       <button type="button" class="user-action-btn" id="loginBtnNav" style="position: relative;">
         👤 <span id="loginBtnText">تسجيل الدخول</span>
         <span id="notificationDot" style="display:none; position:absolute; top:-5px; right:-5px; font-size:10px;">🔴</span>
@@ -80,11 +71,8 @@
 </header>
 
 <main class="container">
-  <!-- ========================================== -->
-  <!-- 🔄 الواجهة الرئيسية (الرئيسية والمنتجات) -->
-  <!-- ========================================== -->
+  <!-- 🔄 الواجهة الرئيسية -->
   <div id="homeView">
-    <!-- سلايدر البانرات الإعلانية المتحركة -->
     <section class="promo-slider-container" id="promoSlider">
       <div class="slider-track" id="sliderTrack"></div>
       <button type="button" class="slider-btn slider-prev" id="prevSlideBtn">❯</button>
@@ -98,7 +86,6 @@
       <div class="stat-card"><div class="stat-number">🛡️ 100%</div><div class="stat-label">أمان وتسليم فوري</div></div>
     </section>
 
-    <!-- شريط البحث وفلتر الترتيب -->
     <div class="search-bar-container" style="display: flex; gap: 10px; flex-wrap: wrap;">
       <input type="search" class="search-input" id="searchInput" placeholder="🔍 ابحث عن لعبة، اشتراك، أو خدمة تصميم..." autocomplete="off" style="flex: 1; min-width: 250px;">
       <select id="sortSelect" class="search-input" style="flex: 0 1 200px; padding: 10px 15px;">
@@ -108,38 +95,32 @@
       </select>
     </div>
 
-    <!-- شريط التصنيفات الديناميكي -->
     <div class="categories-bar" id="categoriesBar">
       <button type="button" class="category-btn active" data-cat="all">⚡ الكل</button>
     </div>
 
     <h2 class="section-title">المنتجات المميزة</h2>
-    <div class="product-grid" id="productGrid">
-      <!-- شاشة التحميل الوهمية (Skeleton) هتظهر هنا برمجياً -->
-    </div>
+    <div class="product-grid" id="productGrid"></div>
   </div>
 
-  <!-- ========================================== -->
-  <!-- 📦 واجهة تفاصيل المنتج المتقدمة -->
-  <!-- ========================================== -->
+  <!-- 📦 واجهة تفاصيل المنتج -->
   <div id="productDetailsView" style="display:none;">
     <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;">🔙 العودة للمتجر</button>
     <div class="product-details-container" style="flex-direction: column;">
       <div style="display: flex; flex-wrap: wrap; gap: 30px; width: 100%;">
         
-        <!-- قسم الصور (الأساسية + المعرض) -->
-        <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px;">
-          <!-- صورة المنتج الرئيسية (قابلة للضغط للتكبير) -->
-          <div class="details-image-box" id="detailImageBox" style="width: 100%; height: 350px; cursor: zoom-in;" title="اضغط لتكبير الصورة"></div>
-          <!-- 🖼️ معرض الصور المصغرة (جديد) -->
-          <div id="detailImageGallery" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;"></div>
+        <!-- قسم الصور -->
+        <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+          <div class="details-image-box zoomable-image" id="detailImageBox" style="width: 100%; height: 350px;" title="اضغط لتكبير الصورة"></div>
+          <!-- 🖼️ سلايدر الصور المصغرة -->
+          <div class="gallery-slider-wrapper" style="position: relative; width: 100%;">
+            <div id="detailImageGallery" class="gallery-slider-track"></div>
+          </div>
         </div>
         
         <div class="details-info-box" style="flex: 1.5; min-width: 300px; position: relative;">
-          <!-- زر إضافة للمفضلة -->
           <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">🤍</button>
           
-          <!-- عنوان المنتج + زر المشاركة -->
           <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-left: 60px; margin-bottom: 10px;">
             <h2 id="detailTitle" class="details-title" style="margin-bottom: 0;"></h2>
             <button type="button" id="shareProductBtn" style="background: rgba(0,153,255,.1); color: #0099ff; border: 1px solid #0099ff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 18px; transition: all 0.3s;" title="مشاركة المنتج">📤</button>
@@ -147,10 +128,13 @@
           
           <span class="product-badge" id="detailBadge" style="position:relative; display:inline-block; margin-bottom:15px;"></span>
           
-          <div class="product-price-box" style="margin-bottom:20px;">
+          <div class="product-price-box" style="margin-bottom:15px;">
             <span id="detailOldPrice" class="old-price" style="font-size:18px;"></span>
             <span id="detailPrice" class="product-price" style="font-size:28px;"></span>
           </div>
+
+          <!-- ⏳ مؤشر وقت التسليم -->
+          <div id="detailDeliveryBadge" class="delivery-badge" style="display:none; margin-bottom: 15px;"></div>
           
           <div class="stock-status" style="margin-bottom: 20px; font-weight: bold; font-size: 16px;">
             الكمية المتاحة: <span id="detailStock" style="color: var(--accent-neon);"></span>
@@ -158,25 +142,25 @@
           
           <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
           
-          <!-- زر الإضافة للسلة -->
+          <!-- ❓ الأسئلة الشائعة للمنتج -->
+          <div id="detailFaqContainer" class="faq-container" style="display:none; margin-bottom: 20px;">
+            <h4 style="color: var(--accent-neon); margin-bottom: 10px; font-size: 15px;">💡 أسئلة شائعة عن الخدمة</h4>
+            <div id="detailFaqList"></div>
+          </div>
+          
           <button type="button" id="detailAddToCartBtn" class="buy-btn" style="padding:15px; font-size:16px; margin-top:10px;">🛒 إضافة إلى السلة</button>
         </div>
       </div>
 
-      <!-- المنتجات ذات الصلة -->
       <div style="width: 100%; margin-top: 35px;">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 18px;">🔥 قد يعجبك أيضاً</h3>
         <div id="relatedProductsGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; min-height: unset; margin-bottom: 0;"></div>
       </div>
 
-      <!-- قسم التقييمات -->
       <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 25px;">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;">💬 تقييمات وآراء العملاء</h3>
-        
-        <!-- صندوق التقييم -->
         <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
           <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">أضف تقييمك للمنتج</h4>
-          
           <div class="form-group" style="margin-bottom: 15px;">
             <label style="margin-bottom: 8px;">تقييمك بالنجوم</label>
             <div id="interactiveStars" style="display: inline-flex; gap: 8px; font-size: 24px; cursor: pointer; direction: ltr;">
@@ -188,46 +172,31 @@
             </div>
             <input type="hidden" id="reviewRating" value="5">
           </div>
-
           <div class="form-group" style="margin-bottom: 10px;">
             <textarea id="reviewCommentText" rows="2" placeholder="اكتب تعليقك أو تجربتك بعد شراء المنتج..." style="width: 100%; background: #14141d; color: #fff; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);"></textarea>
           </div>
           <button type="button" class="submit-btn" id="submitReviewBtn" style="padding: 8px 20px; font-size: 13px; flex: 0;">إرسال التقييم</button>
         </div>
-        
         <div id="productReviewsList"></div>
       </div>
     </div>
   </div>
 </main>
 
-<!-- زر الواتساب -->
 <a href="#" target="_blank" rel="noopener noreferrer" class="whatsapp-float" id="whatsappBtn">
   <span>💬</span><span>الدعم والاستفسارات</span>
 </a>
 
-<!-- ========================================== -->
-<!-- حاوية النوافذ المنبثقة (Modals) -->
-<!-- ========================================== -->
 <div id="modalsWrapper">
-
-  <!-- 🛒 نافذة سلة المشتريات -->
+  <!-- النوافذ المنبثقة -->
   <div class="modal" id="cartModal">
     <div class="modal-content">
       <h3><span>🛒 سلة المشتريات</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">إغلاق ✕</button></h3>
-      
-      <div id="cartItemsList" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px;">
-        <!-- سيتم حقن المنتجات هنا -->
-      </div>
-
-      <!-- 🎁 قسم اقتراحات السلة (Cross-Selling - جديد) -->
+      <div id="cartItemsList" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px;"></div>
       <div id="cartCrossSellSection" style="display: none; background: rgba(0,255,204,0.05); border: 1px dashed var(--accent-neon); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
         <h4 style="font-size: 13px; color: var(--accent-neon); margin-bottom: 10px;">🔥 ضيف ده لطلبك ووفر:</h4>
-        <div id="cartCrossSellList" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;">
-          <!-- سيتم حقن المنتجات المقترحة هنا -->
-        </div>
+        <div id="cartCrossSellList" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;"></div>
       </div>
-
       <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; color:var(--accent-neon); margin-bottom:15px; border-top:1px solid var(--border-color); padding-top:15px;">
         <span>الإجمالي:</span>
         <span id="cartTotalPriceDisplay">0.00</span>
@@ -236,7 +205,6 @@
     </div>
   </div>
 
-  <!-- 🖼️ نافذة تكبير الصور - Lightbox -->
   <div class="modal" id="lightboxModal" style="z-index: 2000; padding: 0;">
     <div style="position:relative; width:100%; height:100%; display:flex; justify-content:center; align-items:center;">
       <button type="button" id="closeLightboxBtn" style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #fff; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer; z-index:2001; transition:0.3s;">✕</button>
@@ -244,7 +212,6 @@
     </div>
   </div>
 
-  <!-- Auth Modal -->
   <div class="modal" id="authModal">
     <div class="modal-content">
       <h3 id="authModalTitle">تسجيل الدخول / إنشاء حساب</h3>
@@ -268,33 +235,26 @@
     </div>
   </div>
 
-  <!-- User Account Modal -->
   <div class="modal" id="userAccountModal">
     <div class="modal-content large-modal">
       <h3><span>👤 حسابي الشخصي</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">إغلاق ✕</button></h3>
       <div style="margin-bottom:20px;font-size:15px;color:var(--accent-neon);">مرحباً بك، <span id="accountUserName" style="font-weight:bold;"></span>!</div>
-      
-      <!-- تبويبات حساب العميل -->
       <div class="user-tabs-container" style="display:flex; gap:10px; margin-bottom:15px;">
         <button class="tab-btn active" id="tabBtnOrders">📦 طلباتي</button>
         <button class="tab-btn" id="tabBtnWishlist">🤍 المفضلة</button>
       </div>
-
       <div id="userOrdersSection">
         <h4 style="margin-bottom:12px;font-size:16px;border-bottom:1px solid var(--border-color);padding-bottom:5px;">📦 طلباتي والأكواد المستلمة</h4>
         <div id="userOrdersList" style="max-height:350px;overflow-y:auto;"></div>
       </div>
-
       <div id="userWishlistSection" style="display:none;">
         <h4 style="margin-bottom:12px;font-size:16px;border-bottom:1px solid var(--border-color);padding-bottom:5px;">🤍 قائمة المفضلة</h4>
         <div id="userWishlistGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; min-height: 100px;"></div>
       </div>
-
       <button type="button" class="cancel-btn" id="logoutBtn" style="width:100%;margin-top:15px;background:var(--danger);color:#fff;border:none;">تسجيل الخروج</button>
     </div>
   </div>
 
-  <!-- Checkout Modal -->
   <div class="modal" id="checkoutModal">
     <div class="modal-content">
       <h3>إتمام الطلب</h3>
@@ -326,15 +286,12 @@
         </div>
         <div class="form-group"><label>رقم / حساب التحويل</label><input type="text" id="senderInfo" required placeholder="رقم محفظتك أو حسابك"></div>
         <div class="form-group"><label>بيانات الاستلام</label><input type="text" id="customerData" required placeholder="أدخل الآيدي أو الإيميل (لكل المنتجات)"></div>
-        
         <div class="form-group">
           <label>صورة إيصال التحويل (سكرين شوت)</label>
           <input type="file" id="receiptFileInput" accept="image/*" required style="padding: 7px; background: #0b0b10; color: #fff; border: 1px solid var(--border-color); border-radius: 7px; width: 100%;">
           <img id="receiptPreview" src="" alt="معاينة الإيصال" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:8px; border:1px solid var(--border-color);">
         </div>
-
         <p style="color:var(--text-muted);font-size:12px;margin-bottom:15px;text-align:center;">📌 برجاء إرفاق صورة الإيصال بوضوح لضمان سرعة تفعيل طلبك.</p>
-        
         <div class="modal-actions">
           <button type="submit" id="confirmOrderBtn" class="submit-btn" style="position:relative; display:flex; justify-content:center; align-items:center; gap:8px;">
             <span id="confirmBtnText">تأكيد الطلب</span>
@@ -346,23 +303,17 @@
     </div>
   </div>
 
-  <!-- Admin Modal (Dashboard) -->
   <div class="modal" id="adminModal">
     <div class="modal-content large-modal" style="max-width: 900px;">
       <h3><span>⚙️ لوحة تحكم B.n Store</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:5px 12px;">إغلاق ✕</button></h3>
-      
-      <!-- تبويبات الإدارة -->
       <div class="admin-tabs" id="adminTabs" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
         <button class="tab-btn active" data-target="tab-dashboard">📊 الرئيسية</button>
         <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
         <button class="tab-btn" data-target="tab-products">🛒 المنتجات</button>
         <button class="tab-btn" data-target="tab-settings">⚙️ الإعدادات</button>
       </div>
-
       <div id="adminDashboardView">
-        <div id="adminSectionsContainer">
-          <!-- محتوى الإدارة هيتم حقنه هنا عن طريق الجافاسكريبت -->
-        </div>
+        <div id="adminSectionsContainer"></div>
       </div>
     </div>
   </div>
