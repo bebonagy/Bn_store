@@ -22,6 +22,7 @@ const appId = "bn-store-main-app";
 const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
 const sanitizeText = (val, maxLen = 500) => String(val ?? '').replace(/[<>]/g, '').trim().slice(0, maxLen);
+const linkify = (text) => text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color: var(--accent-neon); text-decoration: underline;">$1</a>');
 
 const formatDate = (timestamp) => {
   if (!timestamp) return '';
@@ -29,9 +30,6 @@ const formatDate = (timestamp) => {
   return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-// ==========================================
-// 🌟 دالة ضغط الصور (النسخة الذكية - تقرأ من المعاينة)
-// ==========================================
 const compressImage = (base64Src, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve, reject) => {
     if (!base64Src) return reject(new Error('لم يتم العثور على صورة المعاينة!'));
@@ -77,7 +75,8 @@ let storeState = {
     { id: 'ai', name: '✨ ذكاء اصطناعي' },
     { id: 'software', name: '💻 برامج' }
   ],
-  wishlist: JSON.parse(localStorage.getItem('bn_store_wishlist')) || []
+  wishlist: JSON.parse(localStorage.getItem('bn_store_wishlist')) || [],
+  cart: [] // السلة
 };
 
 let currentUserProfile = null;
@@ -90,6 +89,7 @@ let countdownInterval = null;
 let currentSlideIndex = 0;
 let slideInterval = null;
 let isDataLoaded = false;
+let adminOrdersLimit = 20; // Pagination للإدارة
 
 window.showToast = (msg, type = 'normal') => {
   const container = document.getElementById('toastContainer');
@@ -102,7 +102,7 @@ window.showToast = (msg, type = 'normal') => {
 };
 
 // ==========================================
-// 3. نظام العداد التنازلي والسلايدر
+// 3. نظام العداد التنازلي والسلايدر (بالتاتش)
 // ==========================================
 const initCountdown = (expiryString) => {
   const bannerEl = document.getElementById('flashSaleBanner');
@@ -182,6 +182,19 @@ document.getElementById('prevSlideBtn')?.addEventListener('click', () => {
   const slides = storeState.slides.length > 0 ? storeState.slides : [1];
   currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
   updateSliderPosition();
+});
+
+// تفعيل السحب باللمس للسلايدر (Touch Swipe)
+let touchStartX = 0;
+let touchEndX = 0;
+const sliderTrack = document.getElementById('promoSlider');
+sliderTrack?.addEventListener('touchstart', e => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+sliderTrack?.addEventListener('touchend', e => {
+  touchEndX = e.changedTouches[0].screenX;
+  if (touchEndX < touchStartX - 40) document.getElementById('prevSlideBtn')?.click(); 
+  if (touchEndX > touchStartX + 40) document.getElementById('nextSlideBtn')?.click(); 
 });
 
 // ==========================================
@@ -327,7 +340,7 @@ document.getElementById('backToHomeBtn')?.addEventListener('click', () => showVi
 document.getElementById('sortSelect')?.addEventListener('change', window.renderProducts);
 
 // ==========================================
-// 5. المفضلة وتفاصيل المنتج
+// 5. المفضلة، سلة المشتريات وتفاصيل المنتج
 // ==========================================
 window.toggleWishlist = (prodId, event) => {
   if (event) event.stopPropagation();
@@ -359,6 +372,22 @@ document.getElementById('toggleWishlistBtn')?.addEventListener('click', () => {
   if (currentProductId) window.toggleWishlist(currentProductId);
 });
 
+// تكبير الصور (Lightbox)
+document.getElementById('detailImageBox')?.addEventListener('click', () => {
+  if (!currentProductId) return;
+  const prod = storeState.products.find(p => p.id === currentProductId);
+  if (prod && prod.imgUrl) {
+    document.getElementById('lightboxImg').src = prod.imgUrl;
+    document.getElementById('lightboxModal').style.display = 'flex';
+  }
+});
+document.getElementById('closeLightboxBtn')?.addEventListener('click', () => {
+  document.getElementById('lightboxModal').style.display = 'none';
+});
+document.getElementById('lightboxModal')?.addEventListener('click', (e) => {
+  if(e.target.id === 'lightboxModal') document.getElementById('lightboxModal').style.display = 'none';
+});
+
 window.openProductDetails = (id) => {
   const prod = storeState.products.find(p => p.id === id);
   if (!prod) return;
@@ -387,13 +416,15 @@ window.openProductDetails = (id) => {
       ul.style.cssText = 'padding-right: 20px; line-height: 1.8; color: var(--text-muted);';
       descLines.forEach(line => {
         const li = document.createElement('li');
-        li.textContent = line.replace(/^[-*•]\s*/, '');
+        // تفعيل الروابط التفاعلية
+        li.innerHTML = linkify(line.replace(/^[-*•]\s*/, ''));
         ul.appendChild(li);
       });
       descContainer.appendChild(ul);
     } else {
       const p = document.createElement('p');
-      p.textContent = rawDesc;
+      // تفعيل الروابط التفاعلية
+      p.innerHTML = linkify(rawDesc);
       p.style.cssText = 'color: var(--text-muted); line-height: 1.8;';
       descContainer.appendChild(p);
     }
@@ -401,26 +432,26 @@ window.openProductDetails = (id) => {
   
   const imgBox = document.getElementById('detailImageBox');
   if(imgBox) {
-    if(prod.imgUrl) { imgBox.style.backgroundImage = `url('${prod.imgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; }
-    else { imgBox.style.backgroundImage = 'none'; imgBox.textContent = prod.imgText || prod.title; }
+    if(prod.imgUrl) { imgBox.style.backgroundImage = `url('${prod.imgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; imgBox.style.cursor = 'zoom-in'; }
+    else { imgBox.style.backgroundImage = 'none'; imgBox.textContent = prod.imgText || prod.title; imgBox.style.cursor = 'default'; }
   }
 
   const stockEl = document.getElementById('detailStock');
-  const buyBtn = document.getElementById('detailBuyBtn');
+  const addBtn = document.getElementById('detailAddToCartBtn');
   
-  if (stockEl && buyBtn) {
+  if (stockEl && addBtn) {
     if (inStock) {
       stockEl.textContent = (prod.stockQuantity !== undefined) ? `${prod.stockQuantity} قطعة متاحة` : 'متوفر';
       stockEl.style.color = 'var(--success)';
-      buyBtn.textContent = 'إتمام الشراء الآن';
-      buyBtn.disabled = false;
-      buyBtn.classList.remove('out-of-stock-badge');
+      addBtn.textContent = '🛒 إضافة إلى السلة';
+      addBtn.disabled = false;
+      addBtn.classList.remove('out-of-stock-badge');
     } else {
       stockEl.textContent = 'نفذت الكمية (Sold Out)';
       stockEl.style.color = 'var(--danger)';
-      buyBtn.textContent = 'غير متوفر حالياً';
-      buyBtn.disabled = true;
-      buyBtn.classList.add('out-of-stock-badge');
+      addBtn.textContent = 'غير متوفر حالياً';
+      addBtn.disabled = true;
+      addBtn.classList.add('out-of-stock-badge');
     }
   }
 
@@ -428,19 +459,88 @@ window.openProductDetails = (id) => {
   showView('details');
 };
 
-const updateCheckoutPriceDisplay = () => {
-  if(!currentProductId) return;
+// دوال سلة المشتريات
+window.updateCartBadge = () => {
+  const badge = document.getElementById('cartCountBadge');
+  if (badge) {
+    badge.textContent = storeState.cart.length;
+    badge.style.display = storeState.cart.length > 0 ? 'flex' : 'none';
+  }
+};
+
+document.getElementById('detailAddToCartBtn')?.addEventListener('click', () => {
+  if (!currentProductId) return;
   const prod = storeState.products.find(p => p.id === currentProductId);
-  if(!prod) return;
+  if (prod) {
+    storeState.cart.push(prod);
+    window.updateCartBadge();
+    window.showToast('تم إضافة المنتج للسلة بنجاح 🛒', 'success');
+  }
+});
+
+document.getElementById('cartBtnNav')?.addEventListener('click', () => {
+  window.renderCartModal();
+  document.getElementById('cartModal').style.display = 'flex';
+});
+
+window.removeFromCart = (index) => {
+  storeState.cart.splice(index, 1);
+  window.updateCartBadge();
+  window.renderCartModal();
+};
+
+window.renderCartModal = () => {
+  const list = document.getElementById('cartItemsList');
+  const totalDisplay = document.getElementById('cartTotalPriceDisplay');
   const currency = document.getElementById('currencySelect').value;
   const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
   
-  let price = prod.price * rate;
-  if (activeDiscount > 0) price = price - (price * (activeDiscount / 100));
-  const finalPrice = price.toFixed(currency === 'EGP' ? 0 : 2);
+  if (!storeState.cart.length) {
+    list.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px 0;">السلة فارغة حالياً.</p>';
+    totalDisplay.textContent = `0 ${currency}`;
+    document.getElementById('proceedToCheckoutBtn').disabled = true;
+    return;
+  }
+  
+  document.getElementById('proceedToCheckoutBtn').disabled = false;
+  list.innerHTML = '';
+  let total = 0;
+  storeState.cart.forEach((p, idx) => {
+    const itemPrice = p.price * rate;
+    total += itemPrice;
+    list.innerHTML += `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <div class="cart-item-title">${sanitizeText(p.title)}</div>
+          <div class="cart-item-price">${itemPrice.toFixed(currency==='EGP'?0:2)} ${currency}</div>
+        </div>
+        <button type="button" class="remove-cart-btn" onclick="window.removeFromCart(${idx})" title="حذف من السلة">🗑️</button>
+      </div>
+    `;
+  });
+  totalDisplay.textContent = `${total.toFixed(currency==='EGP'?0:2)} ${currency}`;
+};
+
+const updateCheckoutPriceDisplay = () => {
+  if (!storeState.cart.length) return;
+  const currency = document.getElementById('currencySelect').value;
+  const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
+  
+  let totalPrice = 0;
+  let titles = [];
+  storeState.cart.forEach(p => {
+    totalPrice += (p.price * rate);
+    titles.push(p.title);
+  });
+
+  if (activeDiscount > 0) totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
+  const finalPrice = totalPrice.toFixed(currency === 'EGP' ? 0 : 2);
   const discountText = activeDiscount > 0 ? ` (بعد خصم ${activeDiscount}%)` : '';
+  
   const selectedProductInput = document.getElementById('selectedProduct');
-  if(selectedProductInput) selectedProductInput.value = `${prod.title} - (${finalPrice} ${currency})${discountText}`;
+  if (selectedProductInput) {
+    selectedProductInput.value = `${titles.join(' + ')}\nالإجمالي: (${finalPrice} ${currency})${discountText}`;
+  }
 };
 
 window.loadProductReviews = (prodId) => {
@@ -465,26 +565,56 @@ window.loadProductReviews = (prodId) => {
     }
 
     if (!revs.length) {
-      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تقييمات لهذا المنتج حتى الآن. كن أول المقيّمين!</p>';
-      return;
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تقييمات لهذا المنتج حتى الآن.</p>';
+    } else {
+      revs.forEach(r => {
+        const revBox = document.createElement('div');
+        revBox.style.cssText = 'background: #14141d; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; position: relative;';
+        const stars = '⭐'.repeat(Number(r.rating) || 5);
+        const deleteBtnStr = checkIsAdmin() ? `<button onclick="window.deleteReview('${r.id}')" style="position:absolute; left:10px; top:10px; background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; z-index:10;">حذف 🗑️</button>` : '';
+        
+        revBox.innerHTML = `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: ${checkIsAdmin() ? '50px' : '0'};">
+            <strong style="color: var(--accent-neon);">${sanitizeText(r.userName || 'مستخدم')} <span style="font-size:10px; color:var(--text-muted); font-weight:normal; margin-right:5px;">- ${formatDate(r.createdAt)}</span></strong>
+            <span>${stars}</span>
+          </div>
+          <p style="color: var(--text-main); line-height: 1.5;">${sanitizeText(r.comment)}</p>
+          ${deleteBtnStr}
+        `;
+        list.appendChild(revBox);
+      });
     }
 
-    revs.forEach(r => {
-      const revBox = document.createElement('div');
-      revBox.style.cssText = 'background: #14141d; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; position: relative;';
-      const stars = '⭐'.repeat(Number(r.rating) || 5);
-      const deleteBtnStr = checkIsAdmin() ? `<button onclick="window.deleteReview('${r.id}')" style="position:absolute; left:10px; top:10px; background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; z-index:10;">حذف 🗑️</button>` : '';
-      
-      revBox.innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: ${checkIsAdmin() ? '50px' : '0'};">
-          <strong style="color: var(--accent-neon);">${sanitizeText(r.userName || 'مستخدم')} <span style="font-size:10px; color:var(--text-muted); font-weight:normal; margin-right:5px;">- ${formatDate(r.createdAt)}</span></strong>
-          <span>${stars}</span>
-        </div>
-        <p style="color: var(--text-main); line-height: 1.5;">${sanitizeText(r.comment)}</p>
-        ${deleteBtnStr}
-      `;
-      list.appendChild(revBox);
-    });
+    // التحقق من صلاحية التقييم (هل العميل اشترى المنتج؟)
+    const addReviewBox = document.getElementById('addReviewBox');
+    let hasPurchased = false;
+    
+    if (currentUserProfile && storeState.orders) {
+      hasPurchased = storeState.orders.some(o => {
+        const isCompleted = o.status === 'completed';
+        const matchesProduct = o.productId === prodId || (o.productIds && o.productIds.includes(prodId));
+        return o.uid === currentUserProfile.uid && isCompleted && matchesProduct;
+      });
+    }
+    
+    let placeholderMsg = document.getElementById('reviewPlaceholderMsg');
+    if (addReviewBox) {
+      if (hasPurchased) {
+        addReviewBox.style.display = 'block';
+        if (placeholderMsg) placeholderMsg.style.display = 'none';
+      } else {
+        addReviewBox.style.display = 'none';
+        if (!placeholderMsg) {
+          placeholderMsg = document.createElement('div');
+          placeholderMsg.id = 'reviewPlaceholderMsg';
+          placeholderMsg.style.cssText = 'background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-align: center; color: var(--text-muted); font-size: 14px; margin-bottom: 20px; font-style: italic; border: 1px dashed var(--border-color);';
+          placeholderMsg.textContent = 'نتطلع لسماع رأيك وإضافة تقييمك بعد شراء وتجربة المنتج! 🤍';
+          addReviewBox.parentNode.insertBefore(placeholderMsg, addReviewBox);
+        } else {
+          placeholderMsg.style.display = 'block';
+        }
+      }
+    }
   });
 };
 
@@ -523,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (searchInputEl) searchInputEl.addEventListener('input', window.renderProducts);
 
   const currencySelectEl = document.getElementById('currencySelect');
-  if (currencySelectEl) currencySelectEl.addEventListener('change', window.renderProducts);
+  if (currencySelectEl) currencySelectEl.addEventListener('change', () => { window.renderProducts(); window.renderCartModal(); });
   
   const paymentMethodEl = document.getElementById('paymentMethod');
   if (paymentMethodEl) paymentMethodEl.addEventListener('change', updatePaymentInfoBox);
@@ -579,23 +709,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const detailBuyBtn = document.getElementById('detailBuyBtn');
-  if (detailBuyBtn) {
-    detailBuyBtn.addEventListener('click', () => {
-      if(currentProductId) {
-        activeDiscount = 0; 
-        document.getElementById('promoCodeInput').value = '';
-        document.getElementById('promoMsg').textContent = '';
-        document.getElementById('receiptPreview').style.display = 'none';
-        document.getElementById('receiptPreview').src = '';
-        document.getElementById('checkoutForm').reset();
-        
-        updateCheckoutPriceDisplay();
-        updatePaymentInfoBox();
-        document.getElementById('checkoutModal').style.display = 'flex';
-      }
-    });
-  }
+  // الانتقال من السلة للتشيك أوت
+  document.getElementById('proceedToCheckoutBtn')?.addEventListener('click', () => {
+    if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول أولاً!', 'error');
+    if (!storeState.cart.length) return;
+    
+    document.getElementById('cartModal').style.display = 'none';
+    activeDiscount = 0; 
+    document.getElementById('promoCodeInput').value = '';
+    document.getElementById('promoMsg').textContent = '';
+    document.getElementById('receiptPreview').style.display = 'none';
+    document.getElementById('receiptPreview').src = '';
+    document.getElementById('checkoutForm').reset();
+    
+    updateCheckoutPriceDisplay();
+    updatePaymentInfoBox();
+    document.getElementById('checkoutModal').style.display = 'flex';
+  });
 
   const applyPromoBtn = document.getElementById('applyPromoBtn');
   if (applyPromoBtn) {
@@ -701,37 +831,44 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ==========================================
-  // 🌟 إرسال الطلب (ذكي - يستقرأ من المعاينة مباشرة)
+  // 🌟 إرسال الطلب (مع دعم السلة والـ Spinner وخصم المخزون)
   // ==========================================
   const checkoutForm = document.getElementById('checkoutForm');
   if (checkoutForm) {
     checkoutForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!currentUserProfile || !currentProductId) return;
-
-      const prod = storeState.products.find(p => p.id === currentProductId);
-      if (!prod || !prod.inStock || prod.stockQuantity <= 0) return window.showToast('الكمية نفذت!', 'error');
+      if (!currentUserProfile || !storeState.cart.length) return;
 
       const receiptFileInput = document.getElementById('receiptFileInput');
       if (!receiptFileInput || !receiptFileInput.files[0]) return window.showToast('برجاء إرفاق صورة إيصال التحويل!', 'error');
-      
       if (receiptFileInput.files[0].size > 4 * 1024 * 1024) return window.showToast('حجم الإيصال كبير جداً (أقصى حد 4 ميجا).', 'error');
 
       const confirmBtn = document.getElementById('confirmOrderBtn');
-      const originalBtnText = confirmBtn.textContent;
-      confirmBtn.textContent = 'جاري الإرسال ⏳...';
+      const confirmText = document.getElementById('confirmBtnText');
+      const confirmSpinner = document.getElementById('confirmSpinner');
+      
+      confirmText.textContent = 'جاري الإرسال...';
+      confirmSpinner.style.display = 'inline-block';
       confirmBtn.disabled = true;
 
       try {
-        // نأخذ الصورة المعروضة في المعاينة مباشرة لنتفادى أخطاء قراءة المتصفحات
         const previewImgSrc = document.getElementById('receiptPreview').src;
         const receiptBase64 = await compressImage(previewImgSrc);
         
         const currency = document.getElementById('currencySelect').value;
         const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
-        let finalPrice = prod.price * rate;
-        if (activeDiscount > 0) finalPrice = finalPrice - (finalPrice * (activeDiscount / 100));
-        finalPrice = Number(finalPrice.toFixed(currency === 'EGP' ? 0 : 2));
+        
+        let totalPrice = 0;
+        let productTitles = [];
+        let productIds = [];
+        storeState.cart.forEach(p => {
+          totalPrice += (p.price * rate);
+          productTitles.push(p.title);
+          productIds.push(p.id);
+        });
+
+        if (activeDiscount > 0) totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
+        totalPrice = Number(totalPrice.toFixed(currency === 'EGP' ? 0 : 2));
 
         const paymentMethod = document.getElementById('paymentMethod').value;
         const senderInfo = sanitizeText(document.getElementById('senderInfo').value);
@@ -743,10 +880,10 @@ document.addEventListener('DOMContentLoaded', () => {
         await setDoc(newOrderRef, {
           uid: currentUserProfile.uid, 
           userEmail: currentUserProfile.email, 
-          productId: prod.id, 
-          productName: prod.title,
-          priceEGP: prod.price, 
-          finalPrice: finalPrice, 
+          productIds: productIds,
+          productId: productIds[0], // للرجعية مع الأكواد القديمة
+          productName: productTitles.join(' + '),
+          finalPrice: totalPrice, 
           currency: currency, 
           discountApplied: activeDiscount,
           promoCodeUsed: activeDiscount > 0 ? document.getElementById('promoCodeInput').value.trim() : "",
@@ -758,6 +895,20 @@ document.addEventListener('DOMContentLoaded', () => {
           deliveredCode: '', 
           createdAt: serverTimestamp()
         });
+
+        // 🔄 تحديث وخصم المخزون من قاعدة البيانات لكل منتج في السلة
+        for (const p of storeState.cart) {
+          if (p.stockQuantity !== undefined && p.stockQuantity > 0) {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id), {
+              stockQuantity: p.stockQuantity - 1,
+              inStock: (p.stockQuantity - 1) > 0
+            });
+          }
+        }
+
+        // تفريغ السلة بعد الطلب
+        storeState.cart = [];
+        window.updateCartBadge();
 
         document.getElementById('receiptPreview').style.display = 'none';
         document.getElementById('receiptPreview').src = '';
@@ -774,15 +925,16 @@ document.addEventListener('DOMContentLoaded', () => {
                to_name: currentUserProfile.name,
                to_email: currentUserProfile.email,
                order_id: orderId,
-               product_name: prod.title,
-               price: finalPrice + ' ' + currency
+               product_name: productTitles.join(' + '),
+               price: totalPrice + ' ' + currency
              }).catch(err => console.error("EmailJS Error:", err));
         }
       } catch (err) {
         console.error("Order Error:", err);
         window.showToast(err.message || 'حدث خطأ أثناء إرسال الطلب، تأكد من اتصالك.', 'error');
       } finally {
-        confirmBtn.textContent = originalBtnText; 
+        confirmText.textContent = 'تأكيد الطلب'; 
+        confirmSpinner.style.display = 'none';
         confirmBtn.disabled = false;
       }
     });
@@ -831,13 +983,36 @@ const initApp = () => {
     }
   });
 
+  const subscribeToOrders = (userUid) => {
+      if (unsubscribeOrders) unsubscribeOrders();
+      const ordersRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+      
+      // تطبيق الحد (Pagination) على لوحة الأدمن فقط
+      const q = checkIsAdmin() 
+         ? query(ordersRef, orderBy('createdAt', 'desc'), limit(adminOrdersLimit)) 
+         : query(ordersRef, where('uid', '==', userUid));
+      
+      unsubscribeOrders = onSnapshot(q, snap => {
+         const ords = [];
+         snap.forEach(d => ords.push({id: d.id, ...d.data()}));
+         storeState.orders = ords.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+         window.renderUserOrders();
+         if(checkIsAdmin()) { window.renderAdminOrders(); window.renderAdminStats(); }
+      });
+  };
+
+  window.loadMoreAdminOrders = () => {
+      adminOrdersLimit += 20; // زيادة الحد بـ 20
+      if(currentUserProfile) subscribeToOrders(currentUserProfile.uid);
+  };
+
   onAuthStateChanged(auth, async (user) => {
     const loginBtn = document.getElementById('loginBtnNav');
     if(!loginBtn) return;
     
     if (user) {
       currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم' };
-      loginBtn.textContent = `👤 حسابي`;
+      loginBtn.innerHTML = `👤 <span>حسابي</span>`;
       loginBtn.style.color = 'var(--accent-neon)';
       document.getElementById('accountUserName').textContent = currentUserProfile.name;
 
@@ -863,21 +1038,11 @@ const initApp = () => {
         }
       } else { if (adminBtnInModal) adminBtnInModal.remove(); }
 
-      if (unsubscribeOrders) unsubscribeOrders();
-      const ordersRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
-      const q = checkIsAdmin() ? query(ordersRef, orderBy('createdAt', 'desc'), limit(200)) : query(ordersRef, where('uid', '==', user.uid));
-      
-      unsubscribeOrders = onSnapshot(q, snap => {
-         const ords = [];
-         snap.forEach(d => ords.push({id: d.id, ...d.data()}));
-         storeState.orders = ords.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-         window.renderUserOrders();
-         if(checkIsAdmin()) { window.renderAdminOrders(); window.renderAdminStats(); }
-      });
+      subscribeToOrders(user.uid);
 
     } else {
       currentUserProfile = null;
-      loginBtn.textContent = '👤 تسجيل الدخول';
+      loginBtn.innerHTML = '👤 <span>تسجيل الدخول</span>';
       loginBtn.style.color = '';
       if (document.getElementById('adminBtnInModal')) document.getElementById('adminBtnInModal').remove();
       if (unsubscribeOrders) { unsubscribeOrders(); unsubscribeOrders = null; }
@@ -906,7 +1071,7 @@ window.renderUserOrders = () => {
        </div>
        <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">${formatDate(o.createdAt)}</div>
        <div style="font-size:12px; color:var(--text-muted);">رقم الاستلام: ${o.customerData} | الدفع: ${o.paymentMethod}</div>
-       ${o.status === 'completed' && o.deliveredCode ? `<div class="delivered-code-box">🎁 كود التفعيل: <strong>${o.deliveredCode}</strong></div>` : ''}
+       ${o.status === 'completed' && o.deliveredCode ? `<div class="delivered-code-box">🎁 بيانات التفعيل: <strong>${o.deliveredCode}</strong></div>` : ''}
      `;
      list.appendChild(div);
   });
@@ -973,7 +1138,7 @@ window.injectAdminDashboard = () => {
     </div>
     <div id="tab-orders" class="tab-content">
       <div class="admin-section"><h4>⏳ طلبات جديدة (تحتاج إجراء)</h4><div id="adminOrdersPending" style="max-height:350px; overflow-y:auto;"></div></div>
-      <div class="admin-section" style="margin-top: 20px; opacity: 0.9;"><h4>🗄️ أرشيف الطلبات (مكتمل / ملغي)</h4><div id="adminOrdersArchived" style="max-height:300px; overflow-y:auto;"></div></div>
+      <div class="admin-section" style="margin-top: 20px; opacity: 0.9;"><h4>🗄️ أرشيف الطلبات (مكتمل / ملغي)</h4><div id="adminOrdersArchived" style="max-height:350px; overflow-y:auto;"></div></div>
     </div>
     <div id="tab-products" class="tab-content">
       <div class="admin-section" id="productFormSection">
@@ -987,7 +1152,7 @@ window.injectAdminDashboard = () => {
           <div class="form-group"><label>الشارة (Badge)</label><input type="text" id="newProdBadge" placeholder="تسليم فوري"></div>
         </div>
         <div class="form-group"><label>صورة المنتج</label><input type="file" id="newProdImgFileInput" accept="image/*" style="background:#0b0b10; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
-        <div class="form-group"><label>وصف المنتج (نقطة لكل سطر)</label><textarea id="newProdDesc" rows="4"></textarea></div>
+        <div class="form-group"><label>وصف المنتج (نقطة لكل سطر - أو اكتب الروابط مباشرة)</label><textarea id="newProdDesc" rows="4"></textarea></div>
         <button type="button" class="submit-btn" id="saveProductBtn" style="width:100%;" onclick="window.saveProduct()">➕ إضافة المنتج</button>
         <button type="button" class="cancel-btn" id="cancelEditBtn" style="width:100%; margin-top:10px; display:none;" onclick="window.cancelEdit()">إلغاء التعديل</button>
       </div>
@@ -1015,10 +1180,10 @@ window.renderAdminStats = () => {
   orders.forEach(o => { if (o.status === 'completed') totalRevenue += Number(o.finalPrice || 0); });
 
   statsGrid.innerHTML = `
-    <div style="background: #14141d; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 18px; font-weight: bold; color: var(--accent-neon);">${totalOrders}</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">إجمالي الطلبات</div></div>
+    <div style="background: #14141d; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 18px; font-weight: bold; color: var(--accent-neon);">${totalOrders}</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">إجمالي الطلبات (المعروضة)</div></div>
     <div style="background: #14141d; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 18px; font-weight: bold; color: #ffcc00;">${pendingOrders}</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">طلبات معلقة ⏳</div></div>
     <div style="background: #14141d; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 18px; font-weight: bold; color: var(--success);">${completedOrders}</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">طلبات مكتملة ✅</div></div>
-    <div style="background: #14141d; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 16px; font-weight: bold; color: var(--accent-neon);">${totalRevenue.toFixed(0)} EGP</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">إجمالي المبيعات 💰</div></div>
+    <div style="background: #14141d; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 16px; font-weight: bold; color: var(--accent-neon);">${totalRevenue.toFixed(0)} EGP</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">مبيعات (المعروض) 💰</div></div>
   `;
 };
 
@@ -1039,14 +1204,32 @@ window.renderAdminOrders = () => {
     const discountBadge = o.discountApplied > 0 ? `<span style="color:var(--success); font-weight:bold;">[خصم ${o.discountApplied}% بكود ${o.promoCodeUsed}]</span>` : '';
     const receiptView = o.receiptImage ? `<div style="margin-top:8px;"><a href="${o.receiptImage}" target="_blank" style="color:var(--accent-neon); text-decoration:underline; font-weight:bold; display:inline-flex; align-items:center; gap:5px;">📄 عرض صورة إيصال التحويل</a></div>` : '';
     const customerDataRow = `<strong style="color:var(--accent-neon);">بيانات الاستلام:</strong> <span style="user-select:all;">${o.customerData}</span> <button onclick="window.copyCustomerData('${o.customerData}')" style="background:var(--accent-neon); color:#000; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:5px;">نسخ</button>`;
+    
+    // زرار الحذف النهائي للأدمن
+    const deleteBtn = isArchived ? `<button onclick="window.deleteAdminOrder('${o.id}')" style="position:absolute; bottom:10px; left:10px; background:rgba(255,68,68,0.2); color:var(--danger); border:1px solid var(--danger); padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;">حذف نهائي 🗑️</button>` : '';
 
-    let html = `<div class="admin-item-row" style="flex-direction:column; align-items:flex-start; position:relative;"><span style="position:absolute; top:10px; left:10px; font-size:11px; color:var(--text-muted);">${formatDate(o.createdAt)}</span><div style="width:100%; margin-bottom:8px; line-height:1.6; padding-left: 100px;"><strong>الطلب:</strong> ${o.productName} | <strong>الإيميل:</strong> ${o.userEmail}<br><small><strong>السعر:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${discountBadge}</small><br><small><strong>المحفظة المحول منها:</strong> ${o.senderInfo} <br> ${customerDataRow}</small><br>${receiptView}<small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>${isArchived && o.deliveredCode ? `<small style="display:block; color:var(--success);"><strong>الكود المُسلم:</strong> ${o.deliveredCode}</small>` : ''}</div>`;
-    if (!isArchived) html += `<div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px; border-top:1px dashed var(--border-color); padding-top:10px;"><input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل للعميل هنا..." value="${o.deliveredCode || ''}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b10; color:#fff; border:1px solid var(--border-color);"><button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button><button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button></div>`;
+    let html = `<div class="admin-item-row" style="flex-direction:column; align-items:flex-start; position:relative; padding-bottom: ${isArchived ? '35px' : '10px'}"><span style="position:absolute; top:10px; left:10px; font-size:11px; color:var(--text-muted);">${formatDate(o.createdAt)}</span><div style="width:100%; margin-bottom:8px; line-height:1.6; padding-left: 100px;"><strong>الطلب:</strong> <span style="color:var(--accent-neon);">${o.productName}</span> | <strong>الإيميل:</strong> ${o.userEmail}<br><small><strong>السعر:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${discountBadge}</small><br><small><strong>المحفظة المحول منها:</strong> ${o.senderInfo} <br> ${customerDataRow}</small><br>${receiptView}<small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>${isArchived && o.deliveredCode ? `<small style="display:block; color:var(--success);"><strong>الكود المُسلم:</strong> ${o.deliveredCode}</small>` : ''}</div>${deleteBtn}`;
+    if (!isArchived) html += `<div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px; border-top:1px dashed var(--border-color); padding-top:10px;"><input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل أو الحساب للعميل هنا..." value="${o.deliveredCode || ''}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b10; color:#fff; border:1px solid var(--border-color);"><button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button><button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button></div>`;
     html += `</div>`; return html;
   };
 
   pendingOrders.forEach(o => pendingList.insertAdjacentHTML('beforeend', createOrderHTML(o, false)));
   archivedOrders.forEach(o => archivedList.insertAdjacentHTML('beforeend', createOrderHTML(o, true)));
+  
+  // زر "عرض المزيد"
+  if(orders.length >= adminOrdersLimit) {
+      archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" onclick="window.loadMoreAdminOrders()">عرض المزيد من الطلبات الأقدم ⬇️</button>`);
+  }
+};
+
+window.deleteAdminOrder = async (orderId) => {
+  if (!checkIsAdmin() || !confirm('تأكيد الحذف النهائي لهذا الطلب من قاعدة البيانات؟ لا يمكن التراجع عن هذه الخطوة!')) return;
+  try {
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId));
+    window.showToast('🗑️ تم الحذف النهائي بنجاح', 'success');
+  } catch(e) {
+    window.showToast('فشل حذف الطلب', 'error');
+  }
 };
 
 window.updateOrderStatus = async (orderId, status) => {
@@ -1054,13 +1237,33 @@ window.updateOrderStatus = async (orderId, status) => {
   if(!codeInput) return;
   try {
     const orderRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId);
+    
+    // 🔄 إرجاع المخزون في حالة الإلغاء
     if (status === 'cancelled') {
       const order = storeState.orders.find(o => o.id === orderId);
-      if (order && order.productId) {
+      if (order && order.productIds) {
+        // الدوران على جميع المنتجات اللي كانت في السلة
+        for (const pid of order.productIds) {
+          const prod = storeState.products.find(p => p.id === pid);
+          if (prod && prod.stockQuantity !== undefined) {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { 
+              stockQuantity: prod.stockQuantity + 1, 
+              inStock: true 
+            });
+          }
+        }
+      } else if (order && order.productId) { 
+        // لطلبات النظام القديم (قبل إضافة السلة)
         const prod = storeState.products.find(p => p.id === order.productId);
-        if (prod) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + 1, inStock: true });
+        if (prod && prod.stockQuantity !== undefined) {
+          await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { 
+            stockQuantity: prod.stockQuantity + 1, 
+            inStock: true 
+          });
+        }
       }
     }
+    
     await updateDoc(orderRef, { status, deliveredCode: codeInput.value, updatedAt: serverTimestamp() });
     window.showToast('تم تحديث الطلب ونقله للأرشيف!', 'success');
   } catch(e) { window.showToast('خطأ في التحديث', 'error'); }
@@ -1078,7 +1281,7 @@ window.addSlide = async () => {
   const origText = btn.textContent; btn.textContent = 'جاري الإضافة ⏳...'; btn.disabled = true;
 
   try {
-    const imgBase64 = await compressImage(fileInput.files[0]);
+    const imgBase64 = await compressImage(fileInput.files[0].src || await new Promise(res=>{ const r = new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(fileInput.files[0]) }));
     const slides = storeState.slides ? [...storeState.slides] : [];
     slides.push({ title, desc, imgUrl: imgBase64 });
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true });
@@ -1190,7 +1393,6 @@ window.saveProduct = async () => {
 
   try {
     let imgUrl = '';
-    // في الإضافة بياخد من الملف عادي لأن مفيش معاينة
     if (fileInput && fileInput.files[0]) { 
         const reader = new FileReader();
         imgUrl = await new Promise((res) => {
