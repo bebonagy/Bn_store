@@ -64,7 +64,7 @@
       <option value="USD">USD ($)</option>
     </select>
     <div id="authHeaderButtons" style="display: flex; gap: 8px; align-items: center;">
-      <!-- 🛒 زر سلة المشتريات الجديد -->
+      <!-- 🛒 زر سلة المشتريات -->
       <button type="button" class="user-action-btn" id="cartBtnNav" style="position: relative;">
         🛒 <span id="cartCountBadge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger); color:#fff; font-size:10px; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center;">0</span>
       </button>
@@ -126,8 +126,14 @@
     <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;">🔙 العودة للمتجر</button>
     <div class="product-details-container" style="flex-direction: column;">
       <div style="display: flex; flex-wrap: wrap; gap: 30px; width: 100%;">
-        <!-- صورة المنتج (قابلة للضغط للتكبير) -->
-        <div class="details-image-box" id="detailImageBox" style="flex: 1; min-width: 300px; height: 350px; cursor: zoom-in;" title="اضغط لتكبير الصورة"></div>
+        
+        <!-- قسم الصور (الأساسية + المعرض) -->
+        <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px;">
+          <!-- صورة المنتج الرئيسية (قابلة للضغط للتكبير) -->
+          <div class="details-image-box" id="detailImageBox" style="width: 100%; height: 350px; cursor: zoom-in;" title="اضغط لتكبير الصورة"></div>
+          <!-- 🖼️ معرض الصور المصغرة (جديد) -->
+          <div id="detailImageGallery" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;"></div>
+        </div>
         
         <div class="details-info-box" style="flex: 1.5; min-width: 300px; position: relative;">
           <!-- زر إضافة للمفضلة -->
@@ -152,7 +158,7 @@
           
           <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
           
-          <!-- زر الإضافة للسلة بدلاً من الشراء المباشر -->
+          <!-- زر الإضافة للسلة -->
           <button type="button" id="detailAddToCartBtn" class="buy-btn" style="padding:15px; font-size:16px; margin-top:10px;">🛒 إضافة إلى السلة</button>
         </div>
       </div>
@@ -167,7 +173,7 @@
       <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 25px;">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;">💬 تقييمات وآراء العملاء</h3>
         
-        <!-- صندوق التقييم (سيتم إخفاؤه برمجياً لغير المشترين) -->
+        <!-- صندوق التقييم -->
         <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
           <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">أضف تقييمك للمنتج</h4>
           
@@ -205,13 +211,23 @@
 <!-- ========================================== -->
 <div id="modalsWrapper">
 
-  <!-- 🛒 نافذة سلة المشتريات (جديدة) -->
+  <!-- 🛒 نافذة سلة المشتريات -->
   <div class="modal" id="cartModal">
     <div class="modal-content">
       <h3><span>🛒 سلة المشتريات</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">إغلاق ✕</button></h3>
-      <div id="cartItemsList" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;">
+      
+      <div id="cartItemsList" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px;">
         <!-- سيتم حقن المنتجات هنا -->
       </div>
+
+      <!-- 🎁 قسم اقتراحات السلة (Cross-Selling - جديد) -->
+      <div id="cartCrossSellSection" style="display: none; background: rgba(0,255,204,0.05); border: 1px dashed var(--accent-neon); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+        <h4 style="font-size: 13px; color: var(--accent-neon); margin-bottom: 10px;">🔥 ضيف ده لطلبك ووفر:</h4>
+        <div id="cartCrossSellList" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;">
+          <!-- سيتم حقن المنتجات المقترحة هنا -->
+        </div>
+      </div>
+
       <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; color:var(--accent-neon); margin-bottom:15px; border-top:1px solid var(--border-color); padding-top:15px;">
         <span>الإجمالي:</span>
         <span id="cartTotalPriceDisplay">0.00</span>
@@ -220,7 +236,7 @@
     </div>
   </div>
 
-  <!-- 🖼️ نافذة تكبير الصور - Lightbox (جديدة) -->
+  <!-- 🖼️ نافذة تكبير الصور - Lightbox -->
   <div class="modal" id="lightboxModal" style="z-index: 2000; padding: 0;">
     <div style="position:relative; width:100%; height:100%; display:flex; justify-content:center; align-items:center;">
       <button type="button" id="closeLightboxBtn" style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #fff; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer; z-index:2001; transition:0.3s;">✕</button>
@@ -278,12 +294,11 @@
     </div>
   </div>
 
-  <!-- Checkout Modal (تم تعديله ليدعم السلة) -->
+  <!-- Checkout Modal -->
   <div class="modal" id="checkoutModal">
     <div class="modal-content">
       <h3>إتمام الطلب</h3>
       <form id="checkoutForm">
-        <!-- تم تحويل الـ input لـ textarea عشان يعرض المنتجات المتعددة بوضوح -->
         <div class="form-group"><label>المنتجات المختارة</label><textarea id="selectedProduct" readonly rows="2" style="opacity:.9;color:var(--accent-neon);font-weight:bold; resize:none;"></textarea></div>
         <div class="form-group">
           <label>كود الخصم (اختياري)</label>
@@ -321,7 +336,6 @@
         <p style="color:var(--text-muted);font-size:12px;margin-bottom:15px;text-align:center;">📌 برجاء إرفاق صورة الإيصال بوضوح لضمان سرعة تفعيل طلبك.</p>
         
         <div class="modal-actions">
-          <!-- إضافة Spinner لزر التأكيد -->
           <button type="submit" id="confirmOrderBtn" class="submit-btn" style="position:relative; display:flex; justify-content:center; align-items:center; gap:8px;">
             <span id="confirmBtnText">تأكيد الطلب</span>
             <span id="confirmSpinner" class="spinner" style="display:none;"></span>
