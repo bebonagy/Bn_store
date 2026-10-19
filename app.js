@@ -255,7 +255,7 @@ document.getElementById('backToHomeBtn')?.addEventListener('click', () => showVi
 document.getElementById('sortSelect')?.addEventListener('change', window.renderProducts);
 
 // ==========================================
-// 5. المفضلة، سلة المشتريات، وتفاصيل المنتج (بما فيها معرض الصور)
+// 5. المفضلة، تفاصيل المنتج، والسلة
 // ==========================================
 window.toggleWishlist = (prodId, event) => {
   if (event) event.stopPropagation();
@@ -296,6 +296,13 @@ window.openProductDetails = (id) => {
   document.getElementById('detailOldPrice').textContent = convertedOld ? `${convertedOld} ${currency}` : '';
   document.getElementById('detailBadge').textContent = prod.badge;
   
+  // ⏳ مؤشر وقت التسليم
+  const badgeEl = document.getElementById('detailDeliveryBadge');
+  if (prod.deliveryTime) {
+      badgeEl.innerHTML = `<span>⏳ ${sanitizeText(prod.deliveryTime)}</span>`;
+      badgeEl.style.display = 'inline-flex';
+  } else { badgeEl.style.display = 'none'; }
+  
   const descContainer = document.getElementById('detailDescContainer');
   if (descContainer) {
     descContainer.replaceChildren();
@@ -310,28 +317,55 @@ window.openProductDetails = (id) => {
     }
   }
   
+  // ❓ معالجة الأسئلة الشائعة
+  const faqContainer = document.getElementById('detailFaqContainer');
+  const faqList = document.getElementById('detailFaqList');
+  if (prod.faqText && prod.faqText.trim()) {
+      faqContainer.style.display = 'block'; faqList.innerHTML = '';
+      const blocks = prod.faqText.split(/\n\n+/);
+      blocks.forEach(block => {
+          const lines = block.split('\n').filter(l => l.trim());
+          if (lines.length >= 2) {
+              const q = lines[0].replace(/^(سؤال|س|Q):\s*/i, '');
+              const a = lines.slice(1).join('<br>').replace(/^(إجابة|ج|جواب|A):\s*/i, '');
+              faqList.innerHTML += `<div class="faq-item"><button class="faq-question">${sanitizeText(q)}</button><div class="faq-answer">${linkify(a)}</div></div>`;
+          }
+      });
+      // تفعيل الأنيميشن للأكورديون
+      document.querySelectorAll('.faq-question').forEach(btn => {
+          btn.onclick = () => {
+              btn.classList.toggle('active');
+              const ans = btn.nextElementSibling;
+              ans.classList.toggle('open');
+          };
+      });
+  } else { faqContainer.style.display = 'none'; }
+  
+  // 🖼️ معالجة الصور وفصل البانر والغلاف ومعرض السلايدر التاتش
   const imgBox = document.getElementById('detailImageBox');
   const galleryBox = document.getElementById('detailImageGallery');
+  const mainImgUrl = prod.bannerUrl || prod.imgUrl; // لو فيه صورة داخلية هيعرضها، لو مفيش يعرض الأساسية
+  
   if(imgBox) {
-    if(prod.imgUrl) { imgBox.style.backgroundImage = `url('${prod.imgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; imgBox.style.cursor = 'zoom-in'; }
+    if(mainImgUrl) { imgBox.style.backgroundImage = `url('${mainImgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; }
     else { imgBox.style.backgroundImage = 'none'; imgBox.textContent = prod.imgText || prod.title; imgBox.style.cursor = 'default'; }
   }
   
-  // 🖼️ معالجة معرض الصور
   if(galleryBox) {
       galleryBox.replaceChildren();
       const allImages = [];
       if (prod.imgUrl) allImages.push(prod.imgUrl);
+      if (prod.bannerUrl) allImages.push(prod.bannerUrl);
       if (prod.gallery && Array.isArray(prod.gallery)) allImages.push(...prod.gallery);
+      const uniqueImages = [...new Set(allImages)]; // منع التكرار
       
-      if (allImages.length > 1) {
-          allImages.forEach((imgSrc, idx) => {
+      if (uniqueImages.length > 1) {
+          uniqueImages.forEach((imgSrc) => {
               const thumb = document.createElement('img');
-              thumb.src = imgSrc; thumb.className = `gallery-thumb ${idx === 0 ? 'active-thumb' : ''}`;
+              thumb.src = imgSrc; thumb.className = 'gallery-thumb';
               thumb.onclick = () => {
-                  document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active-thumb'));
-                  thumb.classList.add('active-thumb');
-                  imgBox.style.backgroundImage = `url('${imgSrc}')`;
+                  document.getElementById('lightboxImg').src = imgSrc; 
+                  document.getElementById('lightboxModal').style.display = 'flex';
               };
               galleryBox.appendChild(thumb);
           });
@@ -351,7 +385,9 @@ window.openProductDetails = (id) => {
   window.loadProductReviews(id); showView('details');
 };
 
-// دوال سلة المشتريات واقتراحات السلة (Cross-Selling)
+// ==========================================
+// دوال سلة المشتريات واقتراحات السلة
+// ==========================================
 window.updateCartBadge = () => {
   const badge = document.getElementById('cartCountBadge');
   if (badge) { badge.textContent = storeState.cart.length; badge.style.display = storeState.cart.length > 0 ? 'flex' : 'none'; }
@@ -395,12 +431,10 @@ window.renderCartModal = () => {
   });
   totalDisplay.textContent = `${total.toFixed(currency==='EGP'?0:2)} ${currency}`;
 
-  // 🎁 عرض الاقتراحات (Cross-Selling)
   if(crossSellSection && crossSellList) {
       let suggestions = [];
       storeState.cart.forEach(p => { if (p.crossSellIds) suggestions.push(...p.crossSellIds); });
-      suggestions = [...new Set(suggestions)].filter(id => !currentCartIds.includes(id)); // إزالة المكرر واللي موجود في السلة
-      
+      suggestions = [...new Set(suggestions)].filter(id => !currentCartIds.includes(id)); 
       if(suggestions.length > 0) {
           crossSellList.innerHTML = '';
           suggestions.forEach(sId => {
@@ -564,7 +598,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('logoutBtn')?.addEventListener('click', async () => { try { await signOut(auth); document.getElementById('userAccountModal').style.display = 'none'; window.showToast('تم تسجيل الخروج!', 'success'); } catch (e) {} });
 
-  // 🌟 إرسال الطلب (مع دعم السلة وخصم المخزون)
   document.getElementById('checkoutForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserProfile || !storeState.cart.length) return;
@@ -706,7 +739,6 @@ window.copyCustomerData = (text) => navigator.clipboard.writeText(text).then(() 
 
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer'); if(!container) return;
-  // أضفنا حقول المعرض، الاقتراحات، والخزنة
   container.innerHTML = `
     <div id="tab-dashboard" class="tab-content active-tab">
       <div class="admin-section" style="border-color: var(--accent-neon);"><h4 style="color: var(--accent-neon); margin-bottom: 15px;">📊 إحصائيات المبيعات الدقيقة</h4><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;" id="adminStatsGrid"></div></div>
@@ -728,14 +760,22 @@ window.injectAdminDashboard = () => {
           <div class="form-group"><label>الكمية المتاحة</label><input type="number" id="newProdStock"></div>
           <div class="form-group"><label>الشارة (Badge)</label><input type="text" id="newProdBadge" placeholder="تسليم فوري"></div>
         </div>
-        <div class="form-group"><label>الصورة الأساسية</label><input type="file" id="newProdImgFileInput" accept="image/*" style="background:#0b0b10; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
         
-        <!-- 🆕 إضافات الوحش -->
-        <div class="form-group"><label>معرض الصور الإضافية (اختر أكثر من صورة معاً)</label><input type="file" id="newProdGallery" multiple accept="image/*" style="background:#0b0b10; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
-        <div class="form-group"><label>🛒 اقتراحات السلة (اكتب الـ ID الخاص بالمنتجات وبينهم فاصلة)</label><input type="text" id="newProdCrossSell" placeholder="مثال: 171234, 175678"></div>
-        <div class="form-group"><label>🏦 خزنة الأكواد الذكية (كود في كل سطر للتسليم التلقائي)</label><textarea id="newProdVault" class="vault-textarea" rows="3" placeholder="ABCD-1234&#10;EFGH-5678"></textarea></div>
+        <!-- 🖼️ إعدادات الصور المفصلة -->
+        <div class="form-group"><label>صورة الغلاف (الكارت الخارجي)</label><input type="file" id="newProdImgFileInput" accept="image/*" style="background:#0b0b10; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
+        <div class="form-group"><label>الصورة الداخلية الكبيرة (البانر - اختياري)</label><input type="file" id="newProdBannerFileInput" accept="image/*" style="background:#0b0b10; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
+        <div class="form-group"><label>معرض الصور الإضافية (اختر أكثر من صورة معاً - اختياري)</label><input type="file" id="newProdGallery" multiple accept="image/*" style="background:#0b0b10; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
         
+        <!-- ⏳ مؤشر التسليم والأسئلة والاقتراحات -->
+        <div class="grid-2">
+           <div class="form-group"><label>مؤشر وقت التسليم</label><input type="text" id="newProdDeliveryTime" placeholder="مثال: ⚡ تسليم فوري وتلقائي"></div>
+           <div class="form-group"><label>🛒 اقتراحات السلة (الـ ID مفصول بفاصلة)</label><input type="text" id="newProdCrossSell" placeholder="مثال: 171234, 175678"></div>
+        </div>
+        
+        <div class="form-group"><label>❓ الأسئلة الشائعة (سؤال في سطر والإجابة في اللي تحته وبين كل سؤال مسافة)</label><textarea id="newProdFaq" rows="4" placeholder="سؤال: هل اللعبة أصلية؟&#10;جواب: نعم أصلية 100%&#10;&#10;سؤال: متى أستلم؟&#10;جواب: فوراً"></textarea></div>
+        <div class="form-group"><label>🏦 خزنة الأكواد الذكية (كود في كل سطر)</label><textarea id="newProdVault" class="vault-textarea" rows="3" placeholder="ABCD-1234&#10;EFGH-5678"></textarea></div>
         <div class="form-group"><label>وصف المنتج (روابط أو نص)</label><textarea id="newProdDesc" rows="4"></textarea></div>
+        
         <button type="button" class="submit-btn" id="saveProductBtn" style="width:100%;" onclick="window.saveProduct()">➕ حفظ المنتج</button>
         <button type="button" class="cancel-btn" id="cancelEditBtn" style="width:100%; margin-top:10px; display:none;" onclick="window.cancelEdit()">إلغاء التعديل</button>
       </div>
@@ -755,8 +795,6 @@ window.renderAdminStats = () => {
   const statsGrid = document.getElementById('adminStatsGrid'); if (!statsGrid) return;
   const orders = storeState.orders || [];
   const totalOrders = orders.length, pendingOrders = orders.filter(o => o.status === 'pending').length, completedOrders = orders.filter(o => o.status === 'completed').length;
-  
-  // 💰 حساب المبيعات المكتملة وتفنيط العملات
   let totalRevenueEGP = 0; let currTotals = { EGP: 0, SAR: 0, AED: 0, USD: 0 };
   orders.forEach(o => { 
     if (o.status === 'completed') {
@@ -765,7 +803,6 @@ window.renderAdminStats = () => {
       if(currTotals[currency] !== undefined) currTotals[currency] += price;
     } 
   });
-
   statsGrid.innerHTML = `
     <div style="background: #14141d; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 18px; font-weight: bold; color: var(--accent-neon);">${totalOrders}</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">طلبات معروضة</div></div>
     <div style="background: #14141d; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 18px; font-weight: bold; color: #ffcc00;">${pendingOrders}</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">طلبات معلقة ⏳</div></div>
@@ -792,7 +829,6 @@ window.renderAdminOrders = () => {
     if (!isArchived) html += `<div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px; border-top:1px dashed var(--border-color); padding-top:10px;"><input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل هنا (أو اتركه فارغاً للسحب من الخزنة تلقائياً)..." value="${o.deliveredCode || ''}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b10; color:#fff; border:1px solid var(--border-color);"><button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button><button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button></div>`;
     html += `</div>`; return html;
   };
-
   pendingOrders.forEach(o => pendingList.insertAdjacentHTML('beforeend', createOrderHTML(o, false)));
   archivedOrders.forEach(o => archivedList.insertAdjacentHTML('beforeend', createOrderHTML(o, true)));
   if(orders.length >= adminOrdersLimit) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" onclick="window.loadMoreAdminOrders()">عرض المزيد من الطلبات ⬇️</button>`);
@@ -812,7 +848,6 @@ window.updateOrderStatus = async (orderId, status) => {
         for (const pid of order.productIds) { const prod = storeState.products.find(p => p.id === pid); if (prod && prod.stockQuantity !== undefined) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + 1, inStock: true }); }
       }
     } 
-    // 🏦 سحب أوتوماتيك من الخزنة
     else if (status === 'completed' && !codeToDeliver && order && order.productIds && order.productIds.length > 0) {
         const prod = storeState.products.find(p => p.id === order.productIds[0]);
         if (prod && prod.vaultCodes) {
@@ -826,7 +861,6 @@ window.updateOrderStatus = async (orderId, status) => {
 
     await updateDoc(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
     
-    // 📧 إرسال الإيميل أوتوماتيك للعميل
     if (status === 'completed' && codeToDeliver && typeof emailjs !== 'undefined' && order) {
         emailjs.send("service_01wl99f", "template_wxomgzu", {
             to_name: order.userEmail.split('@')[0],
@@ -840,7 +874,7 @@ window.updateOrderStatus = async (orderId, status) => {
   } catch(e) { window.showToast('خطأ في التحديث', 'error'); }
 };
 
-window.addSlide = async () => { /* ... (نفس الدالة السابقة بدون تغيير) ... */ 
+window.addSlide = async () => { 
   const title = document.getElementById('slideTitleInput').value.trim(), desc = document.getElementById('slideDescInput').value.trim(), fileInput = document.getElementById('slideImgFileInput'), btn = document.getElementById('saveSlideBtn');
   if (!title || !fileInput || !fileInput.files[0]) return window.showToast('أدخل البيانات!', 'error');
   const origText = btn.textContent; btn.textContent = 'جاري الإضافة ⏳...'; btn.disabled = true;
@@ -854,8 +888,8 @@ window.addSlide = async () => { /* ... (نفس الدالة السابقة بد�
 window.deleteSlide = async (idx) => { const slides = [...storeState.slides]; slides.splice(idx, 1); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true }); window.renderAdminSlides(); };
 window.renderAdminSlides = () => { const list = document.getElementById('adminSlidesList'); if(list) list.innerHTML = (storeState.slides||[]).map((s,i) => `<div class="admin-item-row"><span style="flex:1;">${s.title}</span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف</button></div>`).join(''); };
 
-window.addCategory = async () => { /* ... */ }; // (نفس الدالة السابقة)
-window.deleteCategory = async (id) => { /* ... */ }; // (نفس الدالة السابقة)
+window.addCategory = async () => { /* Add Category Logic here if needed */ }; 
+window.deleteCategory = async (id) => { /* Delete Category Logic here if needed */ }; 
 window.renderAdminCategories = () => { const list = document.getElementById('adminCategoriesList'); if(list) list.innerHTML = (storeState.categories||[]).map(c => `<div class="admin-item-row"><span style="flex:1;">${c.name} (${c.id})</span>${['games','subs','ai','software'].includes(c.id)?'<span style="font-size:11px;">أساسي</span>':`<button class="delete-btn" onclick="window.deleteCategory('${c.id}')">حذف</button>`}</div>`).join(''); };
 
 window.loadAdminData = () => {
@@ -866,18 +900,20 @@ window.loadAdminData = () => {
   window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminCategories(); window.renderAdminStats();
 };
 
-window.saveGeneralSettings = async () => { /* ... */ }; // (نفس الدالة السابقة للحفظ)
+window.saveGeneralSettings = async () => { /* Save config logic */ };
 
 window.saveProduct = async () => {
   if (!checkIsAdmin()) return;
   const title = document.getElementById('newProdTitle').value, price = Number(document.getElementById('newProdPrice').value), oldPrice = Number(document.getElementById('newProdOldPrice')?.value) || 0, stockQuantity = Number(document.getElementById('newProdStock')?.value) || 0, category = document.getElementById('newProdCat')?.value || 'games', badge = document.getElementById('newProdBadge')?.value || 'متوفر', desc = document.getElementById('newProdDesc')?.value || '';
   
+  const deliveryTime = document.getElementById('newProdDeliveryTime')?.value || '';
+  const faqText = document.getElementById('newProdFaq')?.value || '';
   const crossSellStr = document.getElementById('newProdCrossSell')?.value || '';
   let crossSellIds = crossSellStr.split(',').map(id => id.trim()).filter(id => id);
-  
   const vaultCodes = document.getElementById('newProdVault')?.value || '';
   
-  const fileInput = document.getElementById('newProdImgFileInput');
+  const coverInput = document.getElementById('newProdImgFileInput');
+  const bannerInput = document.getElementById('newProdBannerFileInput');
   const galleryInput = document.getElementById('newProdGallery');
   const btn = document.getElementById('saveProductBtn');
 
@@ -886,21 +922,25 @@ window.saveProduct = async () => {
 
   try {
     let imgUrl = '';
-    if (fileInput && fileInput.files[0]) { 
-        imgUrl = await new Promise(res => { const r = new FileReader(); r.onload = async e => res(await compressImage(e.target.result)); r.readAsDataURL(fileInput.files[0]); });
+    if (coverInput && coverInput.files[0]) { 
+        imgUrl = await new Promise(res => { const r = new FileReader(); r.onload = async e => res(await compressImage(e.target.result)); r.readAsDataURL(coverInput.files[0]); });
     } else if (editingProductId) { imgUrl = storeState.products.find(p => p.id === editingProductId)?.imgUrl || ''; }
 
-    // معالجة صور المعرض المتعددة 🖼️
+    let bannerUrl = '';
+    if (bannerInput && bannerInput.files[0]) {
+        bannerUrl = await new Promise(res => { const r = new FileReader(); r.onload = async e => res(await compressImage(e.target.result)); r.readAsDataURL(bannerInput.files[0]); });
+    } else if (editingProductId) { bannerUrl = storeState.products.find(p => p.id === editingProductId)?.bannerUrl || ''; }
+
     let gallery = editingProductId ? (storeState.products.find(p => p.id === editingProductId)?.gallery || []) : [];
     if (galleryInput && galleryInput.files.length > 0) {
-        gallery = []; // استبدال القديم بالجديد لو تم اختيار صور
+        gallery = [];
         for (let i = 0; i < galleryInput.files.length; i++) {
             const base64 = await new Promise(res => { const r = new FileReader(); r.onload = async e => res(await compressImage(e.target.result)); r.readAsDataURL(galleryInput.files[i]); });
             gallery.push(base64);
         }
     }
 
-    const prodData = { title, desc, price, oldPrice, category, badge, imgUrl, gallery, crossSellIds, vaultCodes, inStock: stockQuantity > 0, stockQuantity };
+    const prodData = { title, desc, price, oldPrice, category, badge, imgUrl, bannerUrl, gallery, deliveryTime, faqText, crossSellIds, vaultCodes, inStock: stockQuantity > 0, stockQuantity };
 
     if (editingProductId) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', editingProductId), prodData); window.showToast('✏️ تم التعديل!', 'success'); } 
     else { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); window.showToast('📦 تمت الإضافة!', 'success'); }
@@ -912,6 +952,8 @@ window.editProduct = (id) => {
   const p = storeState.products.find(x => x.id === id); if(!p) return;
   document.getElementById('newProdTitle').value = p.title || ''; document.getElementById('newProdPrice').value = p.price || ''; document.getElementById('newProdOldPrice').value = p.oldPrice || ''; document.getElementById('newProdCat').value = p.category || 'games'; document.getElementById('newProdStock').value = p.stockQuantity !== undefined ? p.stockQuantity : ''; document.getElementById('newProdBadge').value = p.badge || ''; document.getElementById('newProdDesc').value = p.desc || '';
   
+  document.getElementById('newProdDeliveryTime').value = p.deliveryTime || '';
+  document.getElementById('newProdFaq').value = p.faqText || '';
   document.getElementById('newProdCrossSell').value = p.crossSellIds ? p.crossSellIds.join(', ') : '';
   document.getElementById('newProdVault').value = p.vaultCodes || '';
   
