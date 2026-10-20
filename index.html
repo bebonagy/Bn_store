@@ -50,15 +50,15 @@
       <span class="logo-sub">DIGITAL MARKETPLACE</span>
     </div>
 
-    <!-- روابط الهيدر المحدثة بناءً على التصميم الجديد -->
+    <!-- روابط الهيدر المحدثة بـ data-i18n للترجمة -->
     <nav class="top-nav-links">
       <button class="nav-link active" data-target="homeView" data-i18n="nav_home">Home</button>
-      <button class="nav-link" data-cat="games">Games</button>
-      <button class="nav-link" data-cat="keys">Digital Keys</button>
-      <button class="nav-link" data-cat="software">Software</button>
-      <button class="nav-link" data-cat="subs">Subscriptions</button>
-      <button class="nav-link" data-cat="gifts">Gift Cards</button>
-      <button class="nav-link" data-cat="deals">Deals</button>
+      <button class="nav-link" data-cat="games" data-i18n="nav_games">Games</button>
+      <button class="nav-link" data-cat="keys" data-i18n="nav_keys">Digital Keys</button>
+      <button class="nav-link" data-cat="software" data-i18n="nav_software">Software</button>
+      <button class="nav-link" data-cat="subs" data-i18n="nav_subs">Subscriptions</button>
+      <button class="nav-link" data-cat="gifts" data-i18n="nav_gifts">Gift Cards</button>
+      <button class="nav-link" data-cat="deals" data-i18n="nav_deals">Deals</button>
     </nav>
 
     <div class="header-actions">
@@ -96,41 +96,27 @@
   <!-- 🔄 1. الواجهة الرئيسية (Home) -->
   <div id="homeView" class="view-section active-view">
     <!-- السلايدر الرئيسي (يتم حقنه من الجافاسكريبت) -->
-    <section class="hero-banner promo-slider-container" id="promoSlider">
-      <div class="slider-track" id="sliderTrack"></div>
-      <button type="button" class="slider-btn slider-prev" id="prevSlideBtn">❯</button>
-      <button type="button" class="slider-btn slider-next" id="nextSlideBtn">❮</button>
-      <div class="slider-dots" id="sliderDots"></div>
-    </section>
+    <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none;"></section>
 
-    <!-- إحصائيات الثقة المطابقة للتصميم الجديد -->
-    <section class="trust-stats-bar hero-stats-row" id="heroStatsRow" style="display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px;">
-      <div class="hero-stat-item" style="display: flex; align-items: center; gap: 12px;">
-        <div class="stat-icon" style="font-size: 24px; color: var(--accent-neon);">⚡</div>
-        <div>
-          <div style="font-weight: bold; font-size: 14px; color: #fff;">Instant Delivery</div>
-          <div style="font-size: 12px; color: var(--text-muted);">Get your product in minutes</div>
-        </div>
-      </div>
-      <div class="hero-stat-item" style="display: flex; align-items: center; gap: 12px;">
-        <div class="stat-icon" style="font-size: 24px; color: var(--accent-neon);">🛡️</div>
-        <div>
-          <div style="font-weight: bold; font-size: 14px; color: #fff;">100% Secure</div>
-          <div style="font-size: 12px; color: var(--text-muted);">Safe & encrypted</div>
-        </div>
-      </div>
-      <div class="hero-stat-item" style="display: flex; align-items: center; gap: 12px;">
-        <div class="stat-icon" style="font-size: 24px; color: var(--accent-neon);">🎧</div>
-        <div>
-          <div style="font-weight: bold; font-size: 14px; color: #fff;">24/7 Support</div>
-          <div style="font-size: 12px; color: var(--text-muted);">We're always here</div>
+    <!-- Hero Banner الجديد المطابق للتصميم مع دعم الترجمة -->
+    <section class="hero-banner-box">
+      <div class="hero-content">
+        <div class="trusted-badge" data-i18n="hero_badge">🛡️ YOUR TRUSTED DIGITAL STORE</div>
+        <h1 class="hero-title" data-i18n="hero_title">BN MAX<br>MORE THAN <span>JUST KEYS</span></h1>
+        <p class="hero-desc" data-i18n="hero_desc">Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.</p>
+        <button type="button" class="hero-btn" id="shopNowBtn"><span data-i18n="btn_shop_now">Shop Now</span> ➔</button>
+        
+        <div class="hero-stats-row">
+          <div class="hero-stat-item"><span>⚡</span> <span data-i18n="hero_stat_1">Instant Delivery</span></div>
+          <div class="hero-stat-item"><span>🛡️</span> <span data-i18n="hero_stat_2">100% Secure</span></div>
+          <div class="hero-stat-item"><span>🎧</span> <span data-i18n="hero_stat_3">24/7 Support</span></div>
         </div>
       </div>
     </section>
 
-    <!-- شريط الأقسام (يتم تحديث ستايله من CSS وتوليده من JS) -->
-    <div class="categories-bar categories-grid-bar" id="categoriesBar">
-      <button type="button" class="category-btn active" data-cat="all" data-i18n="cat_all">⚡ الكل</button>
+    <!-- شريط الأقسام (تم تفريغه ليتم بناؤه ديناميكياً من app.js) -->
+    <div class="categories-grid-bar" id="categoriesBar">
+      <!-- الـ JS هيحط الأقسام هنا -->
     </div>
 
     <!-- بانر الفلاش سيل -->
@@ -140,7 +126,7 @@
     </div>
 
     <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2 class="section-title">🔥 Best Sellers <span style="font-size:12px; color:var(--text-muted); font-weight:normal; margin-inline-start: 10px;">Our most popular products</span></h2>
+      <h2 class="section-title"><span data-i18n="best_sellers">🔥 Best Sellers</span> <span style="font-size:12px; color:var(--text-muted); font-weight:normal; margin-inline-start: 10px;" data-i18n="best_sellers_sub">Our most popular products</span></h2>
       <select id="sortSelect" class="search-input sort-dropdown" style="width: auto; padding: 5px 10px;">
         <option value="default" data-i18n="sort_default">الترتيب الافتراضي</option>
         <option value="price_asc" data-i18n="sort_cheap">الأرخص أولاً</option>
@@ -152,31 +138,28 @@
     <div class="product-grid" id="productGrid"></div>
     <div class="pagination-container" id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; margin-bottom: 40px;"></div>
 
-    <!-- البانرات الترويجية السفلية (المطابقة للتصميم) -->
+    <!-- البانرات الترويجية السفلية -->
     <section class="promo-banners-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
-      <!-- Banner 1 -->
       <div class="promo-banner-card" style="background: linear-gradient(135deg, #0a0a16, #1a0f2e); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; position: relative; overflow: hidden;">
-        <h3 style="color: #fff; font-size: 22px; font-weight: 900; margin-bottom: 5px;">Limited Time Offer</h3>
-        <h2 style="color: var(--accent-neon); font-size: 28px; font-weight: 900; margin-bottom: 10px;">Up to 50% OFF</h2>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">On Selected Games & Keys</p>
-        <button class="buy-btn" style="width: max-content; padding: 10px 25px;">Shop Now ➔</button>
+        <h3 style="color: #fff; font-size: 22px; font-weight: 900; margin-bottom: 5px;" data-i18n="promo_1_sub">Limited Time Offer</h3>
+        <h2 style="color: var(--accent-neon); font-size: 28px; font-weight: 900; margin-bottom: 10px;" data-i18n="promo_1_title">Up to 50% OFF</h2>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;" data-i18n="promo_1_desc">On Selected Games & Keys</p>
+        <button class="buy-btn" style="width: max-content; padding: 10px 25px;"><span data-i18n="btn_shop_now">Shop Now</span> ➔</button>
       </div>
-      <!-- Banner 2 -->
       <div class="promo-banner-card" style="background: linear-gradient(135deg, #0a0a16, #002233); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; position: relative; overflow: hidden;">
-        <h3 style="color: #fff; font-size: 20px; font-weight: 900; margin-bottom: 10px;">Get the Best Deals</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Exclusive offers for our members</p>
-        <button class="buy-btn" style="width: max-content; padding: 10px 25px; background: var(--accent-purple); color: #fff; border-color: var(--accent-purple);">Join Now ➔</button>
+        <h3 style="color: #fff; font-size: 20px; font-weight: 900; margin-bottom: 10px;" data-i18n="promo_2_title">Get the Best Deals</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;" data-i18n="promo_2_desc">Exclusive offers for our members</p>
+        <button class="buy-btn" style="width: max-content; padding: 10px 25px; background: var(--accent-purple); color: #fff; border-color: var(--accent-purple);"><span data-i18n="btn_join_now">Join Now</span> ➔</button>
       </div>
-      <!-- Banner 3 -->
       <div class="promo-banner-card" style="background: linear-gradient(135deg, #0a0a16, #12121a); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; position: relative; overflow: hidden;">
-        <h3 style="color: #fff; font-size: 20px; font-weight: 900; margin-bottom: 10px;">Bulk Orders?</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">For Businesses & Resellers</p>
-        <button class="buy-btn" style="width: max-content; padding: 10px 25px; border-color: #fff; color: #fff;">Contact Us ➔</button>
+        <h3 style="color: #fff; font-size: 20px; font-weight: 900; margin-bottom: 10px;" data-i18n="promo_3_title">Bulk Orders?</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;" data-i18n="promo_3_desc">For Businesses & Resellers</p>
+        <button class="buy-btn" style="width: max-content; padding: 10px 25px; border-color: #fff; color: #fff;"><span data-i18n="btn_contact">Contact Us</span> ➔</button>
       </div>
     </section>
   </div>
 
-  <!-- 🔄 2. واجهة تفاصيل المنتج (تم الاحتفاظ بها كاملة لتجنب أي أخطاء) -->
+  <!-- 🔄 2. واجهة تفاصيل المنتج -->
   <div id="productDetailsView" style="display:none;">
     <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;" data-i18n="btn_back">🔙 رجوع</button>
     <div class="product-details-container" style="flex-direction: column;">
@@ -250,16 +233,16 @@
   </div>
 </main>
 
-<!-- الفوتر الجديد المطابق للتصميم -->
+<!-- الفوتر -->
 <footer class="main-footer" style="background: #08080c; border-top: 1px solid var(--border-color); padding: 40px 20px 20px 20px; margin-top: 50px; text-align: center;">
   <div class="footer-links" style="display: flex; justify-content: center; gap: 25px; margin-bottom: 25px; flex-wrap: wrap;">
-    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;">About Us</a>
-    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;">Contact</a>
-    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;">Terms & Conditions</a>
-    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;">Privacy Policy</a>
+    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;" data-i18n="ft_about">About Us</a>
+    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;" data-i18n="ft_contact">Contact</a>
+    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;" data-i18n="ft_terms">Terms & Conditions</a>
+    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;" data-i18n="ft_privacy">Privacy Policy</a>
   </div>
   <div class="copyright" style="font-size: 13px; color: var(--text-muted);">
-    © 2026 BN MAX. All rights reserved. <span style="color: var(--accent-neon); font-style: italic; margin-inline-start: 10px;">Your Digital World... Our Mission 🚀</span>
+    <span data-i18n="ft_copy">© 2026 BN MAX. All rights reserved.</span> <span style="color: var(--accent-neon); font-style: italic; margin-inline-start: 10px;" data-i18n="ft_slogan">Your Digital World... Our Mission 🚀</span>
   </div>
 </footer>
 
@@ -301,17 +284,17 @@
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="loginEmail" placeholder="example@gmail.com"></div>
         <div class="form-group"><label data-i18n="password">كلمة المرور</label><input type="password" id="loginPass" placeholder="••••••••"></div>
         <button type="button" class="submit-btn" id="doLoginBtn" style="width:100%;" data-i18n="btn_login">تسجيل الدخول</button>
-        <button type="button" id="googleLoginBtn" style="width:100%; margin-top:10px; background:#db4437; color:#fff; padding:10px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px;">🌐 الدخول بواسطة Google</button>
+        <button type="button" id="googleLoginBtn" style="width:100%; margin-top:10px; background:#db4437; color:#fff; padding:10px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px;">🌐 <span data-i18n="google_login">الدخول بواسطة Google</span></button>
         <a href="#" id="resetPassBtn" style="color:var(--accent-neon); display:block; text-align:center; margin-top:10px; font-size:13px;" data-i18n="forgot_password">نسيت كلمة المرور؟</a>
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="no_account">ليس لديك حساب؟</span> <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);" data-i18n="create_account">إنشاء حساب جديد</a></p>
       </div>
       
       <!-- نافذة استعادة الباسورد الفرعية داخل المودال (الخاصة بـ BN MAX) -->
       <div id="authViewReset" style="display:none;">
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.</p>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;" data-i18n="reset_pass_desc">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.</p>
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="resetEmailInput" placeholder="example@gmail.com"></div>
-        <button type="button" class="submit-btn" id="doSendResetBtn" style="width:100%;">إرسال رابط الاستعادة</button>
-        <button type="button" id="backToLoginFromReset" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;">رجوع لتسجيل الدخول</button>
+        <button type="button" class="submit-btn" id="doSendResetBtn" style="width:100%;" data-i18n="btn_send_reset">إرسال رابط الاستعادة</button>
+        <button type="button" id="backToLoginFromReset" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;" data-i18n="back_to_login">رجوع لتسجيل الدخول</button>
       </div>
 
       <div id="authViewRegister" style="display:none;">
