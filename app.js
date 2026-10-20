@@ -1,13 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup, signInWithRedirect, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, limit, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
 // 1. الإعدادات الأساسية (Firebase)
 // ==========================================
 const firebaseConfig = Object.freeze({
   apiKey: "AIzaSyBkt-5W1vLcGvWgJTv95KbpbrnMf7Rm0JU",
-  authDomain: "bn-max.com", // 🚀 تم التعديل للدومين الجديد لحل مشكلة تسجيل الدخول
+  authDomain: "bn-max.com", // 🚀 الدومين الجديد لحل مشكلة تسجيل الدخول بجوجل
   projectId: "bn-store-4f0c0",
   storageBucket: "bn-store-4f0c0.firebasestorage.app",
   messagingSenderId: "281646513182",
@@ -49,13 +49,18 @@ const compressImage = (base64Src, maxWidth = 800, quality = 0.7) => {
 };
 
 // ==========================================
-// 2. نظام اللغات (Localization)
+// 2. نظام اللغات (Localization) الشامل للتصميم الجديد
 // ==========================================
 const translations = {
   ar: {
-    nav_home: "الرئيسية", nav_account: "حسابي", search_placeholder: "ابحث عن ألعاب، مفاتيح، برامج...",
-    cat_all: "⚡ الكل", sort_default: "الترتيب الافتراضي", sort_cheap: "الأرخص أولاً", sort_expensive: "الأغلى أولاً",
-    btn_back: "🔙 رجوع", availability: "التوفر:", faq_title: "💡 أسئلة شائعة", btn_add_to_cart: "🛒 إضافة إلى السلة",
+    nav_home: "الرئيسية", nav_games: "ألعاب", nav_keys: "مفاتيح رقمية", nav_software: "برامج", nav_subs: "اشتراكات", nav_gifts: "بطاقات هدايا", nav_deals: "عروض",
+    nav_account: "حسابي", search_placeholder: "ابحث عن ألعاب، مفاتيح، برامج...",
+    hero_badge: "🛡️ متجرك الرقمي الموثوق", hero_title: "BN MAX<br>أكثر من <span>مجرد مفاتيح</span>",
+    hero_desc: "ألعاب، برامج، بطاقات هدايا، اشتراكات والمزيد...<br>كل شيء في مكان واحد — سريع، آمن، وموثوق.",
+    btn_shop_now: "تسوق الآن", hero_stat_1: "تسليم فوري", hero_stat_2: "100% أمان", hero_stat_3: "دعم 24/7",
+    cat_all: "⚡ الكل", best_sellers: "🔥 المنتجات المميزة", best_sellers_sub: "منتجاتنا الأكثر مبيعاً",
+    sort_default: "الترتيب الافتراضي", sort_cheap: "الأرخص أولاً", sort_expensive: "الأغلى أولاً",
+    btn_back: "🔙 رجوع", availability: "التوفر:", faq_title: "💡 أسئلة شائعة", btn_add_to_cart: "🛒 إضافة للسلة",
     you_may_like: "🔥 قد يعجبك أيضاً", reviews_title: "💬 تقييمات العملاء", add_review: "أضف تقييمك", rating: "التقييم",
     btn_submit_review: "إرسال التقييم", support: "الدعم الفني", cart_title: "🛒 سلة المشتريات", cart_suggestion: "🔥 ضيف ده لطلبك ووفر:",
     total: "الإجمالي:", btn_checkout: "إتمام الشراء الآن", auth_title: "تسجيل الدخول / إنشاء حساب", email: "البريد الإلكتروني",
@@ -66,11 +71,23 @@ const translations = {
     selected_products: "المنتجات المختارة", promo_code: "كود الخصم (اختياري)", btn_apply: "تطبيق", payment_method: "اختر طريقة الدفع",
     transfer_to: "يرجى تحويل المبلغ إلى الحساب التالي:", btn_copy: "نسخ", sender_info: "رقم / حساب التحويل", receive_data: "بيانات الاستلام",
     receipt_img: "صورة إيصال التحويل (سكرين شوت)", btn_confirm_order: "تأكيد الطلب", btn_cancel: "إلغاء",
-    out_of_stock: "نفذت الكمية", details_btn: "عرض التفاصيل", available: "متاح", piece: "قطعة", no_products: "لا توجد منتجات مطابقة حالياً."
+    out_of_stock: "نفذت الكمية", details_btn: "عرض التفاصيل", available: "متاح", piece: "قطعة", no_products: "لا توجد منتجات مطابقة حالياً.",
+    promo_1_sub: "عرض لفترة محدودة", promo_1_title: "خصم يصل إلى 50%", promo_1_desc: "على ألعاب ومفاتيح مختارة",
+    promo_2_title: "أحصل على أفضل العروض", promo_2_desc: "عروض حصرية لأعضائنا", btn_join_now: "انضم الآن",
+    promo_3_title: "طلبات الجملة؟", promo_3_desc: "للشركات والموزعين", btn_contact: "تواصل معنا",
+    ft_about: "من نحن", ft_contact: "اتصل بنا", ft_terms: "الشروط والأحكام", ft_privacy: "سياسة الخصوصية",
+    ft_copy: "© 2026 BN MAX. جميع الحقوق محفوظة.", ft_slogan: "عالمك الرقمي... مهمتنا 🚀",
+    reset_pass_desc: "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.",
+    btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول", google_login: "الدخول بواسطة Google"
   },
   en: {
-    nav_home: "Home", nav_account: "Account", search_placeholder: "Search for games, keys, software...",
-    cat_all: "⚡ All", sort_default: "Default Sorting", sort_cheap: "Lowest Price", sort_expensive: "Highest Price",
+    nav_home: "Home", nav_games: "Games", nav_keys: "Digital Keys", nav_software: "Software", nav_subs: "Subscriptions", nav_gifts: "Gift Cards", nav_deals: "Deals",
+    nav_account: "Account", search_placeholder: "Search for games, keys, software...",
+    hero_badge: "🛡️ YOUR TRUSTED DIGITAL STORE", hero_title: "BN MAX<br>MORE THAN <span>JUST KEYS</span>",
+    hero_desc: "Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.",
+    btn_shop_now: "Shop Now", hero_stat_1: "Instant Delivery", hero_stat_2: "100% Secure", hero_stat_3: "24/7 Support",
+    cat_all: "⚡ All", best_sellers: "🔥 Best Sellers", best_sellers_sub: "Our most popular products",
+    sort_default: "Default Sorting", sort_cheap: "Lowest Price", sort_expensive: "Highest Price",
     btn_back: "🔙 Back", availability: "Availability:", faq_title: "💡 FAQ", btn_add_to_cart: "🛒 Add to Cart",
     you_may_like: "🔥 You May Also Like", reviews_title: "💬 Reviews", add_review: "Add your review", rating: "Rating",
     btn_submit_review: "Submit Review", support: "Support", cart_title: "🛒 Shopping Cart", cart_suggestion: "🔥 Add this and save:",
@@ -82,11 +99,18 @@ const translations = {
     selected_products: "Selected Products", promo_code: "Promo Code", btn_apply: "Apply", payment_method: "Payment Method",
     transfer_to: "Please transfer the amount to:", btn_copy: "Copy", sender_info: "Sender Number/Account", receive_data: "Receive Data (ID/Email)",
     receipt_img: "Transfer Receipt", btn_confirm_order: "Confirm Order", btn_cancel: "Cancel",
-    out_of_stock: "Sold Out", details_btn: "View Details", available: "Available", piece: "pcs", no_products: "No matching products found."
+    out_of_stock: "Sold Out", details_btn: "View Details", available: "Available", piece: "pcs", no_products: "No matching products found.",
+    promo_1_sub: "Limited Time Offer", promo_1_title: "Up to 50% OFF", promo_1_desc: "On Selected Games & Keys",
+    promo_2_title: "Get the Best Deals", promo_2_desc: "Exclusive offers for our members", btn_join_now: "Join Now",
+    promo_3_title: "Bulk Orders?", promo_3_desc: "For Businesses & Resellers", btn_contact: "Contact Us",
+    ft_about: "About Us", ft_contact: "Contact", ft_terms: "Terms & Conditions", ft_privacy: "Privacy Policy",
+    ft_copy: "© 2026 BN MAX. All rights reserved.", ft_slogan: "Your Digital World... Our Mission 🚀",
+    reset_pass_desc: "Enter your registered email and we will send you a password reset link.",
+    btn_send_reset: "Send Reset Link", back_to_login: "Back to Login", google_login: "Login with Google"
   }
 };
 
-let currentLang = localStorage.getItem('bn_lang') || 'ar';
+let currentLang = localStorage.getItem('bn_lang') || 'en';
 
 const applyLanguage = () => {
   document.documentElement.lang = currentLang;
@@ -103,6 +127,7 @@ const applyLanguage = () => {
   if(searchInput) searchInput.placeholder = translations[currentLang].search_placeholder;
   
   window.renderProducts();
+  window.renderCategoriesBar(); // إعادة رسم الأقسام باللغة الجديدة
 };
 
 document.getElementById('langSwitchBtn')?.addEventListener('click', async () => {
@@ -124,7 +149,7 @@ let storeState = {
   rates: { SAR: 0.077, AED: 0.075, USD: 0.020 },
   payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
   promoCode: "", promoDiscount: 0, products: [], orders: [], reviews: [], slides: [],
-  categories: [ { id: 'games', name: '🎮 ألعاب' }, { id: 'subs', name: '📺 اشتراكات' }, { id: 'ai', name: '✨ ذكاء اصطناعي' }, { id: 'software', name: '💻 برامج' } ],
+  categories: [ { id: 'games', name: 'Games' }, { id: 'keys', name: 'Digital Keys' }, { id: 'software', name: 'Software' }, { id: 'subs', name: 'Subscriptions' }, { id: 'gifts', name: 'Gift Cards' } ],
   wishlist: JSON.parse(localStorage.getItem('bn_store_wishlist')) || [],
   cart: []
 };
@@ -156,7 +181,7 @@ window.showToast = (msg, type = 'normal') => {
 };
 
 // ==========================================
-// 4. نظام العداد التنازلي والسلايدر
+// 4. نظام العداد التنازلي والسلايدر الترويجي
 // ==========================================
 const initCountdown = (expiryString) => {
   const bannerEl = document.getElementById('flashSaleBanner');
@@ -183,13 +208,20 @@ const initCountdown = (expiryString) => {
 };
 
 window.renderPromoSlider = () => {
+  const container = document.getElementById('promoSlider');
   const track = document.getElementById('sliderTrack');
   const dotsContainer = document.getElementById('sliderDots');
-  if (!track || !dotsContainer) return;
+  if (!container || !track || !dotsContainer) return;
+  
+  if (!storeState.slides || storeState.slides.length === 0) {
+      container.style.display = 'none'; // إخفاء السلايدر إذا لم يتم إضافة سلايدز من الإدارة
+      return;
+  }
+  
+  container.style.display = 'block';
   track.replaceChildren(); dotsContainer.replaceChildren();
 
-  const slides = storeState.slides && storeState.slides.length > 0 ? storeState.slides : [ { title: "BN MAX العروض الكبرى", desc: "أفضل أسعار شحن الألعاب والخدمات الرقمية", imgUrl: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200" } ];
-  slides.forEach((slide, idx) => {
+  storeState.slides.forEach((slide, idx) => {
     const slideDiv = document.createElement('div');
     slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
     slideDiv.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${slide.imgUrl}')`;
@@ -202,37 +234,68 @@ window.renderPromoSlider = () => {
   });
 
   if (slideInterval) clearInterval(slideInterval);
-  if (slides.length > 1) { slideInterval = setInterval(() => { currentSlideIndex = (currentSlideIndex + 1) % slides.length; updateSliderPosition(); }, 4500); }
+  if (storeState.slides.length > 1) { slideInterval = setInterval(() => { currentSlideIndex = (currentSlideIndex + 1) % storeState.slides.length; updateSliderPosition(); }, 4500); }
 };
 
 const updateSliderPosition = () => {
   const track = document.getElementById('sliderTrack');
   const dots = document.querySelectorAll('.slider-dot');
-  if (!track) return;
+  if (!track || !storeState.slides.length) return;
   track.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
   dots.forEach((dot, idx) => dot.classList.toggle('active', idx === currentSlideIndex));
 };
 
-document.getElementById('nextSlideBtn')?.addEventListener('click', () => { const slides = storeState.slides.length > 0 ? storeState.slides : [1]; currentSlideIndex = (currentSlideIndex + 1) % slides.length; updateSliderPosition(); });
-document.getElementById('prevSlideBtn')?.addEventListener('click', () => { const slides = storeState.slides.length > 0 ? storeState.slides : [1]; currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length; updateSliderPosition(); });
-
-let touchStartX = 0, touchEndX = 0;
-const sliderTrack = document.getElementById('promoSlider');
-sliderTrack?.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-sliderTrack?.addEventListener('touchend', e => {
-  touchEndX = e.changedTouches[0].screenX;
-  if (touchEndX < touchStartX - 40) document.getElementById('prevSlideBtn')?.click(); 
-  if (touchEndX > touchStartX + 40) document.getElementById('nextSlideBtn')?.click(); 
-});
+document.getElementById('nextSlideBtn')?.addEventListener('click', () => { if(storeState.slides.length){ currentSlideIndex = (currentSlideIndex + 1) % storeState.slides.length; updateSliderPosition(); }});
+document.getElementById('prevSlideBtn')?.addEventListener('click', () => { if(storeState.slides.length){ currentSlideIndex = (currentSlideIndex - 1 + storeState.slides.length) % storeState.slides.length; updateSliderPosition(); }});
 
 // ==========================================
-// 5. التصنيفات، المنتجات والـ Pagination
+// 5. التصنيفات والمنتجات
 // ==========================================
 window.renderCategoriesBar = () => {
+  const bar = document.getElementById('categoriesBar');
   const selectCat = document.getElementById('newProdCat');
+  
+  if (bar) {
+    bar.replaceChildren();
+    // زر "الكل" بتصميم المربع الجديد
+    const allBtn = document.createElement('div');
+    allBtn.className = `category-box ${currentCategory === 'all' ? 'active' : ''}`;
+    allBtn.dataset.cat = 'all';
+    allBtn.innerHTML = `<div class="category-info"><div class="category-icon">⚡</div><div class="category-name">${translations[currentLang].cat_all}</div></div>`;
+    allBtn.onclick = () => { currentCategory = 'all'; currentPage = 1; window.renderCategoriesBar(); window.renderProducts(); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); };
+    bar.appendChild(allBtn);
+  }
+  
   if(selectCat) selectCat.replaceChildren();
+  
+  const getCatIcon = (id) => {
+      id = id.toLowerCase();
+      if(id.includes('game')) return '🎮';
+      if(id.includes('key')) return '🔑';
+      if(id.includes('soft')) return '💻';
+      if(id.includes('sub')) return '📺';
+      if(id.includes('gift')) return '🎁';
+      return '✨';
+  };
+
   const cats = storeState.categories || [];
   cats.forEach(c => {
+    if (bar) {
+      const btn = document.createElement('div');
+      btn.className = `category-box ${currentCategory === c.id ? 'active' : ''}`;
+      btn.dataset.cat = c.id;
+      // ترجمة الأقسام الافتراضية إذا أمكن
+      let catName = c.name;
+      if (c.id === 'games') catName = translations[currentLang].nav_games;
+      if (c.id === 'keys') catName = translations[currentLang].nav_keys;
+      if (c.id === 'software') catName = translations[currentLang].nav_software;
+      if (c.id === 'subs') catName = translations[currentLang].nav_subs;
+      if (c.id === 'gifts') catName = translations[currentLang].nav_gifts;
+
+      btn.innerHTML = `<div class="category-info"><div class="category-icon">${getCatIcon(c.id)}</div><div class="category-name">${catName}</div></div>`;
+      btn.onclick = () => { currentCategory = c.id; currentPage = 1; window.renderCategoriesBar(); window.renderProducts(); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); };
+      bar.appendChild(btn);
+    }
     if(selectCat) { const opt = document.createElement('option'); opt.value = c.id; opt.textContent = c.name; selectCat.appendChild(opt); }
   });
 };
@@ -290,8 +353,14 @@ window.renderProducts = () => {
     const discountPercent = (prod.oldPrice && prod.oldPrice > prod.price) ? Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100) : 0;
     const discountBadgeHTML = discountPercent > 0 ? `<span class="product-discount-badge">-${discountPercent}%</span>` : '';
     
-    // تحديد التقييم الظاهري لو مفيش تقييمات حقيقية
-    const ratingHTML = `<div class="product-rating">⭐ 4.9 (1.2k)</div>`; 
+    // إيجاد التقييم
+    let ratingVal = 5.0, ratingCount = 0;
+    const prodRevs = storeState.reviews.filter(r => r.productId === prod.id);
+    if(prodRevs.length > 0) {
+        ratingVal = (prodRevs.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / prodRevs.length).toFixed(1);
+        ratingCount = prodRevs.length;
+    }
+    const ratingHTML = ratingCount > 0 ? `<div class="product-rating">⭐ ${ratingVal} (${ratingCount})</div>` : `<div class="product-rating">⭐ 5.0 (0)</div>`;
 
     const card = document.createElement('div'); card.className = 'product-card';
     card.onclick = (e) => { if(e.target.classList.contains('wishlist-icon-btn') || e.target.classList.contains('buy-btn')) return; window.openProductDetails(prod.id); };
@@ -300,14 +369,14 @@ window.renderProducts = () => {
       <div style="position:relative;">
         <button type="button" class="wishlist-icon-btn ${isWished ? 'active' : ''}" onclick="window.toggleWishlist('${prod.id}', event)">${isWished ? '❤️' : '🤍'}</button>
         ${discountBadgeHTML}
-        ${badge ? `<span class="product-badge" style="top: 35px;">${sanitizeText(badge)}</span>` : ''}
+        ${badge ? `<span class="product-badge" style="top: ${discountPercent > 0 ? '35px' : '12px'}; right: 12px;">${sanitizeText(badge)}</span>` : ''}
         <div class="product-img" style="background-image: url('${prod.imgUrl}'); border: ${prod.imgUrl ? 'none' : ''}">${prod.imgUrl ? '' : sanitizeText(prod.imgText || title)}</div>
         <h3 class="product-title">${sanitizeText(title)}</h3>
         ${ratingHTML}
       </div>
       <div>
-        <div class="product-price-box">${convertedOld ? `<span class="old-price">${convertedOld}${currency}</span>` : ''}<span class="product-price">${convertedPrice} ${currency}</span></div>
-        <button type="button" class="buy-btn ${inStock ? '' : 'out-of-stock-badge'}" onclick="window.addToCartDirect('${prod.id}', event)" ${inStock ? '' : 'disabled'}>${inStock ? 'Add to Cart' : translations[currentLang].out_of_stock}</button>
+        <div class="product-price-box">${convertedOld ? `<span class="old-price">${convertedOld} ${currency}</span>` : ''}<span class="product-price">${convertedPrice} ${currency}</span></div>
+        <button type="button" class="buy-btn ${inStock ? '' : 'out-of-stock-badge'}" onclick="window.addToCartDirect('${prod.id}', event)" ${inStock ? '' : 'disabled'}>${inStock ? translations[currentLang].btn_add_to_cart : translations[currentLang].out_of_stock}</button>
       </div>
     `;
     grid.appendChild(card);
@@ -332,7 +401,7 @@ const showView = (viewName) => {
   if (productDetailsView) productDetailsView.style.display = viewName === 'details' ? 'block' : 'none';
   if (viewName === 'home') window.scrollTo({ top: 0, behavior: 'smooth' });
 };
-document.getElementById('logoBtn')?.addEventListener('click', () => { currentCategory = 'all'; currentPage = 1; window.renderProducts(); showView('home'); document.querySelectorAll('.nav-link, .category-box, .category-btn').forEach(b => b.classList.remove('active')); });
+document.getElementById('logoBtn')?.addEventListener('click', () => { currentCategory = 'all'; currentPage = 1; window.renderCategoriesBar(); window.renderProducts(); showView('home'); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); });
 document.getElementById('backToHomeBtn')?.addEventListener('click', () => showView('home'));
 document.getElementById('sortSelect')?.addEventListener('change', window.renderProducts);
 
@@ -483,13 +552,19 @@ window.updateCartBadge = () => {
 document.getElementById('detailAddToCartBtn')?.addEventListener('click', () => {
   if (!currentProductId) return;
   const prod = storeState.products.find(p => p.id === currentProductId);
-  if (prod) { storeState.cart.push(prod); window.updateCartBadge(); window.showToast('تم إضافة المنتج للسلة بنجاح 🛒', 'success'); }
+  if (prod) { storeState.cart.push(prod); window.updateCartBadge(); window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); }
 });
 
+// إضافة المنتج للسلة من الخارج مع التأكد من المخزون
 window.addToCartDirect = (prodId, event) => {
   if (event) event.stopPropagation();
   const prod = storeState.products.find(p => p.id === prodId);
-  if (prod) { storeState.cart.push(prod); window.updateCartBadge(); window.showToast('🛒 Added to Cart successfully!', 'success'); }
+  if (prod) { 
+      if (prod.inStock === false || (prod.stockQuantity !== undefined && prod.stockQuantity <= 0)) {
+          return window.showToast(translations[currentLang].out_of_stock, 'error');
+      }
+      storeState.cart.push(prod); window.updateCartBadge(); window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); 
+  }
 };
 
 document.getElementById('cartBtnNav')?.addEventListener('click', () => { window.renderCartModal(); document.getElementById('cartModal').style.display = 'flex'; });
@@ -566,6 +641,7 @@ window.loadProductReviews = (prodId) => {
   unsubscribeReviews = onSnapshot(q, (snap) => {
     const list = document.getElementById('productReviewsList'); if (!list) return; list.replaceChildren();
     const revs = []; snap.forEach(d => revs.push({ id: d.id, ...d.data() }));
+    storeState.reviews = storeState.reviews.filter(r => r.productId !== prodId).concat(revs);
     revs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
     const detailBadge = document.getElementById('detailBadge');
@@ -665,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tabBtnOrders')?.addEventListener('click', () => { document.getElementById('tabBtnOrders').classList.add('active'); document.getElementById('tabBtnWishlist').classList.remove('active'); document.getElementById('userOrdersSection').style.display = 'block'; document.getElementById('userWishlistSection').style.display = 'none'; });
   document.getElementById('tabBtnWishlist')?.addEventListener('click', () => { document.getElementById('tabBtnWishlist').classList.add('active'); document.getElementById('tabBtnOrders').classList.remove('active'); document.getElementById('userWishlistSection').style.display = 'block'; document.getElementById('userOrdersSection').style.display = 'none'; window.renderUserWishlist(); });
   
-  // 🌟 نظام فتح النوافذ المطابق للتصميم الجديد (الاستعادة والدخول)
+  // 🌟 نظام المصادقة ونافذة استعادة الباسورد
   const authModal = document.getElementById('authModal');
   document.getElementById('loginBtnNav')?.addEventListener('click', () => { if(currentUserProfile) document.getElementById('userAccountModal').style.display = 'flex'; else authModal.style.display = 'flex'; });
 
@@ -687,7 +763,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { if (e.code !== 'auth/popup-closed-by-user') window.showToast('فشل تسجيل الدخول', 'error'); }
   });
   
-  // 🌟 تفعيل نافذة استعادة كلمة المرور المخصصة (BN MAX Custom View)
   document.getElementById('resetPassBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('authViewLogin').style.display = 'none';
@@ -706,13 +781,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!email) return window.showToast('أدخل البريد الإلكتروني أولاً!', 'error');
     try {
       await sendPasswordResetEmail(auth, email);
-      window.showToast('✉️ تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح!', 'success');
+      window.showToast('✉️ تم إرسال رابط استعادة كلمة المرور بنجاح!', 'success');
       document.getElementById('authViewReset').style.display = 'none';
       document.getElementById('authViewLogin').style.display = 'block';
       document.getElementById('authModalTitle').textContent = translations[currentLang].auth_title;
-    } catch(err) {
-      window.showToast('حدث خطأ، تأكد من صحة البريد الإلكتروني.', 'error');
-    }
+    } catch(err) { window.showToast('حدث خطأ، تأكد من صحة البريد.', 'error'); }
   });
 
   document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; document.getElementById('authModalTitle').textContent = translations[currentLang].create_account; });
@@ -784,21 +857,18 @@ document.addEventListener('DOMContentLoaded', () => {
     finally { confirmText.textContent = translations[currentLang].btn_confirm_order; confirmSpinner.style.display = 'none'; confirmBtn.disabled = false; }
   });
   
-  // 🌟 نظام تبديل الأقسام الجديد في الهيدر والبار
+  // 🌟 نظام التنقل والفلترة في الهيدر والبار
   document.getElementById('searchInput')?.addEventListener('input', () => { currentPage = 1; window.renderProducts(); });
-  document.querySelectorAll('.nav-link, .category-btn, .category-box').forEach(btn => {
+  document.querySelectorAll('.nav-link').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      document.querySelectorAll('.category-btn, .nav-link, .category-box').forEach(b => b.classList.remove('active'));
-      const targetElement = e.target.closest('.category-box') || e.target;
-      const cat = targetElement.dataset.cat || 'all';
-      
-      document.querySelectorAll(`[data-cat="${cat}"]`).forEach(b => b.classList.add('active'));
-      currentCategory = cat; currentPage = 1; window.renderProducts();
+      document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+      const cat = e.target.dataset.cat || 'all';
+      e.target.classList.add('active');
+      currentCategory = cat; currentPage = 1; window.renderCategoriesBar(); window.renderProducts();
       showView('home');
     });
   });
   
-  // تفعيل أزرار البانر الترويجي
   document.getElementById('shopNowBtn')?.addEventListener('click', () => {
       document.getElementById('productGrid').scrollIntoView({ behavior: 'smooth' });
   });
@@ -812,6 +882,10 @@ const initApp = () => {
   onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), snap => {
     const products = []; snap.forEach(doc => products.push({ id: doc.id, ...doc.data() })); storeState.products = products; isDataLoaded = true; 
     window.renderProducts(); if(checkIsAdmin()) window.renderAdminProducts();
+  });
+
+  onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'reviews'), snap => {
+     const revs = []; snap.forEach(doc => revs.push({ id: doc.id, ...doc.data() })); storeState.reviews = revs; window.renderProducts();
   });
 
   onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), snap => {
