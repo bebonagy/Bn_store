@@ -3,23 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>B.n Store | شحن ألعاب، اشتراكات الذكاء الاصطناعي، والخدمات الرقمية بأفضل سعر</title>
+<title>BN MAX | Digital Marketplace</title>
 
 <!-- 🌐 تخصيص روابط المشاركة (Open Graph SEO) -->
-<meta property="og:title" content="B.n Store | المتجر الرقمي الأول">
-<meta property="og:description" content="وجهتك الأولى لشحن الألعاب، اشتراكات الذكاء الاصطناعي، والخدمات الرقمية بأفضل وأرخص الأسعار.">
+<meta property="og:title" content="BN MAX | Digital Marketplace">
+<meta property="og:description" content="وجهتك الأولى لشحن الألعاب، والخدمات الرقمية بأفضل وأرخص الأسعار.">
 <meta property="og:image" content="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200">
-<meta property="og:url" content="https://bn-store-eg.vercel.app/">
+<meta property="og:url" content="https://bn-max.com/">
 <meta property="og:type" content="website">
 
 <!-- 🛡️ سياسة أمان المحتوى (CSP) -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
-<meta name="description" content="متجر B.n Store - وجهتك الأولى والموثوقة لشحن الألعاب، اشتراكات الذكاء الاصطناعي (ChatGPT, Canva, CapCut)، والخدمات الرقمية.">
-<meta name="theme-color" content="#00ffcc">
+<meta name="description" content="BN MAX - متجرك الأفضل للخدمات الرقمية وشحن الألعاب.">
+<meta name="theme-color" content="#00f2ff">
 
-<!-- 🔗 ربط ملف التصميمات المنفصل -->
 <link rel="stylesheet" href="style.css">
 
 <!-- 🌟 مكتبات إضافية -->
@@ -29,11 +28,12 @@
    emailjs.init("t5Irys8GSHX5X1a63");
 </script>
 
+<!-- 🛡️ حماية ضد الـ Clickjacking -->
 <style id="antiClickjack">body{display:none !important;}</style>
 <script>
   if (self === top) {
     var antiClickjack = document.getElementById("antiClickjack");
-    antiClickjack.parentNode.removeChild(antiClickjack);
+    if(antiClickjack) antiClickjack.parentNode.removeChild(antiClickjack);
   } else {
     top.location = self.location;
   }
@@ -42,38 +42,58 @@
 <body>
 <div id="toastContainer" aria-live="polite"></div>
 
-<div class="flash-sale-banner" id="flashSaleBanner">
-  <span id="flashBannerText">⚡ جاري تحميل العروض...</span>
-  <div class="countdown-timer" id="countdownTimer">⏳ 00:00:00</div>
-</div>
-
-<header>
-  <div class="logo" id="logoBtn">B<span class="dot-accent">.</span>n Store</div>
-  <nav class="header-controls">
-    <button type="button" class="share-store-btn" id="shareBtn">🔗 مشاركة المتجر</button>
-    <select id="currencySelect">
-      <option value="EGP">EGP (ج.م)</option>
-      <option value="SAR">SAR (ر.س)</option>
-      <option value="AED">AED (د.إ)</option>
-      <option value="USD">USD ($)</option>
-    </select>
-    <div id="authHeaderButtons" style="display: flex; gap: 8px; align-items: center;">
-      <button type="button" class="user-action-btn" id="cartBtnNav" style="position: relative;">
-        🛒 <span id="cartCountBadge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger); color:#fff; font-size:10px; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center;">0</span>
-      </button>
-      <button type="button" class="user-action-btn" id="loginBtnNav" style="position: relative;">
-        👤 <span id="loginBtnText">تسجيل الدخول</span>
-        <span id="notificationDot" style="display:none; position:absolute; top:-5px; right:-5px; font-size:10px;">🔴</span>
-      </button>
+<!-- شريط الهيدر -->
+<header class="main-header">
+  <div class="header-top">
+    <div class="logo" id="logoBtn">
+      BN <span class="max-glow">MAX</span>
+      <span class="logo-sub">DIGITAL MARKETPLACE</span>
     </div>
-    <button type="button" class="admin-trigger-btn" id="adminBtnNav" style="display:none;">⚙️ الإدارة</button>
-  </nav>
+
+    <nav class="top-nav-links">
+      <button class="nav-link active" data-target="homeView" data-i18n="nav_home">الرئيسية</button>
+      <button class="nav-link" data-cat="games" data-i18n="nav_games">ألعاب</button>
+      <button class="nav-link" data-cat="keys" data-i18n="nav_keys">مفاتيح رقمية</button>
+      <button class="nav-link" data-cat="software" data-i18n="nav_software">برامج</button>
+      <button class="nav-link" data-cat="subs" data-i18n="nav_subs">اشتراكات</button>
+      <button class="nav-link" data-cat="gifts" data-i18n="nav_gifts">بطاقات هدايا</button>
+    </nav>
+
+    <div class="header-actions">
+      <button type="button" class="share-store-btn" id="shareBtn" title="مشاركة المتجر">🔗</button>
+      <select id="currencySelect" class="currency-dropdown">
+        <option value="EGP">EGP</option>
+        <option value="SAR">SAR</option>
+        <option value="AED">AED</option>
+        <option value="USD">USD</option>
+      </select>
+      <button type="button" id="langSwitchBtn" class="action-icon">🌐 EN ∨</button>
+      <div id="authHeaderButtons" style="display: flex; gap: 8px; align-items: center;">
+        <button type="button" class="action-icon" id="cartBtnNav">
+          🛒 <span id="cartCountBadge" class="badge" style="display:none;">0</span>
+        </button>
+        <button type="button" class="action-icon" id="loginBtnNav">
+          👤 <span id="loginBtnText" data-i18n="nav_account">حسابي</span>
+          <span id="notificationDot" style="display:none; position:absolute; top:-5px; right:-5px; font-size:10px;">🔴</span>
+        </button>
+      </div>
+      <button type="button" class="admin-trigger-btn" id="adminBtnNav" style="display:none;">⚙️ الإدارة</button>
+    </div>
+  </div>
+
+  <div class="header-bottom">
+    <div class="global-search-container">
+      <span class="search-icon">🔍</span>
+      <input type="search" id="searchInput" class="search-input" placeholder="ابحث عن ألعاب، مفاتيح، برامج..." autocomplete="off">
+    </div>
+  </div>
 </header>
 
-<main class="container">
-  <!-- 🔄 الواجهة الرئيسية -->
-  <div id="homeView">
-    <section class="promo-slider-container" id="promoSlider">
+<main class="app-container container">
+  
+  <!-- 🔄 1. الواجهة الرئيسية (Home) -->
+  <div id="homeView" class="view-section active-view">
+    <section class="hero-banner promo-slider-container" id="promoSlider">
       <div class="slider-track" id="sliderTrack"></div>
       <button type="button" class="slider-btn slider-prev" id="prevSlideBtn">❯</button>
       <button type="button" class="slider-btn slider-next" id="nextSlideBtn">❮</button>
@@ -81,49 +101,51 @@
     </section>
 
     <section class="trust-stats-bar">
-      <div class="stat-card"><div class="stat-number">⚡ +500</div><div class="stat-label">طلب ناجح ومكتمل</div></div>
-      <div class="stat-card"><div class="stat-number">⭐ 4.9 / 5</div><div class="stat-label">تقييم العملاء الثقات</div></div>
-      <div class="stat-card"><div class="stat-number">🛡️ 100%</div><div class="stat-label">أمان وتسليم فوري</div></div>
+      <div class="stat-card trust-item"><div class="stat-number" data-i18n="trust_delivery_title">🚀 تسليم فوري</div><div class="stat-label" data-i18n="trust_delivery_desc">استلم منتجك في ثواني</div></div>
+      <div class="stat-card trust-item"><div class="stat-number" data-i18n="trust_secure_title">🛡️ 100% أمان</div><div class="stat-label" data-i18n="trust_secure_desc">معاملات مشفرة وآمنة</div></div>
+      <div class="stat-card trust-item"><div class="stat-number" data-i18n="trust_support_title">🎧 دعم 24/7</div><div class="stat-label" data-i18n="trust_support_desc">دائماً هنا لخدمتك</div></div>
     </section>
 
-    <div class="search-bar-container" style="display: flex; gap: 10px; flex-wrap: wrap;">
-      <input type="search" class="search-input" id="searchInput" placeholder="🔍 ابحث عن لعبة، اشتراك، أو خدمة تصميم..." autocomplete="off" style="flex: 1; min-width: 250px;">
-      <select id="sortSelect" class="search-input" style="flex: 0 1 200px; padding: 10px 15px;">
-        <option value="default">الترتيب الافتراضي</option>
-        <option value="price_asc">الأرخص أولاً</option>
-        <option value="price_desc">الأغلى أولاً</option>
+    <div class="categories-bar" id="categoriesBar">
+      <button type="button" class="category-btn active" data-cat="all" data-i18n="cat_all">⚡ الكل</button>
+    </div>
+
+    <div class="flash-sale-banner" id="flashSaleBanner" style="display:none;">
+      <span id="flashBannerText">⚡ جاري تحميل العروض...</span>
+      <div class="countdown-timer" id="countdownTimer">⏳ 00:00:00</div>
+    </div>
+
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 class="section-title" data-i18n="best_sellers">🔥 المنتجات المميزة</h2>
+      <select id="sortSelect" class="search-input sort-dropdown" style="width: auto; padding: 5px 10px;">
+        <option value="default" data-i18n="sort_default">الترتيب الافتراضي</option>
+        <option value="price_asc" data-i18n="sort_cheap">الأرخص أولاً</option>
+        <option value="price_desc" data-i18n="sort_expensive">الأغلى أولاً</option>
       </select>
     </div>
-
-    <div class="categories-bar" id="categoriesBar">
-      <button type="button" class="category-btn active" data-cat="all">⚡ الكل</button>
-    </div>
-
-    <h2 class="section-title">المنتجات المميزة</h2>
+    
     <div class="product-grid" id="productGrid"></div>
+    <div class="pagination-container" id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;"></div>
   </div>
 
-  <!-- 📦 واجهة تفاصيل المنتج -->
+  <!-- 🔄 2. واجهة تفاصيل المنتج -->
   <div id="productDetailsView" style="display:none;">
-    <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;">🔙 العودة للمتجر</button>
+    <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;" data-i18n="btn_back">🔙 رجوع</button>
     <div class="product-details-container" style="flex-direction: column;">
       <div style="display: flex; flex-wrap: wrap; gap: 30px; width: 100%;">
-        
-        <!-- قسم الصور -->
         <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
-          <div class="details-image-box zoomable-image" id="detailImageBox" style="width: 100%; height: 350px;" title="اضغط لتكبير الصورة"></div>
-          <!-- 🖼️ سلايدر الصور المصغرة -->
+          <div class="details-image-box zoomable-image" id="detailImageBox" style="width: 100%; height: 350px;" title="تكبير الصورة"></div>
           <div class="gallery-slider-wrapper" style="position: relative; width: 100%;">
             <div id="detailImageGallery" class="gallery-slider-track"></div>
           </div>
         </div>
         
         <div class="details-info-box" style="flex: 1.5; min-width: 300px; position: relative;">
-          <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">🤍</button>
+          <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer;">🤍</button>
           
           <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-left: 60px; margin-bottom: 10px;">
             <h2 id="detailTitle" class="details-title" style="margin-bottom: 0;"></h2>
-            <button type="button" id="shareProductBtn" style="background: rgba(0,153,255,.1); color: #0099ff; border: 1px solid #0099ff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 18px; transition: all 0.3s;" title="مشاركة المنتج">📤</button>
+            <button type="button" id="shareProductBtn" style="background: rgba(0,242,255,.1); color: #00f2ff; border: 1px solid #00f2ff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 18px;" title="مشاركة المنتج">📤</button>
           </div>
           
           <span class="product-badge" id="detailBadge" style="position:relative; display:inline-block; margin-bottom:15px;"></span>
@@ -133,36 +155,33 @@
             <span id="detailPrice" class="product-price" style="font-size:28px;"></span>
           </div>
 
-          <!-- ⏳ مؤشر وقت التسليم -->
           <div id="detailDeliveryBadge" class="delivery-badge" style="display:none; margin-bottom: 15px;"></div>
           
           <div class="stock-status" style="margin-bottom: 20px; font-weight: bold; font-size: 16px;">
-            الكمية المتاحة: <span id="detailStock" style="color: var(--accent-neon);"></span>
+            <span data-i18n="availability">التوفر:</span> <span id="detailStock" style="color: var(--accent-neon);"></span>
           </div>
           
           <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
-          
-          <!-- ❓ الأسئلة الشائعة للمنتج -->
           <div id="detailFaqContainer" class="faq-container" style="display:none; margin-bottom: 20px;">
-            <h4 style="color: var(--accent-neon); margin-bottom: 10px; font-size: 15px;">💡 أسئلة شائعة عن الخدمة</h4>
+            <h4 style="color: var(--accent-neon); margin-bottom: 10px; font-size: 15px;" data-i18n="faq_title">💡 أسئلة شائعة</h4>
             <div id="detailFaqList"></div>
           </div>
           
-          <button type="button" id="detailAddToCartBtn" class="buy-btn" style="padding:15px; font-size:16px; margin-top:10px;">🛒 إضافة إلى السلة</button>
+          <button type="button" id="detailAddToCartBtn" class="buy-btn" style="padding:15px; font-size:16px; margin-top:10px;" data-i18n="btn_add_to_cart">🛒 إضافة إلى السلة</button>
         </div>
       </div>
 
       <div style="width: 100%; margin-top: 35px;">
-        <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 18px;">🔥 قد يعجبك أيضاً</h3>
+        <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 18px;" data-i18n="you_may_like">🔥 قد يعجبك أيضاً</h3>
         <div id="relatedProductsGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; min-height: unset; margin-bottom: 0;"></div>
       </div>
 
       <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 25px;">
-        <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;">💬 تقييمات وآراء العملاء</h3>
+        <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;" data-i18n="reviews_title">💬 تقييمات العملاء</h3>
         <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
-          <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);">أضف تقييمك للمنتج</h4>
+          <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);" data-i18n="add_review">أضف تقييمك</h4>
           <div class="form-group" style="margin-bottom: 15px;">
-            <label style="margin-bottom: 8px;">تقييمك بالنجوم</label>
+            <label style="margin-bottom: 8px;" data-i18n="rating">التقييم</label>
             <div id="interactiveStars" style="display: inline-flex; gap: 8px; font-size: 24px; cursor: pointer; direction: ltr;">
               <span class="star" data-value="1" style="filter: grayscale(100%);">⭐</span>
               <span class="star" data-value="2" style="filter: grayscale(100%);">⭐</span>
@@ -173,103 +192,106 @@
             <input type="hidden" id="reviewRating" value="5">
           </div>
           <div class="form-group" style="margin-bottom: 10px;">
-            <textarea id="reviewCommentText" rows="2" placeholder="اكتب تعليقك أو تجربتك بعد شراء المنتج..." style="width: 100%; background: #14141d; color: #fff; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);"></textarea>
+            <textarea id="reviewCommentText" rows="2" placeholder="اكتب تجربتك هنا..." style="width: 100%; background: #14141d; color: #fff; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);"></textarea>
           </div>
-          <button type="button" class="submit-btn" id="submitReviewBtn" style="padding: 8px 20px; font-size: 13px; flex: 0;">إرسال التقييم</button>
+          <button type="button" class="submit-btn" id="submitReviewBtn" style="padding: 8px 20px; font-size: 13px; flex: 0;" data-i18n="btn_submit_review">إرسال التقييم</button>
         </div>
         <div id="productReviewsList"></div>
       </div>
     </div>
   </div>
+
 </main>
 
 <a href="#" target="_blank" rel="noopener noreferrer" class="whatsapp-float" id="whatsappBtn">
-  <span>💬</span><span>الدعم والاستفسارات</span>
+  <span>💬</span><span data-i18n="support">الدعم الفني</span>
 </a>
 
 <div id="modalsWrapper">
-  <!-- النوافذ المنبثقة -->
+  <!-- سلة المشتريات -->
   <div class="modal" id="cartModal">
     <div class="modal-content">
-      <h3><span>🛒 سلة المشتريات</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">إغلاق ✕</button></h3>
+      <h3><span data-i18n="cart_title">🛒 سلة المشتريات</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">✕</button></h3>
       <div id="cartItemsList" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px;"></div>
-      <div id="cartCrossSellSection" style="display: none; background: rgba(0,255,204,0.05); border: 1px dashed var(--accent-neon); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-        <h4 style="font-size: 13px; color: var(--accent-neon); margin-bottom: 10px;">🔥 ضيف ده لطلبك ووفر:</h4>
+      <div id="cartCrossSellSection" style="display: none; background: rgba(0,242,255,0.05); border: 1px dashed var(--accent-neon); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+        <h4 style="font-size: 13px; color: var(--accent-neon); margin-bottom: 10px;" data-i18n="cart_suggestion">🔥 ضيف ده لطلبك ووفر:</h4>
         <div id="cartCrossSellList" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;"></div>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; color:var(--accent-neon); margin-bottom:15px; border-top:1px solid var(--border-color); padding-top:15px;">
-        <span>الإجمالي:</span>
+        <span data-i18n="total">الإجمالي:</span>
         <span id="cartTotalPriceDisplay">0.00</span>
       </div>
-      <button type="button" class="submit-btn" id="proceedToCheckoutBtn" style="width:100%;">إتمام الشراء الآن</button>
+      <button type="button" class="submit-btn" id="proceedToCheckoutBtn" style="width:100%;" data-i18n="btn_checkout">إتمام الشراء الآن</button>
     </div>
   </div>
 
+  <!-- تكبير الصور -->
   <div class="modal" id="lightboxModal" style="z-index: 2000; padding: 0;">
     <div style="position:relative; width:100%; height:100%; display:flex; justify-content:center; align-items:center;">
       <button type="button" id="closeLightboxBtn" style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #fff; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer; z-index:2001; transition:0.3s;">✕</button>
-      <img id="lightboxImg" src="" alt="تكبير الصورة" style="max-width:90%; max-height:90%; object-fit:contain; border-radius:8px; box-shadow:0 0 30px rgba(0,255,204,0.3);">
+      <img id="lightboxImg" src="" alt="تكبير الصورة" style="max-width:90%; max-height:90%; object-fit:contain; border-radius:8px; box-shadow:0 0 30px rgba(0,242,255,0.3);">
     </div>
   </div>
 
+  <!-- تسجيل الدخول -->
   <div class="modal" id="authModal">
     <div class="modal-content">
-      <h3 id="authModalTitle">تسجيل الدخول / إنشاء حساب</h3>
+      <h3 id="authModalTitle" data-i18n="auth_title">تسجيل الدخول / إنشاء حساب</h3>
       <div id="authViewLogin">
-        <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="loginEmail" placeholder="example@gmail.com"></div>
-        <div class="form-group"><label>كلمة المرور</label><input type="password" id="loginPass" placeholder="••••••••"></div>
-        <button type="button" class="submit-btn" id="doLoginBtn" style="width:100%;">تسجيل الدخول</button>
+        <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="loginEmail" placeholder="example@gmail.com"></div>
+        <div class="form-group"><label data-i18n="password">كلمة المرور</label><input type="password" id="loginPass" placeholder="••••••••"></div>
+        <button type="button" class="submit-btn" id="doLoginBtn" style="width:100%;" data-i18n="btn_login">تسجيل الدخول</button>
         <button type="button" id="googleLoginBtn" style="width:100%; margin-top:10px; background:#db4437; color:#fff; padding:10px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px;">🌐 الدخول بواسطة Google</button>
-        <a href="#" id="resetPassBtn" style="color:var(--accent-neon); display:block; text-align:center; margin-top:10px; font-size:13px;">نسيت كلمة المرور؟</a>
-        <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);">ليس لديك حساب؟ <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);">إنشاء حساب جديد</a></p>
+        <a href="#" id="resetPassBtn" style="color:var(--accent-neon); display:block; text-align:center; margin-top:10px; font-size:13px;" data-i18n="forgot_password">نسيت كلمة المرور؟</a>
+        <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="no_account">ليس لديك حساب؟</span> <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);" data-i18n="create_account">إنشاء حساب جديد</a></p>
       </div>
       <div id="authViewRegister" style="display:none;">
-        <div class="form-group"><label>الاسم الكامل</label><input type="text" id="regName" placeholder="اسمك"></div>
-        <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="regEmail" placeholder="example@gmail.com"></div>
-        <div class="form-group"><label>كلمة المرور</label><input type="password" id="regPass" placeholder="••••••••"></div>
-        <div class="form-group"><label>تأكيد كلمة المرور</label><input type="password" id="regPassConfirm" placeholder="••••••••"></div>
-        <button type="button" class="submit-btn" id="doRegisterBtn" style="width:100%;">إنشاء الحساب</button>
-        <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);">لديك حساب بالفعل؟ <a href="#" id="showLoginBtn" style="color:var(--accent-neon);">تسجيل الدخول</a></p>
+        <div class="form-group"><label data-i18n="full_name">الاسم الكامل</label><input type="text" id="regName" placeholder="اسمك"></div>
+        <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="regEmail" placeholder="example@gmail.com"></div>
+        <div class="form-group"><label data-i18n="password">كلمة المرور</label><input type="password" id="regPass" placeholder="••••••••"></div>
+        <div class="form-group"><label data-i18n="confirm_password">تأكيد كلمة المرور</label><input type="password" id="regPassConfirm" placeholder="••••••••"></div>
+        <button type="button" class="submit-btn" id="doRegisterBtn" style="width:100%;" data-i18n="btn_register">إنشاء الحساب</button>
+        <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="have_account">لديك حساب بالفعل؟</span> <a href="#" id="showLoginBtn" style="color:var(--accent-neon);" data-i18n="btn_login">تسجيل الدخول</a></p>
       </div>
-      <button type="button" class="cancel-btn close-modal-btn" style="width:100%;margin-top:10px;">إغلاق</button>
+      <button type="button" class="cancel-btn close-modal-btn" style="width:100%;margin-top:10px;" data-i18n="btn_close">إغلاق</button>
     </div>
   </div>
 
+  <!-- حساب المستخدم -->
   <div class="modal" id="userAccountModal">
     <div class="modal-content large-modal">
-      <h3><span>👤 حسابي الشخصي</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">إغلاق ✕</button></h3>
-      <div style="margin-bottom:20px;font-size:15px;color:var(--accent-neon);">مرحباً بك، <span id="accountUserName" style="font-weight:bold;"></span>!</div>
+      <h3><span data-i18n="my_account">👤 حسابي الشخصي</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">✕</button></h3>
+      <div style="margin-bottom:20px;font-size:15px;color:var(--accent-neon);"><span data-i18n="welcome">مرحباً بك،</span> <span id="accountUserName" style="font-weight:bold;"></span>!</div>
       <div class="user-tabs-container" style="display:flex; gap:10px; margin-bottom:15px;">
-        <button class="tab-btn active" id="tabBtnOrders">📦 طلباتي</button>
-        <button class="tab-btn" id="tabBtnWishlist">🤍 المفضلة</button>
+        <button class="tab-btn active" id="tabBtnOrders" data-i18n="tab_orders">📦 طلباتي</button>
+        <button class="tab-btn" id="tabBtnWishlist" data-i18n="tab_wishlist">🤍 المفضلة</button>
       </div>
       <div id="userOrdersSection">
-        <h4 style="margin-bottom:12px;font-size:16px;border-bottom:1px solid var(--border-color);padding-bottom:5px;">📦 طلباتي والأكواد المستلمة</h4>
         <div id="userOrdersList" style="max-height:350px;overflow-y:auto;"></div>
       </div>
       <div id="userWishlistSection" style="display:none;">
-        <h4 style="margin-bottom:12px;font-size:16px;border-bottom:1px solid var(--border-color);padding-bottom:5px;">🤍 قائمة المفضلة</h4>
         <div id="userWishlistGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; min-height: 100px;"></div>
       </div>
-      <button type="button" class="cancel-btn" id="logoutBtn" style="width:100%;margin-top:15px;background:var(--danger);color:#fff;border:none;">تسجيل الخروج</button>
+      <button type="button" class="cancel-btn" id="logoutBtn" style="width:100%;margin-top:15px;background:var(--danger);color:#fff;border:none;" data-i18n="btn_logout">تسجيل الخروج</button>
     </div>
   </div>
 
+  <!-- إتمام الطلب -->
   <div class="modal" id="checkoutModal">
     <div class="modal-content">
-      <h3>إتمام الطلب</h3>
+      <h3 data-i18n="checkout_title">إتمام الطلب</h3>
       <form id="checkoutForm">
-        <div class="form-group"><label>المنتجات المختارة</label><textarea id="selectedProduct" readonly rows="2" style="opacity:.9;color:var(--accent-neon);font-weight:bold; resize:none;"></textarea></div>
+        <div class="form-group"><label data-i18n="selected_products">المنتجات المختارة</label><textarea id="selectedProduct" readonly rows="2" style="opacity:.9;color:var(--accent-neon);font-weight:bold; resize:none;"></textarea></div>
         <div class="form-group">
-          <label>كود الخصم (اختياري)</label>
+          <label data-i18n="promo_code">كود الخصم (اختياري)</label>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="promoCodeInput" placeholder="مثل: BN10">
-            <button type="button" class="control-btn" id="applyPromoBtn">تطبيق</button>
+            <input type="text" id="promoCodeInput" placeholder="BN10">
+            <button type="button" class="control-btn" id="applyPromoBtn" data-i18n="btn_apply">تطبيق</button>
           </div>
           <small id="promoMsg" style="font-size:12px;display:block;margin-top:4px;"></small>
         </div>
         <div class="form-group">
-          <label>اختر طريقة الدفع</label>
+          <label data-i18n="payment_method">اختر طريقة الدفع</label>
           <select id="paymentMethod">
             <option value="instapay">إنستا باي (InstaPay)</option>
             <option value="vodafone">فودافون كاش (Vodafone Cash)</option>
@@ -278,34 +300,34 @@
           </select>
         </div>
         <div class="payment-details-box">
-          <div>يرجى تحويل المبلغ إلى الحساب التالي:</div>
+          <div data-i18n="transfer_to">يرجى تحويل المبلغ إلى الحساب التالي:</div>
           <div class="payment-address-row">
             <span class="payment-address" id="paymentAddressDisplay"></span>
-            <button type="button" class="copy-btn" id="copyBtnText">نسخ</button>
+            <button type="button" class="copy-btn" id="copyBtnText" data-i18n="btn_copy">نسخ</button>
           </div>
         </div>
-        <div class="form-group"><label>رقم / حساب التحويل</label><input type="text" id="senderInfo" required placeholder="رقم محفظتك أو حسابك"></div>
-        <div class="form-group"><label>بيانات الاستلام</label><input type="text" id="customerData" required placeholder="أدخل الآيدي أو الإيميل (لكل المنتجات)"></div>
+        <div class="form-group"><label data-i18n="sender_info">رقم / حساب التحويل</label><input type="text" id="senderInfo" required placeholder="رقم محفظتك أو حسابك"></div>
+        <div class="form-group"><label data-i18n="receive_data">بيانات الاستلام</label><input type="text" id="customerData" required placeholder="أدخل الآيدي أو الإيميل"></div>
         <div class="form-group">
-          <label>صورة إيصال التحويل (سكرين شوت)</label>
+          <label data-i18n="receipt_img">صورة إيصال التحويل (سكرين شوت)</label>
           <input type="file" id="receiptFileInput" accept="image/*" required style="padding: 7px; background: #0b0b10; color: #fff; border: 1px solid var(--border-color); border-radius: 7px; width: 100%;">
           <img id="receiptPreview" src="" alt="معاينة الإيصال" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:8px; border:1px solid var(--border-color);">
         </div>
-        <p style="color:var(--text-muted);font-size:12px;margin-bottom:15px;text-align:center;">📌 برجاء إرفاق صورة الإيصال بوضوح لضمان سرعة تفعيل طلبك.</p>
         <div class="modal-actions">
           <button type="submit" id="confirmOrderBtn" class="submit-btn" style="position:relative; display:flex; justify-content:center; align-items:center; gap:8px;">
-            <span id="confirmBtnText">تأكيد الطلب</span>
+            <span id="confirmBtnText" data-i18n="btn_confirm_order">تأكيد الطلب</span>
             <span id="confirmSpinner" class="spinner" style="display:none;"></span>
           </button>
-          <button type="button" class="cancel-btn close-modal-btn">إلغاء</button>
+          <button type="button" class="cancel-btn close-modal-btn" data-i18n="btn_cancel">إلغاء</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- لوحة الإدارة -->
   <div class="modal" id="adminModal">
     <div class="modal-content large-modal" style="max-width: 900px;">
-      <h3><span>⚙️ لوحة تحكم B.n Store</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:5px 12px;">إغلاق ✕</button></h3>
+      <h3><span>⚙️ لوحة تحكم BN MAX</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:5px 12px;">✕</button></h3>
       <div class="admin-tabs" id="adminTabs" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
         <button class="tab-btn active" data-target="tab-dashboard">📊 الرئيسية</button>
         <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
