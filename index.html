@@ -44,51 +44,71 @@
 
 <!-- شريط الهيدر -->
 <header class="main-header">
-  <div class="header-top">
-    <div class="logo" id="logoBtn">
-      BN <span class="max-glow">MAX</span>
-      <span class="logo-sub">DIGITAL MARKETPLACE</span>
-    </div>
-
-    <!-- روابط الهيدر المحدثة بـ data-i18n للترجمة -->
-    <nav class="top-nav-links">
-      <button class="nav-link active" data-target="homeView" data-i18n="nav_home">Home</button>
-      <button class="nav-link" data-cat="games" data-i18n="nav_games">Games</button>
-      <button class="nav-link" data-cat="keys" data-i18n="nav_keys">Digital Keys</button>
-      <button class="nav-link" data-cat="software" data-i18n="nav_software">Software</button>
-      <button class="nav-link" data-cat="subs" data-i18n="nav_subs">Subscriptions</button>
-      <button class="nav-link" data-cat="gifts" data-i18n="nav_gifts">Gift Cards</button>
-      <button class="nav-link" data-cat="deals" data-i18n="nav_deals">Deals</button>
-    </nav>
-
-    <div class="header-actions">
-      <button type="button" class="share-store-btn" id="shareBtn" title="مشاركة المتجر">🔗</button>
-      <select id="currencySelect" class="currency-dropdown">
-        <option value="EGP">EGP</option>
-        <option value="SAR">SAR</option>
-        <option value="AED">AED</option>
-        <option value="USD">USD</option>
-      </select>
-      <button type="button" id="langSwitchBtn" class="action-icon">🌐 EN ∨</button>
-      <div id="authHeaderButtons" style="display: flex; gap: 8px; align-items: center;">
-        <button type="button" class="action-icon" id="cartBtnNav">
-          🛒 <span id="cartCountBadge" class="badge" style="display:none;">0</span>
-        </button>
-        <button type="button" class="action-icon" id="loginBtnNav">
-          👤 <span id="loginBtnText" data-i18n="nav_account">Account</span>
-          <span id="notificationDot" style="display:none; position:absolute; top:-5px; right:-5px; font-size:10px;">🔴</span>
-        </button>
+  
+  <!-- 💻 هيدر الكمبيوتر (Desktop Header) -->
+  <div class="desktop-header-wrapper">
+    <div class="header-top">
+      <div class="logo" id="logoBtn">
+        BN <span class="max-glow">MAX</span>
+        <span class="logo-sub">DIGITAL MARKETPLACE</span>
       </div>
-      <button type="button" class="admin-trigger-btn" id="adminBtnNav" style="display:none;">⚙️ الإدارة</button>
+
+      <!-- روابط الهيدر المحدثة بـ data-i18n للترجمة -->
+      <nav class="top-nav-links">
+        <button class="nav-link active" data-target="homeView" data-i18n="nav_home">Home</button>
+        <button class="nav-link" data-cat="games" data-i18n="nav_games">Games</button>
+        <button class="nav-link" data-cat="keys" data-i18n="nav_keys">Digital Keys</button>
+        <button class="nav-link" data-cat="software" data-i18n="nav_software">Software</button>
+        <button class="nav-link" data-cat="subs" data-i18n="nav_subs">Subscriptions</button>
+        <button class="nav-link" data-cat="gifts" data-i18n="nav_gifts">Gift Cards</button>
+        <button class="nav-link" data-cat="deals" data-i18n="nav_deals">Deals</button>
+      </nav>
+
+      <div class="header-actions">
+        <button type="button" class="share-store-btn" id="shareBtn" title="مشاركة المتجر">🔗</button>
+        <select id="currencySelect" class="currency-dropdown">
+          <option value="EGP">EGP</option>
+          <option value="SAR">SAR</option>
+          <option value="AED">AED</option>
+          <option value="USD">USD</option>
+        </select>
+        <button type="button" id="langSwitchBtn" class="action-icon">🌐 EN ∨</button>
+        <div id="authHeaderButtons" style="display: flex; gap: 8px; align-items: center;">
+          <button type="button" class="action-icon" id="cartBtnNav">
+            🛒 <span id="cartCountBadge" class="badge" style="display:none;">0</span>
+          </button>
+          <button type="button" class="action-icon" id="loginBtnNav">
+            👤 <span id="loginBtnText" data-i18n="nav_account">Account</span>
+            <span id="notificationDot" style="display:none; position:absolute; top:-5px; right:-5px; font-size:10px;">🔴</span>
+          </button>
+        </div>
+        <button type="button" class="admin-trigger-btn" id="adminBtnNav" style="display:none;">⚙️ الإدارة</button>
+      </div>
+    </div>
+
+    <div class="header-bottom">
+      <div class="global-search-container">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="searchInput" class="search-input" placeholder="Search for games, keys, software..." autocomplete="off">
+      </div>
     </div>
   </div>
 
-  <div class="header-bottom">
-    <div class="global-search-container">
-      <span class="search-icon">🔍</span>
-      <input type="search" id="searchInput" class="search-input" placeholder="Search for games, keys, software..." autocomplete="off">
+  <!-- 📱 هيدر الموبايل الجديد المطابق للتصميم (Mobile Header) -->
+  <div class="mobile-header-wrapper" style="display: none;">
+    <button type="button" class="mobile-menu-btn" onclick="document.querySelector('.desktop-header-wrapper').classList.toggle('show-mobile-menu')">≡</button>
+    
+    <div class="logo mobile-logo" onclick="document.getElementById('logoBtn').click()">
+      BN <span class="max-glow">MAX</span>
+    </div>
+    
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button type="button" class="action-icon mobile-cart-btn" onclick="document.getElementById('cartBtnNav').click()" style="position:relative;">
+        🛒 <span id="cartCountBadgeMobile" class="badge" style="display:none;">0</span>
+      </button>
     </div>
   </div>
+
 </header>
 
 <main class="app-container container">
@@ -245,6 +265,30 @@
     <span data-i18n="ft_copy">© 2026 BN MAX. All rights reserved.</span> <span style="color: var(--accent-neon); font-style: italic; margin-inline-start: 10px;" data-i18n="ft_slogan">Your Digital World... Our Mission 🚀</span>
   </div>
 </footer>
+
+<!-- 📱 شريط التنقل السفلي للموبايل (Bottom Navigation) -->
+<nav class="mobile-bottom-nav" style="display: none;">
+  <button class="bottom-nav-item active" onclick="document.getElementById('logoBtn').click(); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+    <span class="icon">🏠</span>
+    <span class="text" data-i18n="nav_home">Home</span>
+  </button>
+  <button class="bottom-nav-item" onclick="document.getElementById('categoriesBar').scrollIntoView({behavior:'smooth', block:'center'}); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+    <span class="icon">🗂️</span>
+    <span class="text" data-i18n="nav_categories">Categories</span>
+  </button>
+  <button class="bottom-nav-item" onclick="window.scrollTo({top:0, behavior:'smooth'}); document.getElementById('searchInput').focus(); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+    <span class="icon">🔍</span>
+    <span class="text" data-i18n="nav_search">Search</span>
+  </button>
+  <button class="bottom-nav-item" onclick="document.getElementById('loginBtnNav').click(); setTimeout(() => document.getElementById('tabBtnWishlist')?.click(), 300); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+    <span class="icon">🤍</span>
+    <span class="text" data-i18n="nav_wishlist">Wishlist</span>
+  </button>
+  <button class="bottom-nav-item" onclick="document.getElementById('loginBtnNav').click(); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+    <span class="icon">👤</span>
+    <span class="text" data-i18n="nav_account">Account</span>
+  </button>
+</nav>
 
 <a href="#" target="_blank" rel="noopener noreferrer" class="whatsapp-float" id="whatsappBtn">
   <span>💬</span><span data-i18n="support">الدعم الفني</span>
