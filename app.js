@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup, signInWithRedirect, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, limit, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
 // 1. الإعدادات الأساسية (Firebase)
@@ -352,7 +352,7 @@ document.getElementById('backToHomeBtn')?.addEventListener('click', () => showVi
 document.getElementById('sortSelect')?.addEventListener('change', window.renderProducts);
 
 // ==========================================
-// 6. المفضلة، تفاصيل المنتج، والسلة
+// 6. المفضلة، تفاصيل المنتج، النجوم، والتقييمات
 // ==========================================
 window.toggleWishlist = (prodId, event) => {
   if (event) event.stopPropagation();
@@ -378,6 +378,18 @@ document.getElementById('detailImageBox')?.addEventListener('click', (e) => {
 });
 document.getElementById('closeLightboxBtn')?.addEventListener('click', () => { document.getElementById('lightboxModal').style.display = 'none'; });
 document.getElementById('lightboxModal')?.addEventListener('click', (e) => { if(e.target.id === 'lightboxModal') document.getElementById('lightboxModal').style.display = 'none'; });
+
+// 🌟 تفاعل النجوم التفاعلية (5 نجوم)
+document.querySelectorAll('#interactiveStars .star').forEach(star => {
+  star.addEventListener('click', (e) => {
+    const val = Number(e.target.getAttribute('data-value'));
+    document.getElementById('reviewRating').value = val;
+    document.querySelectorAll('#interactiveStars .star').forEach(s => {
+      if(Number(s.getAttribute('data-value')) <= val) s.classList.add('active');
+      else s.classList.remove('active');
+    });
+  });
+});
 
 window.openProductDetails = (id) => {
   const prod = storeState.products.find(p => p.id === id); if (!prod) return;
@@ -557,6 +569,7 @@ const updateCheckoutPriceDisplay = () => {
   if (selectedProductInput) selectedProductInput.value = `${titles.join(' + ')}\nالإجمالي: (${finalPrice} ${currency})${discountText}`;
 };
 
+// 🌟 فحص تقييمات العملاء (شرط completed للتقييم)
 window.loadProductReviews = (prodId) => {
   if (unsubscribeReviews) unsubscribeReviews();
   const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'reviews'), where('productId', '==', prodId));
@@ -600,7 +613,7 @@ document.getElementById('shareBtn')?.addEventListener('click', () => handleShare
 document.getElementById('shareProductBtn')?.addEventListener('click', () => { const title = document.getElementById('detailTitle').textContent; handleShare(title, `شاهد هذا المنتج الرائع على BN MAX: ${title}`, window.location.href); });
 
 // ==========================================
-// 9. الأحداث والشراء والتسجيل
+// 9. الأحداث والشراء واستعادة الباسورد
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   window.renderSkeletons();
@@ -621,9 +634,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addressText) navigator.clipboard.writeText(addressText).then(() => window.showToast('📋 تم نسخ رقم الحساب بنجاح!', 'success'));
   });
 
+  // 🌟 إرسال التقييم مع شرط الشراء المكتمل (completed)
   document.getElementById('submitReviewBtn')?.addEventListener('click', async () => {
     if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول لإضافة تقييم!', 'error');
     if (!currentProductId) return;
+    
+    // فحص إن كان العميل لديه طلب مكتمل (completed) لهذا المنتج
+    const hasCompletedOrder = storeState.orders.some(o => o.uid === currentUserProfile.uid && o.status === 'completed' && (o.productIds?.includes(currentProductId) || o.productId === currentProductId));
+    if (!hasCompletedOrder && !checkIsAdmin()) {
+      return window.showToast('⚠️ عذراً، لا يمكنك تقييم المنتج إلا بعد اكتمال طلب الشراء الخاص به!', 'error');
+    }
+
     const comment = sanitizeText(document.getElementById('reviewCommentText').value), rating = document.getElementById('reviewRating').value;
     if (!comment) return window.showToast('اكتب تعليقاً أولاً!', 'error');
     const submitBtn = document.getElementById('submitReviewBtn'), origBtnText = submitBtn.textContent;
@@ -675,6 +696,34 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { if (e.code !== 'auth/popup-closed-by-user') window.showToast('فشل تسجيل الدخول', 'error'); }
   });
   
+  // 🌟 تفعيل زر وعرض استعادة كلمة المرور
+  document.getElementById('resetPassBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('authViewLogin').style.display = 'none';
+    document.getElementById('authViewRegister').style.display = 'none';
+    document.getElementById('authViewReset').style.display = 'block';
+    document.getElementById('authModalTitle').textContent = 'استعادة كلمة المرور';
+  });
+  document.getElementById('backToLoginFromReset')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('authViewReset').style.display = 'none';
+    document.getElementById('authViewLogin').style.display = 'block';
+    document.getElementById('authModalTitle').textContent = translations[currentLang].auth_title;
+  });
+  document.getElementById('doSendResetBtn')?.addEventListener('click', async () => {
+    const email = document.getElementById('resetEmailInput').value.trim();
+    if (!email) return window.showToast('أدخل البريد الإلكتروني أولاً!', 'error');
+    try {
+      await sendPasswordResetEmail(auth, email);
+      window.showToast('✉️ تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح!', 'success');
+      document.getElementById('authViewReset').style.display = 'none';
+      document.getElementById('authViewLogin').style.display = 'block';
+      document.getElementById('authModalTitle').textContent = translations[currentLang].auth_title;
+    } catch(err) {
+      window.showToast('حدث خطأ، تأكد من صحة البريد الإلكتروني.', 'error');
+    }
+  });
+
   document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; document.getElementById('authModalTitle').textContent = translations[currentLang].create_account; });
   document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'block'; document.getElementById('authViewRegister').style.display = 'none'; document.getElementById('authModalTitle').textContent = translations[currentLang].btn_login; });
 
@@ -686,10 +735,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const cred = await createUserWithEmailAndPassword(auth, email, pass); await updateProfile(cred.user, { displayName: name });
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), { uid: cred.user.uid, name, email, createdAt: serverTimestamp() });
       document.getElementById('authModal').style.display = 'none'; window.showToast('تم إنشاء الحساب بنجاح!', 'success');
+
+      // 🌟 إيميل الترحيب باستخدام التيمبلت الجديد (Template_gx1ra8k)
+      if (typeof emailjs !== 'undefined') {
+        emailjs.send("service_01wl99f", "Template_gx1ra8k", { to_name: name, to_email: email }).catch(err => console.error("Welcome Email Error:", err));
+      }
     } catch (e) { window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); }
   });
   document.getElementById('logoutBtn')?.addEventListener('click', async () => { try { await signOut(auth); document.getElementById('userAccountModal').style.display = 'none'; window.showToast('تم تسجيل الخروج!', 'success'); } catch (e) {} });
 
+  // 🌟 معالجة الشراء وإرسال الإيميل للعميل بالـ template_wxomgzu
   document.getElementById('checkoutForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserProfile || !storeState.cart.length) return;
@@ -727,9 +782,15 @@ document.addEventListener('DOMContentLoaded', () => {
       window.showToast('🎉 تم إرسال طلبك بنجاح! راجع "حسابي" لمتابعة الحالة.', 'success');
       if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#00f2ff', '#b500ff', '#ffffff'] });
 
-      // إشعار للإدارة
+      // 🌟 إرسال إيميل تأكيد الطلب للعميل مباشرة (مش ليك إنت) باستخدام template_wxomgzu
       if (typeof emailjs !== 'undefined') {
-           emailjs.send("service_01wl99f", "template_wxomgzu", { to_name: "الإدارة", to_email: "bebo.nagy97@gmail.com", order_id: orderId, product_name: productTitles.join(' + '), price: totalPrice + ' ' + currency }).catch(err => console.error("Email Error:", err));
+           emailjs.send("service_01wl99f", "template_wxomgzu", { 
+             to_name: currentUserProfile.name, 
+             to_email: currentUserProfile.email, 
+             order_id: orderId, 
+             product_name: productTitles.join(' + '), 
+             price: totalPrice + ' ' + currency 
+           }).catch(err => console.error("Email Error:", err));
       }
     } catch (err) { window.showToast(err.message || 'حدث خطأ، تأكد من اتصالك.', 'error'); } 
     finally { confirmText.textContent = translations[currentLang].btn_confirm_order; confirmSpinner.style.display = 'none'; confirmBtn.disabled = false; }
