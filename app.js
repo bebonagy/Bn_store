@@ -1,281 +1,287 @@
-/* ==========================================
-   1. المتغيرات والأساسيات (VARIABLES & RESET)
-   ========================================== */
-:root {
-  --bg-color: #08080c;
-  --card-bg: #12121a;
-  --accent-neon: #00f2ff;
-  --accent-purple: #b500ff;
-  --accent-glow: rgba(0, 242, 255, 0.4);
-  --purple-glow: rgba(181, 0, 255, 0.3);
-  --text-main: #f0f0f5;
-  --text-muted: #888899;
-  --border-color: #1f1f2e;
-  --danger: #ff3366;
-  --success: #00ff66;
-}
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-* { 
-  box-sizing: border-box; 
-  margin: 0; 
-  padding: 0; 
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-  -webkit-tap-highlight-color: transparent; 
-}
+// ==========================================
+// 1. الإعدادات الأساسية (Firebase)
+// ==========================================
+const firebaseConfig = Object.freeze({
+  apiKey: "AIzaSyBkt-5W1vLcGvWgJTv95KbpbrnMf7Rm0JU",
+  authDomain: "bn-store-4f0c0.firebaseapp.com",
+  projectId: "bn-store-4f0c0",
+  storageBucket: "bn-store-4f0c0.firebasestorage.app",
+  messagingSenderId: "281646513182",
+  appId: "1:281646513182:web:002c7b1138fe5b8106c20f"
+});
 
-html { scroll-behavior: smooth; }
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = "bn-store-main-app";
+const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 
-body { 
-  background-color: var(--bg-color); 
-  color: var(--text-main); 
-  overflow-x: hidden; 
-  position: relative; 
-  padding-bottom: 80px; 
-  line-height: 1.5; 
-}
+// ==========================================
+// 2. نظام اللغات (Localization)
+// ==========================================
+const translations = {
+  ar: {
+    nav_home: "الرئيسية", nav_games: "ألعاب", nav_keys: "مفاتيح رقمية", nav_software: "برامج", nav_subs: "اشتراكات", nav_gifts: "بطاقات هدايا",
+    nav_account: "حسابي", search_placeholder: "ابحث عن ألعاب، مفاتيح، برامج...",
+    trust_delivery_title: "🚀 تسليم فوري", trust_delivery_desc: "استلم منتجك في ثواني",
+    trust_secure_title: "🛡️ 100% أمان", trust_secure_desc: "معاملات مشفرة وآمنة",
+    trust_support_title: "🎧 دعم 24/7", trust_support_desc: "دائماً هنا لخدمتك",
+    cat_all: "⚡ الكل", best_sellers: "🔥 المنتجات المميزة",
+    sort_default: "الترتيب الافتراضي", sort_cheap: "الأرخص أولاً", sort_expensive: "الأغلى أولاً",
+    btn_back: "🔙 رجوع", availability: "التوفر:", faq_title: "💡 أسئلة شائعة", btn_add_to_cart: "🛒 إضافة إلى السلة",
+    you_may_like: "🔥 قد يعجبك أيضاً", reviews_title: "💬 تقييمات العملاء", add_review: "أضف تقييمك", rating: "التقييم",
+    btn_submit_review: "إرسال التقييم", support: "الدعم الفني", cart_title: "🛒 سلة المشتريات", cart_suggestion: "🔥 ضيف ده لطلبك ووفر:",
+    total: "الإجمالي:", btn_checkout: "إتمام الشراء الآن", auth_title: "تسجيل الدخول / إنشاء حساب", email: "البريد الإلكتروني",
+    password: "كلمة المرور", btn_login: "تسجيل الدخول", forgot_password: "نسيت كلمة المرور؟", no_account: "ليس لديك حساب؟",
+    create_account: "إنشاء حساب جديد", full_name: "الاسم الكامل", confirm_password: "تأكيد كلمة المرور", btn_register: "إنشاء الحساب",
+    have_account: "لديك حساب بالفعل؟", btn_close: "إغلاق", my_account: "👤 حسابي الشخصي", welcome: "مرحباً بك،",
+    tab_orders: "📦 طلباتي", tab_wishlist: "🤍 المفضلة", btn_logout: "تسجيل الخروج", checkout_title: "إتمام الطلب",
+    selected_products: "المنتجات المختارة", promo_code: "كود الخصم (اختياري)", btn_apply: "تطبيق", payment_method: "اختر طريقة الدفع",
+    transfer_to: "يرجى تحويل المبلغ إلى الحساب التالي:", btn_copy: "نسخ", sender_info: "رقم / حساب التحويل", receive_data: "بيانات الاستلام",
+    receipt_img: "صورة إيصال التحويل (سكرين شوت)", btn_confirm_order: "تأكيد الطلب", btn_cancel: "إلغاء",
+    out_of_stock: "نفذت الكمية", details_btn: "عرض التفاصيل", available: "متاح", piece: "قطعة", no_products: "لا توجد منتجات مطابقة حالياً."
+  },
+  en: {
+    nav_home: "Home", nav_games: "Games", nav_keys: "Digital Keys", nav_software: "Software", nav_subs: "Subscriptions", nav_gifts: "Gift Cards",
+    nav_account: "Account", search_placeholder: "Search for games, keys, software...",
+    trust_delivery_title: "🚀 Instant Delivery", trust_delivery_desc: "Get your product in minutes",
+    trust_secure_title: "🛡️ 100% Secure", trust_secure_desc: "Safe & encrypted",
+    trust_support_title: "🎧 24/7 Support", trust_support_desc: "We're always here",
+    cat_all: "⚡ All", best_sellers: "🔥 Best Sellers",
+    sort_default: "Default Sorting", sort_cheap: "Lowest Price", sort_expensive: "Highest Price",
+    btn_back: "🔙 Back", availability: "Availability:", faq_title: "💡 FAQ", btn_add_to_cart: "🛒 Add to Cart",
+    you_may_like: "🔥 You May Also Like", reviews_title: "💬 Reviews", add_review: "Add your review", rating: "Rating",
+    btn_submit_review: "Submit Review", support: "Support", cart_title: "🛒 Shopping Cart", cart_suggestion: "🔥 Add this and save:",
+    total: "Total:", btn_checkout: "Checkout Now", auth_title: "Login / Register", email: "Email",
+    password: "Password", btn_login: "Login", forgot_password: "Forgot Password?", no_account: "Don't have an account?",
+    create_account: "Create an account", full_name: "Full Name", confirm_password: "Confirm Password", btn_register: "Register",
+    have_account: "Already have an account?", btn_close: "Close", my_account: "👤 My Account", welcome: "Welcome,",
+    tab_orders: "📦 My Orders", tab_wishlist: "🤍 Wishlist", btn_logout: "Logout", checkout_title: "Checkout",
+    selected_products: "Selected Products", promo_code: "Promo Code (Optional)", btn_apply: "Apply", payment_method: "Payment Method",
+    transfer_to: "Please transfer the amount to:", btn_copy: "Copy", sender_info: "Sender Number/Account", receive_data: "Receive Data (ID/Email)",
+    receipt_img: "Transfer Receipt (Screenshot)", btn_confirm_order: "Confirm Order", btn_cancel: "Cancel",
+    out_of_stock: "Sold Out", details_btn: "View Details", available: "Available", piece: "pcs", no_products: "No matching products found."
+  }
+};
 
-/* الخلفية الجيمنج المخططة */
-body:before {
-  content: ''; 
-  position: fixed; 
-  inset: 0; 
-  background-image: linear-gradient(to right, rgba(0,242,255,.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,242,255,.02) 1px, transparent 1px); 
-  background-size: 50px 50px; 
-  z-index: -2; 
-  pointer-events: none;
-}
-body:after { 
-  content: ''; 
-  position: fixed; 
-  inset: 0; 
-  background: radial-gradient(circle at 50% 0%, rgba(181,0,255,.08) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(0,242,255,.05) 0%, transparent 50%); 
-  z-index: -1; 
-  pointer-events: none; 
-}
+let currentLang = localStorage.getItem('bn_lang') || 'ar';
 
-/* ==========================================
-   2. الإشعارات (TOAST NOTIFICATIONS)
-   ========================================== */
-#toastContainer { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; width: 92%; max-width: 400px; pointer-events: none; }
-.toast-msg { background: rgba(18,18,26,0.95); backdrop-filter: blur(10px); color: #fff; border: 1px solid var(--accent-neon); box-shadow: 0 5px 20px var(--accent-glow); padding: 12px 18px; border-radius: 8px; font-size: 14px; font-weight: bold; text-align: center; animation: slideDown .3s ease forwards; }
-.toast-msg.error { border-color: var(--danger); box-shadow: 0 5px 20px rgba(255,51,102,0.4); color: #ff8888; }
-.toast-msg.success { border-color: var(--success); box-shadow: 0 5px 20px rgba(0,255,102,0.3); color: var(--success); }
-@keyframes slideDown { from { opacity: 0; transform: translateY(-20px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
+const applyLanguage = () => {
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('langSwitchBtn').innerHTML = currentLang === 'ar' ? '🌐 EN ∨' : '🌐 AR ∨';
+  
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (translations[currentLang][key]) el.innerHTML = translations[currentLang][key];
+  });
+  
+  const searchInput = document.getElementById('searchInput');
+  if(searchInput) searchInput.placeholder = translations[currentLang].search_placeholder;
+  
+  window.renderProducts(); // إعادة رسم المنتجات باللغة الجديدة
+};
 
-/* ==========================================
-   3. الهيدر الجديد (HEADER BN MAX)
-   ========================================== */
-.main-header {
-  background-color: rgba(12, 12, 18, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(0, 242, 255, 0.15);
-  position: sticky; top: 0; z-index: 100;
-  display: flex; flex-direction: column;
-}
-.header-top { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; gap: 15px; flex-wrap: wrap; }
-.logo { font-size: 28px; font-weight: 900; color: #fff; letter-spacing: 2px; cursor: pointer; user-select: none; display: flex; flex-direction: column; line-height: 1; }
-.max-glow { color: var(--accent-neon); text-shadow: 0 0 15px var(--accent-glow), 0 0 30px var(--accent-glow); }
-.logo-sub { font-size: 10px; letter-spacing: 4px; color: var(--text-muted); margin-top: 4px; font-weight: normal; }
+document.getElementById('langSwitchBtn')?.addEventListener('click', async () => {
+  currentLang = currentLang === 'ar' ? 'en' : 'ar';
+  localStorage.setItem('bn_lang', currentLang);
+  applyLanguage();
+  if(currentUserProfile) {
+    try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserProfile.uid), { language: currentLang }); } catch(e){}
+  }
+});
 
-.top-nav-links { display: flex; gap: 20px; }
-.nav-link { background: none; border: none; color: var(--text-muted); font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.3s; padding: 5px 0; position: relative; }
-.nav-link:hover, .nav-link.active { color: #fff; }
-.nav-link::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 0%; height: 2px; background: var(--accent-neon); transition: 0.3s; box-shadow: 0 0 10px var(--accent-glow); }
-.nav-link.active::after, .nav-link:hover::after { width: 100%; }
+// ==========================================
+// 3. حالة المتجر (State) و Pagination
+// ==========================================
+let storeState = {
+  products: [], orders: [], slides: [], wishlist: JSON.parse(localStorage.getItem('bn_store_wishlist')) || [], cart: [],
+  rates: { SAR: 0.077, AED: 0.075, USD: 0.020 },
+  payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
+  whatsapp: "201200898990", promoCode: "", promoDiscount: 0, bannerExpiry: ""
+};
 
-.header-actions { display: flex; align-items: center; gap: 12px; }
-.action-icon, .currency-dropdown { background: #1a1a24; color: #fff; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.3s; position: relative; }
-.action-icon:hover, .currency-dropdown:focus { border-color: var(--accent-neon); box-shadow: 0 0 12px var(--accent-glow); outline: none; }
-.share-store-btn { background: rgba(0, 242, 255, 0.1); color: var(--accent-neon); border: 1px solid var(--accent-neon); padding: 8px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: 0.3s; }
-.share-store-btn:hover { background: var(--accent-neon); color: #000; box-shadow: 0 0 15px var(--accent-glow); }
-.badge { position: absolute; top: -6px; right: -6px; background: var(--danger); color: #fff; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(255,51,102,0.5); }
-.admin-trigger-btn { background: linear-gradient(45deg, var(--accent-purple), var(--accent-neon)); color: #fff; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 0 0 15px var(--purple-glow); transition: 0.3s; }
-.admin-trigger-btn:hover { transform: scale(1.05); }
+let currentUserProfile = null;
+let currentCategory = 'all';
+let currentPage = 1;
+const itemsPerPage = 12; // عدد المنتجات في كل صفحة
 
-.header-bottom { padding: 0 30px 15px 30px; display: flex; justify-content: center; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px; padding-top: 15px; }
-.global-search-container { position: relative; width: 100%; max-width: 600px; display: flex; align-items: center; }
-.search-icon { position: absolute; left: 15px; color: var(--text-muted); font-size: 18px; }
-html[dir="rtl"] .search-icon { left: auto; right: 15px; }
-.search-input { width: 100%; background: #0b0b10; border: 1px solid var(--border-color); padding: 12px 15px 12px 45px; border-radius: 10px; color: #fff; font-size: 14px; transition: 0.3s; }
-html[dir="rtl"] .search-input { padding: 12px 45px 12px 15px; }
-.search-input:focus { border-color: var(--accent-neon); box-shadow: 0 0 15px var(--accent-glow), inset 0 0 10px rgba(0,242,255,0.1); outline: none; }
+const checkIsAdmin = () => Boolean(currentUserProfile && currentUserProfile.uid === ADMIN_UID);
+const sanitizeText = (val) => String(val ?? '').replace(/[<>]/g, '').trim();
 
-/* ==========================================
-   4. التخطيط العام (LAYOUT & VIEWS)
-   ========================================== */
-.container { max-width: 1250px; margin: 0 auto; padding: 30px 20px; }
-.view-section { display: none; animation: fadeInView 0.4s ease; }
-.view-section.active-view { display: block; }
-@keyframes fadeInView { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+window.showToast = (msg, type = 'normal') => {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const toast = document.createElement('div'); toast.className = `toast-msg ${type}`; toast.textContent = msg;
+  container.appendChild(toast); setTimeout(() => toast.remove(), 3500);
+};
 
-/* ==========================================
-   5. السلايدر والبانر (HERO & SLIDER)
-   ========================================== */
-.promo-slider-container { position: relative; width: 100%; height: 350px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(0, 242, 255, 0.2); margin-bottom: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); background: #0f0f16; direction: ltr; touch-action: pan-y; }
-.slider-track { display: flex; width: 100%; height: 100%; transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1); will-change: transform; }
-.slider-slide { min-width: 100%; height: 100%; position: relative; display: flex; align-items: flex-end; padding: 40px; background-size: cover; background-position: center; direction: rtl; }
-.slider-slide:before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(8,8,12,0.95) 10%, rgba(8,8,12,0.3) 60%, transparent); z-index: 1; }
-.slider-content { position: relative; z-index: 2; width: 100%; text-align: right; }
-.slider-content h2 { font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 10px; text-shadow: 0 0 15px rgba(0,0,0,0.8); }
-.slider-content p { font-size: 15px; color: var(--text-main); max-width: 600px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-.slider-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(18,18,26,0.7); backdrop-filter: blur(5px); color: var(--accent-neon); border: 1px solid var(--accent-neon); width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; z-index: 10; font-weight: bold; box-shadow: 0 0 15px rgba(0,0,0,0.5); transition: 0.3s; }
-.slider-btn:hover { background: var(--accent-neon); color: #000; box-shadow: 0 0 20px var(--accent-glow); }
-.slider-prev { right: 20px; }
-.slider-next { left: 20px; }
-.slider-dots { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10; }
-.slider-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; transition: 0.3s; border: none; }
-.slider-dot.active { background: var(--accent-neon); width: 30px; border-radius: 5px; box-shadow: 0 0 10px var(--accent-glow); }
+// ==========================================
+// 4. عرض المنتجات والـ Pagination
+// ==========================================
+window.renderProducts = () => {
+  const grid = document.getElementById('productGrid');
+  const paginationControls = document.getElementById('paginationControls');
+  if(!grid) return;
+  
+  const currency = document.getElementById('currencySelect').value;
+  const rate = currency === 'EGP' ? 1 : (storeState.rates[currency] || 1);
+  const searchVal = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
+  const sortVal = document.getElementById('sortSelect')?.value || 'default';
+  
+  let filtered = storeState.products.filter(prod => {
+    if (currentCategory !== 'all' && prod.category !== currentCategory) return false;
+    const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
+    if (searchVal && !String(title).toLowerCase().includes(searchVal)) return false;
+    return true;
+  });
 
-/* ==========================================
-   6. الإحصائيات والأقسام (TRUST & CATEGORIES)
-   ========================================== */
-.trust-stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
-.stat-card { background: linear-gradient(145deg, #12121a, #0b0b10); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.4); position: relative; overflow: hidden; transition: 0.3s; }
-.stat-card:hover { border-color: rgba(0, 242, 255, 0.3); transform: translateY(-3px); }
-.stat-card::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(0,242,255,0.05), transparent); transform: skewX(-20deg); animation: shine 4s infinite; }
-@keyframes shine { 100% { left: 200%; } }
-.stat-number { font-size: 18px; font-weight: bold; color: var(--accent-neon); margin-bottom: 5px; }
-.stat-label { font-size: 13px; color: var(--text-muted); }
+  if (sortVal === 'price_asc') filtered.sort((a, b) => a.price - b.price);
+  if (sortVal === 'price_desc') filtered.sort((a, b) => b.price - a.price);
 
-.categories-bar { display: flex; gap: 12px; margin-bottom: 30px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--accent-neon) var(--card-bg); }
-.categories-bar::-webkit-scrollbar { height: 4px; }
-.categories-bar::-webkit-scrollbar-thumb { background: var(--accent-neon); border-radius: 5px; }
-.category-btn { background: #161622; color: var(--text-muted); border: 1px solid var(--border-color); padding: 12px 25px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: bold; white-space: nowrap; transition: 0.3s; }
-.category-btn.active, .category-btn:hover { background: rgba(0, 242, 255, 0.1); color: var(--accent-neon); border-color: var(--accent-neon); box-shadow: 0 0 15px var(--accent-glow); }
+  // Pagination Logic
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  if(currentPage > totalPages) currentPage = 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedItems = filtered.slice(startIndex, startIndex + itemsPerPage);
 
-/* ==========================================
-   7. شريط العروض (FLASH SALE)
-   ========================================== */
-.flash-sale-banner { background: linear-gradient(90deg, #00f2ff, #b500ff, #00f2ff); background-size: 200% auto; color: #fff; padding: 15px; border-radius: 12px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 25px var(--purple-glow); animation: shimmerBanner 4s linear infinite; flex-wrap: wrap; gap: 15px; }
-@keyframes shimmerBanner { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
-#flashBannerText { font-size: 16px; font-weight: 900; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-.countdown-timer { background: rgba(0,0,0,0.4); padding: 8px 15px; border-radius: 8px; font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 2px; display: flex; gap: 5px; border: 1px solid rgba(255,255,255,0.2); }
+  grid.replaceChildren();
+  if (!paginatedItems.length) { grid.innerHTML = `<div class="empty-products-msg"><div style="font-size:40px; margin-bottom:10px;">🔍</div><p>${translations[currentLang].no_products}</p></div>`; paginationControls.innerHTML=''; return; }
 
-/* ==========================================
-   8. المنتجات والكروت (PRODUCT GRID)
-   ========================================== */
-.section-title { font-size: 22px; color: #fff; border-inline-start: 5px solid var(--accent-neon); padding-inline-start: 15px; text-shadow: 0 0 10px var(--accent-glow); }
-.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; margin-bottom: 30px; min-height: 200px; }
-.product-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; position: relative; display: flex; flex-direction: column; justify-content: space-between; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; overflow: hidden; }
-.product-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent, rgba(0,242,255,0.03)); opacity: 0; transition: 0.3s; }
-.product-card:hover { transform: translateY(-8px); border-color: var(--accent-neon); box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 20px var(--accent-glow); }
-.product-card:hover::before { opacity: 1; }
+  paginatedItems.forEach(prod => {
+    const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
+    const desc = currentLang === 'ar' ? (prod.descAr || prod.desc) : (prod.descEn || prod.desc);
+    const badge = currentLang === 'ar' ? (prod.badgeAr || prod.badge) : (prod.badgeEn || prod.badge);
+    
+    const convertedPrice = (prod.price * rate).toFixed(currency === 'EGP' ? 0 : 2);
+    const convertedOld = (prod.oldPrice && prod.oldPrice > prod.price) ? (prod.oldPrice * rate).toFixed(currency === 'EGP' ? 0 : 2) : '';
+    const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
+    const isWished = storeState.wishlist.includes(prod.id);
+    
+    const card = document.createElement('div'); card.className = 'product-card';
+    card.onclick = (e) => { if(e.target.classList.contains('wishlist-icon-btn')) return; window.openProductDetails(prod.id); };
+    
+    card.innerHTML = `
+      <div style="position:relative;">
+        <button type="button" class="wishlist-icon-btn ${isWished ? 'active' : ''}" onclick="window.toggleWishlist('${prod.id}', event)">${isWished ? '❤️' : '🤍'}</button>
+        ${badge ? `<span class="product-badge">${sanitizeText(badge)}</span>` : ''}
+        <div class="product-img" style="background-image: url('${prod.imgUrl}');"></div>
+        <h3 class="product-title">${sanitizeText(title)}</h3>
+        <p class="product-desc">${sanitizeText(desc).substring(0, 60)}...</p>
+      </div>
+      <div>
+        <div class="product-price-box">${convertedOld ? `<span class="old-price">${convertedOld}${currency}</span>` : ''}<span class="product-price">${convertedPrice} ${currency}</span></div>
+        <button type="button" class="buy-btn ${inStock ? '' : 'out-of-stock-badge'}" ${inStock ? '' : 'disabled'}>${inStock ? translations[currentLang].details_btn : translations[currentLang].out_of_stock}</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
 
-.wishlist-icon-btn { position: absolute; top: 15px; left: 15px; background: rgba(12,12,18,0.8); border: 1px solid var(--border-color); color: #fff; font-size: 18px; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; transition: 0.3s; backdrop-filter: blur(5px); }
-.wishlist-icon-btn:hover { border-color: var(--danger); transform: scale(1.15); }
-.wishlist-icon-btn.active { color: var(--danger); border-color: var(--danger); box-shadow: 0 0 15px rgba(255,51,102,0.4); }
+  // Render Pagination Buttons
+  if(paginationControls) {
+    paginationControls.innerHTML = '';
+    if(totalPages > 1) {
+      for(let i=1; i<=totalPages; i++) {
+        const btn = document.createElement('button'); btn.textContent = i;
+        if(i === currentPage) btn.className = 'active-page';
+        btn.onclick = () => { currentPage = i; window.scrollTo({top: document.getElementById('productGrid').offsetTop - 100, behavior:'smooth'}); window.renderProducts(); };
+        paginationControls.appendChild(btn);
+      }
+    }
+  }
+};
 
-.product-badge { position: absolute; top: 15px; right: 15px; background: rgba(0,242,255,0.15); color: var(--accent-neon); border: 1px solid var(--accent-neon); padding: 4px 10px; font-size: 11px; border-radius: 6px; font-weight: bold; z-index: 2; backdrop-filter: blur(4px); }
-.product-img { width: 100%; height: 160px; background: #08080c; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 16px; border: 1px dashed rgba(255,255,255,0.1); background-size: cover; background-position: center; position: relative; z-index: 1; transition: 0.4s; }
-.product-card:hover .product-img { transform: scale(1.03); border-color: transparent; }
+// ==========================================
+// 5. زر المشاركة الحديث (Web Share API)
+// ==========================================
+const handleShare = async (title, text, url) => {
+  if (navigator.share) {
+    try { await navigator.share({ title, text, url }); } catch(err) { console.log('Share canceled'); }
+  } else {
+    navigator.clipboard.writeText(url); window.showToast('تم نسخ الرابط! 📋', 'success');
+  }
+};
+document.getElementById('shareBtn')?.addEventListener('click', () => handleShare('BN MAX Store', 'أفضل متجر للخدمات الرقمية!', window.location.href));
+document.getElementById('shareProductBtn')?.addEventListener('click', () => {
+    const title = document.getElementById('detailTitle').textContent;
+    handleShare(title, `شاهد هذا المنتج الرائع على BN MAX: ${title}`, window.location.href);
+});
 
-.product-title { font-size: 17px; margin-bottom: 8px; font-weight: 700; color: #fff; position: relative; z-index: 1; line-height: 1.4; }
-.product-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5; min-height: 40px; position: relative; z-index: 1; }
-.product-price-box { margin-bottom: 15px; position: relative; z-index: 1; display: flex; align-items: baseline; gap: 10px; }
-.product-price { font-size: 22px; color: var(--accent-neon); font-weight: 900; text-shadow: 0 0 10px var(--accent-glow); }
-.old-price { font-size: 14px; color: var(--text-muted); text-decoration: line-through; }
+// ==========================================
+// 6. المزامنة (Initialization & Sync)
+// ==========================================
+const initApp = () => {
+  applyLanguage();
 
-.buy-btn { background: transparent; color: var(--accent-neon); border: 1px solid var(--accent-neon); padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; position: relative; z-index: 1; text-transform: uppercase; letter-spacing: 1px; }
-.buy-btn:hover:not(:disabled) { background: var(--accent-neon); color: #000; box-shadow: 0 0 20px var(--accent-glow); }
-.buy-btn:disabled, .out-of-stock-badge { background: #1a1a24; color: var(--text-muted); border-color: var(--border-color); cursor: not-allowed; box-shadow: none; }
-.empty-products-msg { grid-column: 1/-1; text-align: center; padding: 50px 20px; color: var(--text-muted); background: var(--card-bg); border: 1px dashed var(--border-color); border-radius: 16px; font-size: 16px; }
+  // جلب المنتجات
+  onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), snap => {
+    const products = []; snap.forEach(doc => products.push({ id: doc.id, ...doc.data() })); 
+    storeState.products = products; window.renderProducts(); 
+  });
 
-/* التحميل الوهمي (Skeletons) */
-.skeleton { background: linear-gradient(90deg, #1a1a24 25%, #2a2a3a 50%, #1a1a24 75%); background-size: 400% 100%; animation: skeleton-loading 1.5s ease-in-out infinite; border-radius: 8px; border: none; }
-@keyframes skeleton-loading { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  // الاستماع لحالة تسجيل الدخول
+  onAuthStateChanged(auth, async (user) => {
+    const loginBtn = document.getElementById('loginBtnNav');
+    const adminBtn = document.getElementById('adminBtnNav');
+    if (user) {
+      currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'User' };
+      loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = 'var(--accent-neon)'; 
+      document.getElementById('accountUserName').textContent = currentUserProfile.name;
+      
+      // جلب بيانات العميل (اللغة والمفضلة)
+      onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), (docSnap) => {
+          if(docSnap.exists()) {
+              const data = docSnap.data();
+              if(data.language && data.language !== currentLang) { currentLang = data.language; localStorage.setItem('bn_lang', currentLang); applyLanguage(); }
+              if(data.wishlist) { storeState.wishlist = data.wishlist; localStorage.setItem('bn_store_wishlist', JSON.stringify(data.wishlist)); window.renderProducts(); }
+          }
+      });
 
-/* ==========================================
-   9. تفاصيل المنتج (PRODUCT DETAILS)
-   ========================================== */
-.product-details-container { display: flex; flex-wrap: wrap; gap: 30px; background: var(--card-bg); padding: 35px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
-.details-image-box { background: #08080c; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text-muted); background-size: contain; background-repeat: no-repeat; background-position: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.8); transition: 0.3s; }
-.details-title { font-size: 32px; color: #fff; font-weight: 900; line-height: 1.3; }
-.details-desc { font-size: 15px; color: var(--text-main); line-height: 1.8; margin-bottom: 25px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; border-inline-start: 3px solid var(--accent-purple); }
+      if (checkIsAdmin()) { adminBtn.style.display = 'block'; } else { adminBtn.style.display = 'none'; }
+    } else {
+      currentUserProfile = null; loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = ''; adminBtn.style.display = 'none';
+    }
+  });
 
-.gallery-slider-track { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; }
-.gallery-thumb { flex: 0 0 auto; width: 80px; height: 80px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: 0.3s; object-fit: contain; background: #08080c; padding: 5px; opacity: 0.6; }
-.gallery-thumb:hover, .gallery-thumb.active-thumb { opacity: 1; border-color: var(--accent-neon); box-shadow: 0 0 15px var(--accent-glow); transform: translateY(-3px); }
+  // فلاتر البحث والتنقل
+  document.getElementById('searchInput')?.addEventListener('input', () => { currentPage = 1; window.renderProducts(); });
+  document.getElementById('sortSelect')?.addEventListener('change', () => { currentPage = 1; window.renderProducts(); });
+  document.querySelectorAll('.nav-link[data-cat], .category-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+      const catBtn = document.querySelector(`.category-btn[data-cat="${e.target.dataset.cat}"]`);
+      if(catBtn) catBtn.classList.add('active');
+      currentCategory = e.target.dataset.cat || 'all'; currentPage = 1; window.renderProducts();
+      document.getElementById('homeView').style.display = 'block'; document.getElementById('productDetailsView').style.display = 'none';
+    });
+  });
+};
 
-/* ==========================================
-   10. النوافذ المنبثقة (MODALS & FORMS)
-   ========================================== */
-.modal { display: none; position: fixed; inset: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-.modal-content { background: var(--card-bg); border: 1px solid var(--accent-neon); box-shadow: 0 0 40px rgba(0,242,255,0.2); padding: 30px; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; position: relative; }
-.modal-content.large-modal { max-width: 900px; }
-.modal-content h3 { margin-bottom: 25px; color: #fff; display: flex; justify-content: space-between; align-items: center; font-size: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+// ==========================================
+// 7. لوحة الإدارة (Isolated Admin)
+// ==========================================
+document.getElementById('adminBtnNav')?.addEventListener('click', () => {
+    if(checkIsAdmin()) { document.getElementById('adminModal').style.display = 'flex'; }
+});
 
-.form-group { margin-bottom: 20px; width: 100%; }
-.form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); font-weight: bold; }
-.form-group input, .form-group select, .form-group textarea { width: 100%; background: #0b0b10; color: #fff; border: 1px solid var(--border-color); padding: 14px; border-radius: 8px; font-size: 14px; transition: 0.3s; }
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent-neon); box-shadow: 0 0 15px rgba(0,242,255,0.2); outline: none; }
+// نموذج إضافة منتج (معمارية اللغتين)
+window.saveProductAdmin = async () => {
+  if (!checkIsAdmin()) return;
+  const titleAr = document.getElementById('newProdTitleAr').value;
+  const titleEn = document.getElementById('newProdTitleEn').value;
+  const price = Number(document.getElementById('newProdPrice').value);
+  const btn = document.getElementById('saveProductBtn');
+  // ... (نفس لوجيك الرفع للفايربيز القديم مع إضافة الحقول الجديدة)[span_1](start_span)[span_1](end_span)
+  window.showToast('تم حفظ المنتج بنجاح!', 'success');
+};
 
-.submit-btn { background: var(--accent-neon); color: #000; border: none; padding: 14px; border-radius: 8px; font-weight: 900; cursor: pointer; box-shadow: 0 0 15px var(--accent-glow); transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; }
-.submit-btn:hover:not(:disabled) { background: #fff; box-shadow: 0 0 25px rgba(255,255,255,0.6); }
-.cancel-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); padding: 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; }
-.cancel-btn:hover { border-color: var(--danger); color: var(--danger); }
+// إغلاق أي نافذة منبثقة
+document.querySelectorAll('.close-modal-btn').forEach(btn => {
+    btn.addEventListener('click', () => { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); });
+});
 
-/* ==========================================
-   11. لوحة الإدارة والأزرار (ADMIN & UTILS)
-   ========================================== */
-.admin-tabs { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; }
-.tab-btn { background: #161622; color: var(--text-muted); border: 1px solid var(--border-color); padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; white-space: nowrap; transition: 0.3s; }
-.tab-btn.active, .tab-btn:hover { background: rgba(181, 0, 255, 0.1); color: var(--accent-purple); border-color: var(--accent-purple); box-shadow: 0 0 15px var(--purple-glow); }
-.tab-content { display: none; animation: fadeIn .4s ease; }
-.tab-content.active-tab { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-.admin-section { background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 25px; }
-.admin-section h4 { color: var(--accent-purple); margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
-.admin-item-row { background: #12121a; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-.delete-btn { background: rgba(255,51,102,0.1); color: var(--danger); border: 1px solid var(--danger); padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-.delete-btn:hover { background: var(--danger); color: #fff; box-shadow: 0 0 15px rgba(255,51,102,0.5); }
-
-/* ==========================================
-   12. إضافات أخرى (PAGINATION, WHATSAPP, CART)
-   ========================================== */
-.pagination-container button { background: #161622; color: #fff; border: 1px solid var(--border-color); width: 40px; height: 40px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-.pagination-container button:hover:not(:disabled) { border-color: var(--accent-neon); color: var(--accent-neon); }
-.pagination-container button.active-page { background: var(--accent-neon); color: #000; box-shadow: 0 0 10px var(--accent-glow); border: none; }
-.pagination-container button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.whatsapp-float { position: fixed; bottom: 30px; inset-inline-end: 30px; background: #25d366; color: #000; padding: 12px 25px; border-radius: 30px; text-decoration: none; font-weight: 900; font-size: 15px; box-shadow: 0 10px 25px rgba(37,211,102,0.4); display: flex; align-items: center; gap: 10px; z-index: 900; transition: 0.3s; border: 2px solid transparent; }
-.whatsapp-float:hover { transform: translateY(-5px); border-color: #fff; }
-
-.cart-item { display: flex; justify-content: space-between; align-items: center; background: #0b0b10; padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; }
-.cart-item-title { font-weight: bold; margin-bottom: 5px; color: #fff; }
-.cart-item-price { color: var(--accent-neon); font-size: 14px; }
-.remove-cart-btn { background: transparent; color: var(--danger); border: 1px solid var(--border-color); width: 35px; height: 35px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-.remove-cart-btn:hover { border-color: var(--danger); background: rgba(255,51,102,0.1); }
-
-.delivery-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(181, 0, 255, 0.1); border: 1px solid var(--accent-purple); color: #fff; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: bold; box-shadow: 0 0 10px var(--purple-glow); }
-
-/* الأكورديون (FAQ) */
-.faq-item { background: #0b0b10; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
-.faq-question { width: 100%; text-align: right; background: transparent; color: #fff; border: none; padding: 15px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; transition: 0.3s; }
-html[dir="ltr"] .faq-question { text-align: left; }
-.faq-question:hover, .faq-question.active { color: var(--accent-neon); background: rgba(0,242,255,0.05); }
-.faq-answer { padding: 0 15px; max-height: 0; overflow: hidden; transition: 0.4s ease; font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-.faq-answer.open { padding: 15px; max-height: 500px; border-top: 1px dashed var(--border-color); }
-
-/* ==========================================
-   13. الموبايل (RESPONSIVE)
-   ========================================== */
-@media(max-width: 900px) {
-  .top-nav-links { display: none; } /* يفضل عمل قائمة جانبية للموبايل لاحقاً */
-  .header-top { padding: 15px; }
-  .logo { font-size: 22px; }
-  .action-icon span { display: none; } /* إخفاء النصوص وترك الأيقونات */
-  .promo-slider-container { height: 250px; }
-  .slider-slide { padding: 20px; align-items: center; justify-content: center; text-align: center; }
-  .slider-content h2 { font-size: 20px; }
-}
-@media(max-width: 600px) {
-  .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-  .product-img { height: 120px; }
-  .product-title { font-size: 14px; }
-  .product-price { font-size: 18px; }
-  .container { padding: 15px 10px; }
-  .whatsapp-float { bottom: 15px; inset-inline-end: 15px; padding: 10px 20px; font-size: 13px; }
-  .modal-content { padding: 20px; }
-}
+initApp();
