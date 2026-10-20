@@ -7,7 +7,7 @@ import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot
 // ==========================================
 const firebaseConfig = Object.freeze({
   apiKey: "AIzaSyBkt-5W1vLcGvWgJTv95KbpbrnMf7Rm0JU",
-  authDomain: "bn-max.com", // 🚀 الدومين الجديد لحل مشكلة تسجيل الدخول بجوجل
+  authDomain: "bn-max.com", // 🚀 الدومين الجديد
   projectId: "bn-store-4f0c0",
   storageBucket: "bn-store-4f0c0.firebasestorage.app",
   messagingSenderId: "281646513182",
@@ -49,7 +49,7 @@ const compressImage = (base64Src, maxWidth = 800, quality = 0.7) => {
 };
 
 // ==========================================
-// 2. نظام اللغات (Localization) الشامل للتصميم الجديد
+// 2. نظام اللغات (Localization)
 // ==========================================
 const translations = {
   ar: {
@@ -78,7 +78,8 @@ const translations = {
     ft_about: "من نحن", ft_contact: "اتصل بنا", ft_terms: "الشروط والأحكام", ft_privacy: "سياسة الخصوصية",
     ft_copy: "© 2026 BN MAX. جميع الحقوق محفوظة.", ft_slogan: "عالمك الرقمي... مهمتنا 🚀",
     reset_pass_desc: "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.",
-    btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول", google_login: "الدخول بواسطة Google"
+    btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول", google_login: "الدخول بواسطة Google",
+    nav_categories: "الأقسام", nav_search: "بحث", nav_wishlist: "المفضلة"
   },
   en: {
     nav_home: "Home", nav_games: "Games", nav_keys: "Digital Keys", nav_software: "Software", nav_subs: "Subscriptions", nav_gifts: "Gift Cards", nav_deals: "Deals",
@@ -106,7 +107,8 @@ const translations = {
     ft_about: "About Us", ft_contact: "Contact", ft_terms: "Terms & Conditions", ft_privacy: "Privacy Policy",
     ft_copy: "© 2026 BN MAX. All rights reserved.", ft_slogan: "Your Digital World... Our Mission 🚀",
     reset_pass_desc: "Enter your registered email and we will send you a password reset link.",
-    btn_send_reset: "Send Reset Link", back_to_login: "Back to Login", google_login: "Login with Google"
+    btn_send_reset: "Send Reset Link", back_to_login: "Back to Login", google_login: "Login with Google",
+    nav_categories: "Categories", nav_search: "Search", nav_wishlist: "Wishlist"
   }
 };
 
@@ -127,7 +129,7 @@ const applyLanguage = () => {
   if(searchInput) searchInput.placeholder = translations[currentLang].search_placeholder;
   
   window.renderProducts();
-  window.renderCategoriesBar(); // إعادة رسم الأقسام باللغة الجديدة
+  window.renderCategoriesBar(); 
 };
 
 document.getElementById('langSwitchBtn')?.addEventListener('click', async () => {
@@ -149,7 +151,8 @@ let storeState = {
   rates: { SAR: 0.077, AED: 0.075, USD: 0.020 },
   payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
   promoCode: "", promoDiscount: 0, products: [], orders: [], reviews: [], slides: [],
-  categories: [ { id: 'games', name: 'Games' }, { id: 'keys', name: 'Digital Keys' }, { id: 'software', name: 'Software' }, { id: 'subs', name: 'Subscriptions' }, { id: 'gifts', name: 'Gift Cards' } ],
+  // 🚀 تصليح: تم إضافة الـ deals هنا عشان الفلترة تشتغل
+  categories: [ { id: 'games', name: 'Games' }, { id: 'keys', name: 'Digital Keys' }, { id: 'software', name: 'Software' }, { id: 'subs', name: 'Subscriptions' }, { id: 'gifts', name: 'Gift Cards' }, { id: 'deals', name: 'Deals' } ],
   wishlist: JSON.parse(localStorage.getItem('bn_store_wishlist')) || [],
   cart: []
 };
@@ -181,7 +184,7 @@ window.showToast = (msg, type = 'normal') => {
 };
 
 // ==========================================
-// 4. نظام العداد التنازلي والسلايدر الترويجي
+// 4. نظام العداد التنازلي والسلايدر
 // ==========================================
 const initCountdown = (expiryString) => {
   const bannerEl = document.getElementById('flashSaleBanner');
@@ -207,18 +210,23 @@ const initCountdown = (expiryString) => {
   }, 1000);
 };
 
+// 🚀 تصليح: لو مفيش سلايدر، هيظهر الـ Hero Banner الثابت
 window.renderPromoSlider = () => {
   const container = document.getElementById('promoSlider');
   const track = document.getElementById('sliderTrack');
   const dotsContainer = document.getElementById('sliderDots');
+  const heroBanner = document.querySelector('.hero-banner-box');
+  
   if (!container || !track || !dotsContainer) return;
   
   if (!storeState.slides || storeState.slides.length === 0) {
-      container.style.display = 'none'; // إخفاء السلايدر إذا لم يتم إضافة سلايدز من الإدارة
+      container.style.display = 'none'; 
+      if(heroBanner) heroBanner.style.display = 'flex';
       return;
   }
   
   container.style.display = 'block';
+  if(heroBanner) heroBanner.style.display = 'none';
   track.replaceChildren(); dotsContainer.replaceChildren();
 
   storeState.slides.forEach((slide, idx) => {
@@ -257,7 +265,6 @@ window.renderCategoriesBar = () => {
   
   if (bar) {
     bar.replaceChildren();
-    // زر "الكل" بتصميم المربع الجديد
     const allBtn = document.createElement('div');
     allBtn.className = `category-box ${currentCategory === 'all' ? 'active' : ''}`;
     allBtn.dataset.cat = 'all';
@@ -275,6 +282,7 @@ window.renderCategoriesBar = () => {
       if(id.includes('soft')) return '💻';
       if(id.includes('sub')) return '📺';
       if(id.includes('gift')) return '🎁';
+      if(id.includes('deal')) return '🔥';
       return '✨';
   };
 
@@ -284,13 +292,13 @@ window.renderCategoriesBar = () => {
       const btn = document.createElement('div');
       btn.className = `category-box ${currentCategory === c.id ? 'active' : ''}`;
       btn.dataset.cat = c.id;
-      // ترجمة الأقسام الافتراضية إذا أمكن
       let catName = c.name;
       if (c.id === 'games') catName = translations[currentLang].nav_games;
       if (c.id === 'keys') catName = translations[currentLang].nav_keys;
       if (c.id === 'software') catName = translations[currentLang].nav_software;
       if (c.id === 'subs') catName = translations[currentLang].nav_subs;
       if (c.id === 'gifts') catName = translations[currentLang].nav_gifts;
+      if (c.id === 'deals') catName = translations[currentLang].nav_deals;
 
       btn.innerHTML = `<div class="category-info"><div class="category-icon">${getCatIcon(c.id)}</div><div class="category-name">${catName}</div></div>`;
       btn.onclick = () => { currentCategory = c.id; currentPage = 1; window.renderCategoriesBar(); window.renderProducts(); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); };
@@ -349,11 +357,9 @@ window.renderProducts = () => {
     const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
     const isWished = storeState.wishlist.includes(prod.id);
     
-    // حساب نسبة الخصم إن وجدت
     const discountPercent = (prod.oldPrice && prod.oldPrice > prod.price) ? Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100) : 0;
     const discountBadgeHTML = discountPercent > 0 ? `<span class="product-discount-badge">-${discountPercent}%</span>` : '';
     
-    // إيجاد التقييم
     let ratingVal = 5.0, ratingCount = 0;
     const prodRevs = storeState.reviews.filter(r => r.productId === prod.id);
     if(prodRevs.length > 0) {
@@ -542,11 +548,13 @@ window.openProductDetails = (id) => {
 };
 
 // ==========================================
-// 7. دوال سلة المشتريات واقتراحات السلة
+// 7. دوال سلة المشتريات
 // ==========================================
 window.updateCartBadge = () => {
   const badge = document.getElementById('cartCountBadge');
+  const badgeMobile = document.getElementById('cartCountBadgeMobile');
   if (badge) { badge.textContent = storeState.cart.length; badge.style.display = storeState.cart.length > 0 ? 'flex' : 'none'; }
+  if (badgeMobile) { badgeMobile.textContent = storeState.cart.length; badgeMobile.style.display = storeState.cart.length > 0 ? 'flex' : 'none'; }
 };
 
 document.getElementById('detailAddToCartBtn')?.addEventListener('click', () => {
@@ -555,7 +563,7 @@ document.getElementById('detailAddToCartBtn')?.addEventListener('click', () => {
   if (prod) { storeState.cart.push(prod); window.updateCartBadge(); window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); }
 });
 
-// إضافة المنتج للسلة من الخارج مع التأكد من المخزون
+// 🚀 تصليح: حماية زر الـ Add To Cart الخارجي
 window.addToCartDirect = (prodId, event) => {
   if (event) event.stopPropagation();
   const prod = storeState.products.find(p => p.id === prodId);
@@ -679,7 +687,7 @@ document.getElementById('shareBtn')?.addEventListener('click', () => handleShare
 document.getElementById('shareProductBtn')?.addEventListener('click', () => { const title = document.getElementById('detailTitle').textContent; handleShare(title, `شاهد هذا المنتج الرائع على BN MAX: ${title}`, window.location.href); });
 
 // ==========================================
-// 9. الأحداث والشراء واستعادة الباسورد
+// 9. الأحداث والشراء
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   window.renderSkeletons();
