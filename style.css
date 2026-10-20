@@ -105,7 +105,7 @@ body:after {
 }
 
 /* ==========================================
-   3. الهيدر الجديد (HEADER BN MAX)
+   3. الهيدر (HEADER) - للكمبيوتر والموبايل
    ========================================== */
 .main-header {
   background-color: rgba(6, 6, 9, 0.85);
@@ -119,6 +119,12 @@ body:after {
   flex-direction: column;
 }
 
+.desktop-header-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .header-top { 
   display: flex; 
   justify-content: space-between; 
@@ -128,8 +134,9 @@ body:after {
   flex-wrap: wrap; 
 }
 
+/* اللوجو المطابق للصورة */
 .logo { 
-  font-size: 26px; 
+  font-size: 28px; 
   font-weight: 900; 
   color: #fff; 
   letter-spacing: 2px; 
@@ -138,6 +145,7 @@ body:after {
   display: flex; 
   flex-direction: column; 
   line-height: 1; 
+  text-shadow: 0 0 10px rgba(0,242,255,0.3);
 }
 
 .max-glow { 
@@ -150,7 +158,7 @@ body:after {
   letter-spacing: 3px; 
   color: var(--text-muted); 
   margin-top: 4px; 
-  font-weight: normal; 
+  font-weight: bold; 
 }
 
 .top-nav-links { 
@@ -300,7 +308,7 @@ html[dir="rtl"] .search-icon {
   background: #0b0b12; 
   border: 1px solid var(--card-border); 
   padding: 12px 15px 12px 45px; 
-  border-radius: 10px; 
+  border-radius: 20px; /* جعلناه دائري أكثر حسب التصميم */
   color: #fff; 
   font-size: 13px; 
   transition: 0.3s; 
@@ -526,7 +534,7 @@ html[dir="rtl"] .search-input {
   color: #000; 
   border: none; 
   padding: 14px 30px; 
-  border-radius: 10px; 
+  border-radius: 30px; /* زرار دائري زي التصميم */
   font-weight: 900; 
   font-size: 15px; 
   cursor: pointer; 
@@ -535,7 +543,6 @@ html[dir="rtl"] .search-input {
   display: inline-flex; 
   align-items: center; 
   gap: 10px; 
-  text-transform: uppercase; 
 }
 
 .hero-btn:hover { 
@@ -868,8 +875,8 @@ html[dir="rtl"] .search-input {
 
 .buy-btn { 
   background: transparent; 
-  color: var(--accent-neon); 
-  border: 1px solid var(--accent-neon); 
+  color: var(--accent-purple); /* تعديل للون البنفسجي زي التصميم */
+  border: 1px solid var(--accent-purple); 
   padding: 10px; 
   width: 100%; 
   border-radius: 8px; 
@@ -884,9 +891,9 @@ html[dir="rtl"] .search-input {
 }
 
 .buy-btn:hover:not(:disabled) { 
-  background: var(--accent-neon); 
-  color: #000; 
-  box-shadow: 0 0 15px var(--accent-glow); 
+  background: var(--accent-purple); 
+  color: #fff; 
+  box-shadow: 0 0 15px var(--purple-glow); 
 }
 
 .buy-btn:disabled, .out-of-stock-badge { 
@@ -1212,6 +1219,13 @@ html[dir="rtl"] .search-input {
   gap: 8px; 
 }
 
+/* كلاس تقسيم الإدارة اللي كان منسي وتمت إضافته */
+.grid-2 { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+  gap: 15px; 
+}
+
 .admin-item-row { 
   background: #0d0d14; 
   border: 1px solid var(--border-color); 
@@ -1276,7 +1290,7 @@ html[dir="rtl"] .search-input {
 
 .whatsapp-float { 
   position: fixed; 
-  bottom: 30px; 
+  bottom: 80px; /* اترفع شوية عشان شريط الموبايل السفلي */
   inset-inline-end: 30px; 
   background: #25d366; 
   color: #000; 
@@ -1401,71 +1415,108 @@ html[dir="ltr"] .faq-question {
 }
 
 /* ==========================================
-   13. إصلاحات وتنسيقات الموبايل (RESPONSIVE FIXES)
+   13. إصلاحات وتنسيقات الموبايل (RESPONSIVE & MOBILE NAV)
    ========================================== */
 @media(max-width: 900px) {
-  /* إخفاء الروابط في الشاشات الصغيرة لتوفير المساحة */
-  .top-nav-links { 
-    display: none !important; 
+  
+  /* إخفاء هيدر الكمبيوتر المزعج وإظهار هيدر الموبايل */
+  .desktop-header-wrapper { display: none; }
+  
+  /* قائمة الموبايل لو عايز تفتحها (هيدر الكمبيوتر ينزل كقائمة) */
+  .desktop-header-wrapper.show-mobile-menu { 
+    display: flex !important; 
+    position: fixed; 
+    top: 60px; 
+    left: 0; 
+    right: 0; 
+    background: rgba(6, 6, 9, 0.95); 
+    border-bottom: 1px solid var(--accent-neon); 
+    z-index: 99; 
+    padding-bottom: 20px; 
   }
   
-  /* تظبيط الهيدر ليكون عمودي في الموبايل */
-  .header-top { 
-    padding: 15px 10px; 
-    justify-content: center; 
-    gap: 10px; 
+  .desktop-header-wrapper.show-mobile-menu .header-top { 
     flex-direction: column; 
+    gap: 15px; 
   }
   
-  .header-actions { 
-    flex-wrap: wrap; 
-    justify-content: center; 
+  .desktop-header-wrapper.show-mobile-menu .top-nav-links { 
+    display: flex !important; 
+    flex-direction: column; 
     width: 100%; 
-    gap: 8px; 
   }
   
-  /* إخفاء النصوص داخل أزرار الهيدر والإدارة لتوفير مساحة */
-  .action-icon span, .admin-trigger-btn { 
-    display: none !important; 
-  } 
+  .desktop-header-wrapper.show-mobile-menu .logo { display: none; }
   
-  .action-icon { 
-    padding: 8px 15px; 
-    font-size: 16px; 
-  }
-  
-  .logo { 
-    font-size: 24px; 
-    text-align: center; 
-  }
-  
-  /* تظبيط السلايدر القديم لو موجود */
-  .promo-slider-container { 
-    height: 300px; 
-  }
-  
-  .slider-slide { 
-    padding: 20px; 
+  /* إظهار هيدر الموبايل الجديد */
+  .mobile-header-wrapper { 
+    display: flex !important; 
+    justify-content: space-between; 
     align-items: center; 
-    justify-content: center; 
-    text-align: center; 
+    padding: 15px 20px; 
   }
   
-  .slider-content h2 { 
+  .mobile-menu-btn { 
+    background: transparent; 
+    color: #fff; 
+    border: none; 
     font-size: 28px; 
+    cursor: pointer; 
   }
   
-  /* بانرات العروض הסفلية تكون واحدة تحت التانية */
-  .promo-banners-grid { 
-    grid-template-columns: 1fr; 
+  .mobile-logo { 
+    font-size: 22px; 
+    text-shadow: 0 0 10px rgba(0,242,255,0.5); 
   }
   
-  /* تظبيط البانر الرئيسي الجديد (Hero) عشان ياخد حجم الشاشة صح */
+  .mobile-cart-btn { 
+    background: rgba(0,242,255,0.1); 
+    border-color: var(--accent-neon); 
+  }
+
+  /* إظهار شريط التنقل السفلي */
+  .mobile-bottom-nav { 
+    display: flex !important; 
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    background: rgba(13, 13, 20, 0.95); 
+    backdrop-filter: blur(10px); 
+    border-top: 1px solid var(--border-color); 
+    justify-content: space-around; 
+    align-items: center; 
+    padding: 10px 5px; 
+    z-index: 1000; 
+  }
+  
+  .bottom-nav-item { 
+    background: transparent; 
+    border: none; 
+    color: var(--text-muted); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 4px; 
+    font-size: 11px; 
+    cursor: pointer; 
+    transition: 0.3s; 
+  }
+  
+  .bottom-nav-item .icon { font-size: 20px; }
+  .bottom-nav-item.active { color: var(--accent-neon); }
+  
+  body { padding-bottom: 70px; } /* عشان مساحة الشريط السفلي */
+  .whatsapp-float { bottom: 85px; } /* رفع زرار الواتس */
+
+  /* تظبيط البانر الرئيسي عشان ياخد حجم الشاشة صح */
   .hero-banner-box { 
     padding: 30px 15px !important; 
     text-align: center; 
     flex-direction: column; 
   }
+  
+  .hero-title { font-size: 32px; }
   
   /* إحصائيات الثقة تترص بالطول بدل العرض */
   .hero-stats-row { 
@@ -1484,7 +1535,7 @@ html[dir="ltr"] .faq-question {
 }
 
 @media(max-width: 600px) {
-  /* رص الأقسام 2 جنب بعض في الشاشات الصغيرة لحل مشكلة اللغبطة */
+  /* رص الأقسام 2 جنب بعض في الشاشات الصغيرة */
   .categories-grid-bar { 
     grid-template-columns: repeat(2, 1fr) !important; 
     gap: 10px; 
@@ -1497,9 +1548,7 @@ html[dir="ltr"] .faq-question {
     gap: 5px; 
   }
   
-  .category-icon { 
-    margin: 0 auto; 
-  }
+  .category-icon { margin: 0 auto; }
   
   /* تظبيط شبكة المنتجات */
   .product-grid { 
@@ -1507,30 +1556,9 @@ html[dir="ltr"] .faq-question {
     gap: 15px; 
   }
   
-  .product-img { 
-    height: 120px; 
-  }
-  
-  .product-title { 
-    font-size: 14px; 
-  }
-  
-  .product-price { 
-    font-size: 18px; 
-  }
-  
-  .container { 
-    padding: 15px 10px; 
-  }
-  
-  .whatsapp-float { 
-    bottom: 15px; 
-    inset-inline-end: 15px; 
-    padding: 10px 20px; 
-    font-size: 13px; 
-  }
-  
-  .modal-content { 
-    padding: 20px; 
-  }
+  .product-img { height: 120px; }
+  .product-title { font-size: 14px; }
+  .product-price { font-size: 18px; }
+  .container { padding: 15px 10px; }
+  .modal-content { padding: 20px; }
 }
