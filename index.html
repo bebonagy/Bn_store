@@ -25,7 +25,7 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script type="text/javascript">
-   emailjs.init("t5Irys8GSHX5X1a63");
+   emailjs.init("T5Irys8GSHX5X1a63");
 </script>
 
 <!-- 🛡️ حماية ضد الـ Clickjacking -->
@@ -183,11 +183,11 @@
           <div class="form-group" style="margin-bottom: 15px;">
             <label style="margin-bottom: 8px;" data-i18n="rating">التقييم</label>
             <div id="interactiveStars" style="display: inline-flex; gap: 8px; font-size: 24px; cursor: pointer; direction: ltr;">
-              <span class="star" data-value="1" style="filter: grayscale(100%);">⭐</span>
-              <span class="star" data-value="2" style="filter: grayscale(100%);">⭐</span>
-              <span class="star" data-value="3" style="filter: grayscale(100%);">⭐</span>
-              <span class="star" data-value="4" style="filter: grayscale(100%);">⭐</span>
-              <span class="star" data-value="5" style="filter: grayscale(0%);">⭐</span>
+              <span class="star" data-value="1">⭐</span>
+              <span class="star" data-value="2">⭐</span>
+              <span class="star" data-value="3">⭐</span>
+              <span class="star" data-value="4">⭐</span>
+              <span class="star" data-value="5" class="active">⭐</span>
             </div>
             <input type="hidden" id="reviewRating" value="5">
           </div>
@@ -233,7 +233,7 @@
     </div>
   </div>
 
-  <!-- تسجيل الدخول -->
+  <!-- تسجيل الدخول واستعادة الباسورد -->
   <div class="modal" id="authModal">
     <div class="modal-content">
       <h3 id="authModalTitle" data-i18n="auth_title">تسجيل الدخول / إنشاء حساب</h3>
@@ -245,6 +245,15 @@
         <a href="#" id="resetPassBtn" style="color:var(--accent-neon); display:block; text-align:center; margin-top:10px; font-size:13px;" data-i18n="forgot_password">نسيت كلمة المرور؟</a>
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="no_account">ليس لديك حساب؟</span> <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);" data-i18n="create_account">إنشاء حساب جديد</a></p>
       </div>
+      
+      <!-- نافذة استعادة الباسورد الفرعية داخل المودال -->
+      <div id="authViewReset" style="display:none;">
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">أدخل بريدك الإلكتروني المسجل لنرسل لك رابط استعادة كلمة المرور.</p>
+        <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="resetEmailInput" placeholder="example@gmail.com"></div>
+        <button type="button" class="submit-btn" id="doSendResetBtn" style="width:100%;">إرسال رابط الاستعادة</button>
+        <button type="button" id="backToLoginFromReset" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;">رجوع لتسجيل الدخول</button>
+      </div>
+
       <div id="authViewRegister" style="display:none;">
         <div class="form-group"><label data-i18n="full_name">الاسم الكامل</label><input type="text" id="regName" placeholder="اسمك"></div>
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="regEmail" placeholder="example@gmail.com"></div>
