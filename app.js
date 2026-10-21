@@ -14,6 +14,21 @@ const firebaseConfig = Object.freeze({
   appId: "1:281646513182:web:002c7b1138fe5b8106c20f"
 });
 
+getRedirectResult(auth)
+  .then(async (result) => {
+    if (result && result.user) {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
+        uid: result.user.uid, 
+        name: result.user.displayName || 'مستخدم جوجل', 
+        email: result.user.email, 
+        createdAt: serverTimestamp() 
+      }, { merge: true });
+      window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
+    }
+  }).catch((error) => {
+    console.error("Redirect Error:", error);
+  });
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -771,23 +786,19 @@ document.addEventListener('DOMContentLoaded', () => {
     try { await signInWithEmailAndPassword(auth, email, pass); authModal.style.display = 'none'; window.showToast('تم تسجيل الدخول بنجاح!', 'success'); } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
   });
 
-      document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
+      getRedirectResult(auth)
+  .then(async (result) => {
+    if (result && result.user) {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
         uid: result.user.uid, 
         name: result.user.displayName || 'مستخدم جوجل', 
         email: result.user.email, 
         createdAt: serverTimestamp() 
       }, { merge: true });
-      
-      authModal.style.display = 'none'; 
       window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
-    } catch (e) { 
-      console.error("Google Auth Error Details:", e); // دي هطبع المشكلة الحقيقية في الـ Console
-      window.showToast('فشل تسجيل الدخول: ' + (e.message || e.code), 'error'); 
     }
+  }).catch((error) => {
+    console.error("Redirect Error:", error);
   });
 
 
