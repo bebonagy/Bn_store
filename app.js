@@ -19,9 +19,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "bn-store-main-app";
 
-// استقبال الرد بعد الـ Redirect في حال استخدام الموبايل
-getRedirectResult(auth)
-  .then(async (result) => {
+// استقبال الرد بعد الـ Redirect بطريقة مضمونة
+setTimeout(async () => {
+  try {
+    const result = await getRedirectResult(auth);
     if (result && result.user) {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
         uid: result.user.uid, 
@@ -31,9 +32,10 @@ getRedirectResult(auth)
       }, { merge: true });
       window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
     }
-  }).catch((error) => {
+  } catch (error) {
     console.error("Redirect Error:", error);
-  });
+  }
+}, 1000);
 
 const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
