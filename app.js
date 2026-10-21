@@ -771,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { await signInWithEmailAndPassword(auth, email, pass); authModal.style.display = 'none'; window.showToast('تم تسجيل الدخول بنجاح!', 'success'); } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
   });
 
-    document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
+      document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
@@ -785,11 +785,11 @@ document.addEventListener('DOMContentLoaded', () => {
       authModal.style.display = 'none'; 
       window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
     } catch (e) { 
-      if (e.code !== 'auth/popup-closed-by-user') {
-        window.showToast('فشل تسجيل الدخول', 'error'); 
-      }
+      console.error("Google Auth Error Details:", e); // دي هطبع المشكلة الحقيقية في الـ Console
+      window.showToast('فشل تسجيل الدخول: ' + (e.message || e.code), 'error'); 
     }
   });
+
 
   document.getElementById('resetPassBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
