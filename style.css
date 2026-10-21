@@ -5,6 +5,7 @@
   --bg-color: #060609;
   --card-bg: #0d0d14;
   --card-border: #1a1a2e;
+  --border-color: #1a1a2e; /* 🛠️ تم إضافة هذا المتغير لحل مشكلة اختفاء الحدود */
   --accent-neon: #00f2ff;
   --accent-purple: #b500ff;
   --accent-glow: rgba(0, 242, 255, 0.4);
