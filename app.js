@@ -774,15 +774,23 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     const provider = new GoogleAuthProvider();
     try {
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) await signInWithRedirect(auth, provider);
-      else {
         const result = await signInWithPopup(auth, provider);
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { uid: result.user.uid, name: result.user.displayName || 'مستخدم جوجل', email: result.user.email, createdAt: serverTimestamp() }, { merge: true });
-        authModal.style.display = 'none'; window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
-      }
-    } catch (e) { if (e.code !== 'auth/popup-closed-by-user') window.showToast('فشل تسجيل الدخول', 'error'); }
-  });
-  
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
+            uid: result.user.uid, 
+            name: result.user.displayName || 'مستخدم جوجل', 
+            email: result.user.email, 
+            createdAt: serverTimestamp() 
+        }, { merge: true });
+        
+        authModal.style.display = 'none'; 
+        window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
+    } catch (e) { 
+        if (e.code !== 'auth/popup-closed-by-user') {
+            window.showToast('فشل تسجيل الدخول', 'error'); 
+        }
+    }
+});
+
   document.getElementById('resetPassBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('authViewLogin').style.display = 'none';
