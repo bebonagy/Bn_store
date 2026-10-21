@@ -796,8 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (e.code !== 'auth/popup-closed-by-user') {
             window.showToast('فشل تسجيل الدخول', 'error'); 
-        }
-    }
+        }   
 });
 
 
