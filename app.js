@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup, signInWithRedirect, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup, signInWithRedirect, sendPasswordResetEmail, getRedirectResult } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, setDoc, doc, updateDoc, deleteDoc, onSnapshot, query, where, serverTimestamp, limit, orderBy, runTransaction, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
@@ -14,6 +14,12 @@ const firebaseConfig = Object.freeze({
   appId: "1:281646513182:web:002c7b1138fe5b8106c20f"
 });
 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = "bn-store-main-app";
+
+// استقبال الرد بعد الـ Redirect في حال استخدام الموبايل
 getRedirectResult(auth)
   .then(async (result) => {
     if (result && result.user) {
@@ -28,11 +34,6 @@ getRedirectResult(auth)
   }).catch((error) => {
     console.error("Redirect Error:", error);
   });
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = "bn-store-main-app";
 
 const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
@@ -663,7 +664,6 @@ const updateCheckoutPriceDisplay = () => {
 window.loadProductReviews = (prodId) => {
   if (unsubscribeReviews) unsubscribeReviews();
   
-  // التحكم في ظهور صندوق التقييم
   const addReviewBox = document.getElementById('addReviewBox');
   if (addReviewBox) {
     let hasCompletedOrder = false;
@@ -778,7 +778,15 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 🌟 نظام المصادقة ونافذة استعادة الباسورد و الـ OTP
   const authModal = document.getElementById('authModal');
-  document.getElementById('loginBtnNav')?.addEventListener('click', () => { if(currentUserProfile) document.getElementById('userAccountModal').style.display = 'flex'; else authModal.style.display = 'flex'; });
+  
+  // زرار الحساب ( Account ) يعمل بانتظام وبدون أخطاء
+  document.getElementById('loginBtnNav')?.addEventListener('click', () => { 
+      if (currentUserProfile) {
+          document.getElementById('userAccountModal').style.display = 'flex'; 
+      } else {
+          authModal.style.display = 'flex'; 
+      }
+  });
 
   document.getElementById('doLoginBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value.trim(), pass = document.getElementById('loginPass').value;
@@ -786,31 +794,26 @@ document.addEventListener('DOMContentLoaded', () => {
     try { await signInWithEmailAndPassword(auth, email, pass); authModal.style.display = 'none'; window.showToast('تم تسجيل الدخول بنجاح!', 'success'); } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
   });
 
-        document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
+  // زرار تسجيل الدخول بجوجل (طريقة PopUp السريعة والمستقرة)
+  document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     const provider = new GoogleAuthProvider();
     try {
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-          await signInWithRedirect(auth, provider);
-      } else {
-        const result = await signInWithPopup(auth, provider);
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
-            uid: result.user.uid, 
-            name: result.user.displayName || 'مستخدم جوجل', 
-            email: result.user.email, 
-            createdAt: serverTimestamp() 
-        }, { merge: true });
-        
-        authModal.style.display = 'none'; 
-        window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
-      }
+      const result = await signInWithPopup(auth, provider);
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
+          uid: result.user.uid, 
+          name: result.user.displayName || 'مستخدم جوجل', 
+          email: result.user.email, 
+          createdAt: serverTimestamp() 
+      }, { merge: true });
+      
+      authModal.style.display = 'none'; 
+      window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
     } catch (e) { 
-        console.error("Auth Error:", e);
-        if (e.code !== 'auth/popup-closed-by-user') {
-            window.showToast('فشل تسجيل الدخول', 'error'); 
-        }
+      if (e.code !== 'auth/popup-closed-by-user') {
+          window.showToast('فشل تسجيل الدخول', 'error'); 
+      }
     }
   });
-
 
   document.getElementById('resetPassBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -919,11 +922,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const paymentMethod = document.getElementById('paymentMethod').value;
       const senderInfo = sanitizeText(document.getElementById('senderInfo').value);
-      const transactionId = sanitizeText(document.getElementById('transactionIdInput').value); // الحقل الجديد
+      const transactionId = sanitizeText(document.getElementById('transactionIdInput').value); 
       const customerData = sanitizeText(document.getElementById('customerData').value);
       const newOrderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders')), orderId = newOrderRef.id;
 
-      // تحديث المخزون الآمن باستخدام Firebase Transaction لمنع التعارض
       for (const p of storeState.cart) {
         if (p.stockQuantity !== undefined) {
            const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id);
@@ -1016,7 +1018,9 @@ const initApp = () => {
     const loginBtn = document.getElementById('loginBtnNav'); if(!loginBtn) return;
     if (user) {
       currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم' };
-      loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = 'var(--accent-neon)'; document.getElementById('accountUserName').textContent = currentUserProfile.name;
+      loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = 'var(--accent-neon)'; 
+      const accName = document.getElementById('accountUserName');
+      if(accName) accName.textContent = currentUserProfile.name;
       
       onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), (docSnap) => {
           if(docSnap.exists()) {
@@ -1028,10 +1032,10 @@ const initApp = () => {
       
       let adminBtnInModal = document.getElementById('adminBtnInModal');
       if (checkIsAdmin()) {
-        document.getElementById('adminBtnNav').style.display = 'block';
+        const adminNav = document.getElementById('adminBtnNav');
+        if(adminNav) adminNav.style.display = 'block';
         window.injectAdminDashboard(); window.loadAdminData(); window.renderAdminStats();
         
-        // جلب قائمة المستخدمين للأدمن
         if(unsubscribeUsers) unsubscribeUsers();
         unsubscribeUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
            const usrs = []; snap.forEach(d => usrs.push({id: d.id, ...d.data()})); storeState.users = usrs; window.renderAdminUsers();
@@ -1045,11 +1049,16 @@ const initApp = () => {
              accountModalContent.insertBefore(btn, accountModalContent.querySelector('.user-tabs-container'));
            }
         }
-      } else { document.getElementById('adminBtnNav').style.display = 'none'; if (adminBtnInModal) adminBtnInModal.remove(); }
+      } else { 
+        const adminNav = document.getElementById('adminBtnNav');
+        if(adminNav) adminNav.style.display = 'none'; 
+        if (adminBtnInModal) adminBtnInModal.remove(); 
+      }
       subscribeToOrders(user.uid);
     } else {
       currentUserProfile = null; loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = '';
-      document.getElementById('adminBtnNav').style.display = 'none';
+      const adminNav = document.getElementById('adminBtnNav');
+      if(adminNav) adminNav.style.display = 'none';
       if (document.getElementById('adminBtnInModal')) document.getElementById('adminBtnInModal').remove();
       if (unsubscribeOrders) { unsubscribeOrders(); unsubscribeOrders = null; } storeState.orders = []; window.renderUserOrders();
     }
@@ -1149,7 +1158,6 @@ window.injectAdminDashboard = () => {
       <div class="admin-section"><h4>📢 إعدادات الدفع والواتساب</h4><div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div><div class="grid-2"><div class="form-group"><label>إنستا باي</label><input type="text" id="admInstapay"></div><div class="form-group"><label>فودافون كاش</label><input type="text" id="admVodafone"></div><div class="form-group"><label>USDT</label><input type="text" id="admCrypto"></div></div><button type="button" id="saveConfigBtn" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ الإعدادات</button></div>
     </div>
   `;
-  // إضافة زر المستخدمين لقائمة الأدمن
   const adminTabs = document.getElementById('adminTabs');
   if(adminTabs && !adminTabs.innerHTML.includes('tab-users')) {
       adminTabs.innerHTML += `<button class="tab-btn" data-target="tab-users">👥 المستخدمين</button>`;
@@ -1206,7 +1214,6 @@ window.renderAdminOrders = () => {
 
 window.deleteAdminOrder = async (orderId) => { if (!checkIsAdmin() || !confirm('تأكيد الحذف النهائي؟')) return; try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId)); window.showToast('🗑️ تم الحذف', 'success'); } catch(e) {} };
 
-// 🌟 تحديث قوي في نظام تسليم الأكواد المتعددة (Vault)
 window.updateOrderStatus = async (orderId, status) => {
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
   try {
@@ -1220,7 +1227,6 @@ window.updateOrderStatus = async (orderId, status) => {
       }
     } 
     else if (status === 'completed' && !codeToDeliver && order && order.productIds && order.productIds.length > 0) {
-        // سحب كود ذكي من الخزنة (Vault) لكل المنتجات اللي في الطلب مش منتج واحد بس!
         let multiCodesArr = [];
         for (const pid of order.productIds) {
             const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
@@ -1243,7 +1249,6 @@ window.updateOrderStatus = async (orderId, status) => {
     
     await updateDoc(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
     
-    // إرسال إيميل بإكمال الطلب وتوصيل الكود
     if (status === 'completed' && typeof emailjs !== 'undefined' && order) {
         const confirmMsg = `تهانينا! لقد تم اكتمال طلبك بنجاح.<br><strong>المنتجات:</strong> ${order.productName}<br><strong>تفاصيل الاستلام/الأكواد:</strong><br><div class="highlight-box"><p>${codeToDeliver || 'تم التنفيذ مباشرة في حسابك.'}</p></div>`;
         emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: order.userEmail.split('@')[0], to_email: order.userEmail, custom_message: confirmMsg }).catch(err => console.log("Delivery Email Error"));
