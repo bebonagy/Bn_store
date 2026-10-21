@@ -857,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (typeof emailjs !== 'undefined') {
         const welcomeMessage = `حسابك دلوقتي جاهز ومفعل بنجاح.<br>تقدر تتصفح أحدث العروض، وتضيف منتجاتك المفضلة، وتتابع طلباتك بكل سهولة وأمان.<br><br><div class="btn-container"><a href="https://bn-max.com" class="btn">تصفح العروض الآن 🚀</a></div>`;
-        emailjs.send("service_01wl99f", "Template_gx1ra8k", { to_name: tempRegistrationData.name, to_email: tempRegistrationData.email, custom_message: welcomeMessage }).catch(err => console.log("Welcome Email Error"));
+        emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: tempRegistrationData.name, to_email: tempRegistrationData.email, custom_message: welcomeMessage }).catch(err => console.log("Welcome Email Error"));
       }
       tempRegistrationData = null; document.getElementById('regOTP').value = '';
     } catch (e) { window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); } 
@@ -918,7 +918,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (typeof emailjs !== 'undefined') {
            const confirmMsg = `لقد استلمنا طلبك بنجاح وجاري مراجعته.<br>تفاصيل الطلب: <strong>${productTitles.join(' + ')}</strong><br>الإجمالي: <strong>${totalPrice} ${currency}</strong><br><br>يمكنك متابعة حالة الطلب من قسم "طلباتي" في حسابك.`;
-           emailjs.send("service_01wl99f", "Template_gx1ra8k", { 
+           emailjs.send("service_01wl99f", "template_gx1ra8k", { 
              to_name: currentUserProfile.name, 
              to_email: currentUserProfile.email, 
              custom_message: confirmMsg 
@@ -1217,7 +1217,7 @@ window.updateOrderStatus = async (orderId, status) => {
     // إرسال إيميل بإكمال الطلب وتوصيل الكود
     if (status === 'completed' && typeof emailjs !== 'undefined' && order) {
         const confirmMsg = `تهانينا! لقد تم اكتمال طلبك بنجاح.<br><strong>المنتجات:</strong> ${order.productName}<br><strong>تفاصيل الاستلام/الأكواد:</strong><br><div class="highlight-box"><p>${codeToDeliver || 'تم التنفيذ مباشرة في حسابك.'}</p></div>`;
-        emailjs.send("service_01wl99f", "Template_gx1ra8k", { to_name: order.userEmail.split('@')[0], to_email: order.userEmail, custom_message: confirmMsg }).catch(err => console.log("Delivery Email Error"));
+        emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: order.userEmail.split('@')[0], to_email: order.userEmail, custom_message: confirmMsg }).catch(err => console.log("Delivery Email Error"));
     }
 
     window.showToast('تم التحديث!', 'success');
