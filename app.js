@@ -795,23 +795,28 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // زرار تسجيل الدخول بجوجل (طريقة PopUp السريعة والمستقرة)
-  document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
+    document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
-          uid: result.user.uid, 
-          name: result.user.displayName || 'مستخدم جوجل', 
-          email: result.user.email, 
-          createdAt: serverTimestamp() 
-      }, { merge: true });
-      
-      authModal.style.display = 'none'; 
-      window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
-    } catch (e) { 
-      if (e.code !== 'auth/popup-closed-by-user') {
-          window.showToast('فشل تسجيل الدخول', 'error'); 
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+          await signInWithRedirect(auth, provider);
+      } else {
+        const result = await signInWithPopup(auth, provider);
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
+            uid: result.user.uid, 
+            name: result.user.displayName || 'مستخدم جوجل', 
+            email: result.user.email, 
+            createdAt: serverTimestamp() 
+        }, { merge: true });
+        
+        authModal.style.display = 'none'; 
+        window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
       }
+    } catch (e) { 
+        console.error("Auth Error:", e);
+        if (e.code !== 'auth/popup-closed-by-user') {
+            window.showToast('فشل تسجيل الدخول', 'error'); 
+        }
     }
   });
 
