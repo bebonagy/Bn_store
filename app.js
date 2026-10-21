@@ -774,6 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     const provider = new GoogleAuthProvider();
     try {
+        // جرب فتح النافذة المنبثقة أولاً
         const result = await signInWithPopup(auth, provider);
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
             uid: result.user.uid, 
@@ -785,11 +786,20 @@ document.addEventListener('DOMContentLoaded', () => {
         authModal.style.display = 'none'; 
         window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
     } catch (e) { 
-        if (e.code !== 'auth/popup-closed-by-user') {
+        // لو المتصفح حظر النافذة المنبثقة، حول العميل للطريقة التانية تلقائياً
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request') {
+            try {
+                await signInWithRedirect(auth, provider);
+                return;
+            } catch (redirectError) {
+                window.showToast('فشل تسجيل الدخول، حاول مرة أخرى', 'error');
+            }
+        } else if (e.code !== 'auth/popup-closed-by-user') {
             window.showToast('فشل تسجيل الدخول', 'error'); 
         }
     }
 });
+
 
   document.getElementById('resetPassBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
