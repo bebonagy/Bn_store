@@ -795,28 +795,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // زرار تسجيل الدخول بجوجل (طريقة PopUp السريعة والمستقرة)
-    document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
+      document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     const provider = new GoogleAuthProvider();
     try {
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-          await signInWithRedirect(auth, provider);
-      } else {
-        const result = await signInWithPopup(auth, provider);
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
-            uid: result.user.uid, 
-            name: result.user.displayName || 'مستخدم جوجل', 
-            email: result.user.email, 
-            createdAt: serverTimestamp() 
-        }, { merge: true });
-        
-        authModal.style.display = 'none'; 
-        window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
-      }
+      const result = await signInWithPopup(auth, provider);
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', result.user.uid), { 
+          uid: result.user.uid, 
+          name: result.user.displayName || 'مستخدم جوجل', 
+          email: result.user.email, 
+          createdAt: serverTimestamp() 
+      }, { merge: true });
+      
+      authModal.style.display = 'none'; 
+      window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
     } catch (e) { 
-        console.error("Auth Error:", e);
-        if (e.code !== 'auth/popup-closed-by-user') {
-            window.showToast('فشل تسجيل الدخول', 'error'); 
-        }
+      console.error("Google Auth Error:", e);
+      window.showToast('فشل تسجيل الدخول: ' + (e.message || e.code), 'error'); 
     }
   });
 
@@ -844,6 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('authModalTitle').textContent = translations[currentLang].auth_title;
     } catch(err) { window.showToast('حدث خطأ، تأكد من صحة البريد.', 'error'); }
   });
+  
 
   document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; document.getElementById('authModalTitle').textContent = translations[currentLang].create_account; });
   document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'block'; document.getElementById('authViewRegister').style.display = 'none'; document.getElementById('authViewOTP').style.display = 'none'; document.getElementById('authModalTitle').textContent = translations[currentLang].btn_login; });
