@@ -827,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (typeof emailjs !== 'undefined') {
             const customMessage = `كود التفعيل الخاص بك هو:<div class="otp-box">${otpCode}</div>لا تشارك هذا الكود مع أحد.`;
-            await emailjs.send("service_01wl99f", "Template_gx1ra8k", { to_name: name, to_email: email, custom_message: customMessage });
+            await emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: name, to_email: email, custom_message: customMessage });
         }
         document.getElementById('authViewRegister').style.display = 'none';
         document.getElementById('authViewOTP').style.display = 'block';
