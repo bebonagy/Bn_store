@@ -1,6 +1,6 @@
 // auth.js
 import { auth, db, appId, ADMIN_UID, googleProvider } from './firebase-config.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, signInWithPopup, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, signInWithPopup, signInWithRedirect, getRedirectResult, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export let currentUserProfile = null;
@@ -8,6 +8,22 @@ export const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.u
 let tempRegistrationData = null;
 
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
+  // استقبال نتيجة تسجيل الدخول في حال تم استخدام الـ Redirect
+  getRedirectResult(auth).then(async (result) => {
+    if (result && result.user) {
+      const user = result.user;
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
+        uid: user.uid, 
+        name: user.displayName || 'مستخدم جوجل', 
+        email: user.email, 
+        createdAt: serverTimestamp() 
+      }, { merge: true });
+      if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
+    }
+  }).catch((error) => {
+    console.error("Redirect Auth Error:", error);
+  });
+
   // مستمع حالة تسجيل الدخول
   onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -41,9 +57,10 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     }
   });
 
-  // تسجيل الدخول بجوجل عبر النافذة المنبثقة المستقرة
+  // تسجيل الدخول بجوجل (حل ذكي ومضمون للموبايل والكمبيوتر)
   document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     try {
+      // محاولة فتح نافذة منبثقة أولاً
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       
@@ -58,8 +75,14 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
       
     } catch (e) { 
-      console.error("Google Popup Login Error:", e);
-      if (window.showToast) window.showToast('فشل تسجيل الدخول بجوجل.', 'error'); 
+      console.warn("Popup blocked or failed, falling back to redirect:", e);
+      // إذا قام المتصفح بحظر النافذة المنبثقة، التحويل التلقائي لإعادة التوجيه الآمن
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectErr) {
+        console.error("Redirect Error:", redirectErr);
+        if (window.showToast) window.showToast('تعذر تسجيل الدخول بواسطة جوجل.', 'error');
+      }
     }
   });
 
