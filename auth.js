@@ -1,6 +1,6 @@
 // auth.js
 import { auth, db, appId, ADMIN_UID, googleProvider } from './firebase-config.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, signInWithPopup, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, signInWithRedirect, getRedirectResult, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export let currentUserProfile = null;
@@ -8,7 +8,23 @@ export const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.u
 let tempRegistrationData = null;
 
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
-  // 1. مستمع حالة تسجيل الدخول
+  // استقبال نتيجة تسجيل الدخول بجوجل بعد العودة للصفحة
+  getRedirectResult(auth).then(async (result) => {
+    if (result && result.user) {
+      const user = result.user;
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
+        uid: user.uid, 
+        name: user.displayName || 'مستخدم جوجل', 
+        email: user.email, 
+        createdAt: serverTimestamp() 
+      }, { merge: true });
+      if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
+    }
+  }).catch((error) => {
+    console.error("Google Redirect Result Error:", error);
+  });
+
+  // مستمع حالة تسجيل الدخول
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم' };
@@ -19,13 +35,12 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     }
   });
 
-  // 2. أحداث واجهة تسجيل الدخول
   const authModal = document.getElementById('authModal');
   
   document.getElementById('loginBtnNav')?.addEventListener('click', () => { 
-      if (currentUserProfile) {
+      if (currentUserProfile) { 
           document.getElementById('userAccountModal').style.display = 'flex'; 
-      } else {
+      } else { 
           authModal.style.display = 'flex'; 
       }
   });
@@ -33,37 +48,25 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   document.getElementById('doLoginBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value.trim(), pass = document.getElementById('loginPass').value;
     if (!email || !pass) return window.showToast('أدخل البريد وكلمة المرور!', 'error');
-    try { await signInWithEmailAndPassword(auth, email, pass); authModal.style.display = 'none'; window.showToast('تم تسجيل الدخول بنجاح!', 'success'); } catch (e) { window.showToast('البيانات غير صحيحة!', 'error'); }
-  });
-
-  document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
-    try {
-      // استخدام النافذة المنبثقة المباشرة بدلاً من إعادة التوجيه لمنع أخطاء المتصفحات
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
-        uid: user.uid, 
-        name: user.displayName || 'مستخدم جوجل', 
-        email: user.email, 
-        createdAt: serverTimestamp() 
-      }, { merge: true });
-
-      if (authModal) authModal.style.display = 'none';
-      if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
-      
+    try { 
+        await signInWithEmailAndPassword(auth, email, pass); 
+        authModal.style.display = 'none'; 
+        window.showToast('تم تسجيل الدخول بنجاح!', 'success'); 
     } catch (e) { 
-      console.error("Google Popup Login Error:", e);
-      // إذا حدث حظر نافذة منبثقة، نعلم المستخدم بفتح المتصفح بشكل طبيعي
-      if (e.code === 'auth/popup-blocked') {
-        if (window.showToast) window.showToast('تم حظر النافذة المنبثقة من المتصفح، يرجى السماح بالنوافذ المنبثقة.', 'error');
-      } else {
-        if (window.showToast) window.showToast('فشل تسجيل الدخول بجوجل.', 'error');
-      }
+        window.showToast('البيانات غير صحيحة!', 'error'); 
     }
   });
 
-  // 3. استعادة كلمة المرور
+  // تسجيل الدخول بجوجل عبر إعادة التوجيه المباشر (الأكثر استقراراً على الموبايل)
+  document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
+    try {
+      await signInWithRedirect(auth, googleProvider);
+    } catch (e) { 
+      console.error("Google Login Error:", e);
+      if (window.showToast) window.showToast('تعذر بدء تسجيل الدخول بجوجل.', 'error'); 
+    }
+  });
+
   document.getElementById('resetPassBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('authViewLogin').style.display = 'none';
@@ -91,12 +94,10 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     } catch(err) { window.showToast('حدث خطأ، تأكد من صحة البريد.', 'error'); }
   });
 
-  // 4. التنقل بين التسجيل والدخول
   document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; document.getElementById('authModalTitle').textContent = translations[currentLang].create_account; });
   document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'block'; document.getElementById('authViewRegister').style.display = 'none'; document.getElementById('authViewOTP').style.display = 'none'; document.getElementById('authModalTitle').textContent = translations[currentLang].btn_login; });
   document.getElementById('backToRegFromOTP')?.addEventListener('click', () => { document.getElementById('authViewOTP').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; });
 
-  // 5. نظام التسجيل والـ OTP
   document.getElementById('doRegisterBtn')?.addEventListener('click', async () => {
     const name = document.getElementById('regName').value.trim(), email = document.getElementById('regEmail').value.trim(), pass = document.getElementById('regPass').value;
     if (!name || !email || !pass) return window.showToast('أكمل جميع البيانات!', 'error');
