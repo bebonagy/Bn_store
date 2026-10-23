@@ -850,6 +850,11 @@ const initApp = () => {
   document.getElementById('currencySelect')?.addEventListener('change', () => { window.renderProducts(); window.renderCartModal(); });
   document.getElementById('paymentMethod')?.addEventListener('change', updatePaymentInfoBox);
   
+  // تفعيل زر الرجوع للصفحة الرئيسية من تفاصيل المنتج
+  document.getElementById('backToHomeBtn')?.addEventListener('click', () => {
+    showView('home');
+  });
+
   const receiptFileInput = document.getElementById('receiptFileInput'), receiptPreview = document.getElementById('receiptPreview');
   if (receiptFileInput && receiptPreview) {
     receiptFileInput.addEventListener('change', (e) => {
