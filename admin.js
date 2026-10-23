@@ -91,6 +91,36 @@ window.injectAdminDashboard = () => {
   `;
   window.initAdminTabs(); 
   if (window.renderCategoriesBar) window.renderCategoriesBar();
+  window.loadAdminData();
+};
+
+// تحميل وتعبئة بيانات الإعدادات في الحقول
+window.loadAdminData = () => {
+  const s = window.storeState;
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+  
+  setVal('admBannerAr', s.bannerAr);
+  setVal('admBannerExpiry', s.bannerExpiry);
+  setVal('admWhatsapp', s.whatsapp);
+  setVal('admPromoCode', s.promoCode);
+  setVal('admPromoDiscount', s.promoDiscount || 0);
+
+  if (s.payments) {
+    setVal('admInstapay', s.payments.instapay);
+    setVal('admVodafone', s.payments.vodafone);
+    setVal('admCrypto', s.payments.crypto);
+  }
+
+  if (s.rates) {
+    setVal('admRateSAR', s.rates.SAR);
+    setVal('admRateAED', s.rates.AED);
+    setVal('admRateUSD', s.rates.USD);
+  }
+
+  window.renderAdminProducts();
+  window.renderAdminOrders();
+  window.renderAdminSlides();
+  window.renderAdminStats();
 };
 
 // 2. تحديث العملات التلقائي عبر API مجاني (بدون مفتاح)
@@ -139,7 +169,7 @@ window.renderAdminStats = () => {
   `;
 };
 
-// 4. إدارة الطلبات (الجديدة وحذف المكتمل واسترجاع المخزون)
+// 4. إدارة الطلبات
 window.renderAdminOrders = () => {
   const pendingList = document.getElementById('adminOrdersPending'), archivedList = document.getElementById('adminOrdersArchived');
   if (!pendingList || !archivedList) return; pendingList.replaceChildren(); archivedList.replaceChildren();
@@ -171,7 +201,6 @@ window.updateOrderStatus = async (orderId, status) => {
     let codeToDeliver = codeInput.value.trim();
     const order = window.storeState.orders.find(o => o.id === orderId);
     
-    // إرجاع المخزون في حالة الإلغاء
     if (status === 'cancelled') {
       if (order && order.productIds) {
         for (const pid of order.productIds) { 
@@ -182,7 +211,6 @@ window.updateOrderStatus = async (orderId, status) => {
         }
       }
     } 
-    // سحب كود من الخزنة في حالة الإكمال ولم يتم إدخال كود يدوي
     else if (status === 'completed' && !codeToDeliver && order && order.productIds && order.productIds.length > 0) {
         let multiCodesArr = [];
         for (const pid of order.productIds) {
@@ -318,7 +346,6 @@ window.saveSeoSettings = async () => {
         };
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { seo }, { merge: true });
         window.showToast('✅ تم حفظ إعدادات السيو وتطبيقها!', 'success');
-        // تطبيق فوري للسيو
         if(seo.title) { document.getElementById('metaTitle').textContent = seo.title; document.getElementById('metaOgTitle').content = seo.title; }
         if(seo.desc) { document.getElementById('metaDesc').content = seo.desc; document.getElementById('metaOgDesc').content = seo.desc; }
         if(seo.keywords) document.getElementById('metaKeywords').content = seo.keywords;
