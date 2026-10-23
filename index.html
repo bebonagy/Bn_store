@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>BN MAX | Digital Marketplace</title>
+<title id="metaTitle">BN MAX | Digital Marketplace</title>
 
 <!-- 🌐 تخصيص روابط المشاركة (Open Graph SEO) -->
-<meta property="og:title" content="BN MAX | Digital Marketplace">
-<meta property="og:description" content="وجهتك الأولى لشحن الألعاب، والخدمات الرقمية بأفضل وأرخص الأسعار.">
+<meta property="og:title" id="metaOgTitle" content="BN MAX | Digital Marketplace">
+<meta property="og:description" id="metaOgDesc" content="وجهتك الأولى لشحن الألعاب، والخدمات الرقمية بأفضل وأرخص الأسعار.">
 <meta property="og:image" content="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200">
 <meta property="og:url" content="https://bn-max.com/">
 <meta property="og:type" content="website">
 
 <!-- 🛡️ سياسة أمان المحتوى (CSP) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://firebasestorage.googleapis.com blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://api.exchangerate-api.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
-<meta name="description" content="BN MAX - متجرك الأفضل للخدمات الرقمية وشحن الألعاب.">
+<meta name="description" id="metaDesc" content="BN MAX - متجرك الأفضل للخدمات الرقمية وشحن الألعاب.">
+<meta name="keywords" id="metaKeywords" content="العاب, شحن, خدمات رقمية, مفاتيح العاب, BN MAX">
 <meta name="theme-color" content="#00f2ff">
 
 <link rel="stylesheet" href="style.css">
@@ -316,7 +317,7 @@
   <div class="modal" id="lightboxModal" style="z-index: 2000; padding: 0;">
     <div style="position:relative; width:100%; height:100%; display:flex; justify-content:center; align-items:center;">
       <button type="button" id="closeLightboxBtn" style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #fff; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer; z-index:2001; transition:0.3s;">✕</button>
-      <img id="lightboxImg" src="" alt="تكبير الصورة" style="max-width:90%; max-height:90%; object-fit:contain; border-radius:8px; box-shadow:0 0 30px rgba(0,242,255,0.3);">
+      <img id="lightboxImg" loading="lazy" src="" alt="تكبير الصورة" style="max-width:90%; max-height:90%; object-fit:contain; border-radius:8px; box-shadow:0 0 30px rgba(0,242,255,0.3);">
     </div>
   </div>
 
@@ -422,7 +423,7 @@
         <div class="form-group">
           <label data-i18n="receipt_img">صورة إيصال التحويل (سكرين شوت)</label>
           <input type="file" id="receiptFileInput" accept="image/*" required style="padding: 7px; background: #0b0b10; color: #fff; border: 1px solid var(--border-color); border-radius: 7px; width: 100%;">
-          <img id="receiptPreview" src="" alt="معاينة الإيصال" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:8px; border:1px solid var(--border-color);">
+          <img id="receiptPreview" loading="lazy" src="" alt="معاينة الإيصال" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:8px; border:1px solid var(--border-color);">
         </div>
         <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
           <button type="submit" id="confirmOrderBtn" class="submit-btn" style="flex: 1; position:relative; display:flex; justify-content:center; align-items:center; gap:8px;">
@@ -444,6 +445,7 @@
         <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
         <button class="tab-btn" data-target="tab-products">🛒 المنتجات</button>
         <button class="tab-btn" data-target="tab-settings">⚙️ الإعدادات</button>
+        <button class="tab-btn" data-target="tab-seo">🔍 السيو (SEO)</button>
       </div>
       <div id="adminDashboardView">
         <div id="adminSectionsContainer"></div>
