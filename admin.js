@@ -132,10 +132,10 @@ window.autoUpdateCurrencies = async () => {
     const res = await fetch('https://open.er-api.com/v6/latest/EGP');
     const data = await res.json();
     if(data && data.rates) {
-      document.getElementById('admRateSAR').value = data.rates.SAR.toFixed(4);
-      document.getElementById('admRateAED').value = data.rates.AED.toFixed(4);
-      document.getElementById('admRateUSD').value = data.rates.USD.toFixed(4);
-      window.showToast('تم جلب الأسعار بنجاح! اضغط "حفظ الإعدادات" لتأكيد التغيير.', 'success');
+      document.getElementById('admRateSAR').value = (1 / data.rates.SAR).toFixed(4);
+      document.getElementById('admRateAED').value = (1 / data.rates.AED).toFixed(4);
+      document.getElementById('admRateUSD').value = (1 / data.rates.USD).toFixed(4);
+      window.showToast('تم تحديث الأسعار بقيمة العملة مقابل الجنيه! اضغط حفظ الإعدادات.', 'success');
     }
   } catch(e) { 
     window.showToast('فشل جلب الأسعار من الخادم، راجع اتصالك.', 'error'); 
