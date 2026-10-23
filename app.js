@@ -2,7 +2,7 @@
 import { db, appId } from './firebase-config.js';
 import { initAuth, checkIsAdmin } from './auth.js';
 import './admin.js';
-import { collection, doc, setDoc, updateDoc, onSnapshot, query, where, orderBy, limit, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
 // 1. المتغيرات والدوال العامة (Globals)
@@ -383,12 +383,9 @@ const showView = (viewName) => {
   if (productDetailsView) productDetailsView.style.display = viewName === 'details' ? 'block' : 'none';
   if (viewName === 'home') window.scrollTo({ top: 0, behavior: 'smooth' });
 };
-document.getElementById('logoBtn')?.addEventListener('click', () => { currentCategory = 'all'; currentPage = 1; window.renderCategoriesBar(); window.renderProducts(); showView('home'); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); });
-document.getElementById('backToHomeBtn')?.addEventListener('click', () => showView('home'));
-document.getElementById('sortSelect')?.addEventListener('change', window.renderProducts);
 
 // ==========================================
-// 5. التفاصيل والمفضلة والسلة
+// 5. التفاصيل والمفضلة والسلة (والتقييمات)
 // ==========================================
 window.toggleWishlist = (prodId, event) => {
   if (event) event.stopPropagation();
@@ -406,7 +403,36 @@ window.updateDetailWishlistBtn = () => {
   const isWished = window.storeState.wishlist.includes(currentProductId);
   btn.textContent = isWished ? '❤️' : '🤍'; btn.style.color = isWished ? 'var(--danger)' : '#fff'; btn.style.borderColor = isWished ? 'var(--danger)' : 'var(--border-color)';
 };
-document.getElementById('toggleWishlistBtn')?.addEventListener('click', () => { if (currentProductId) window.toggleWishlist(currentProductId); });
+
+window.loadProductReviews = (prodId) => {
+  if (unsubscribeReviews) unsubscribeReviews();
+  const addReviewBox = document.getElementById('addReviewBox');
+  if (addReviewBox) {
+    let hasCompletedOrder = false;
+    if (currentUserProfile && window.storeState.orders) {
+      hasCompletedOrder = window.storeState.orders.some(o => o.uid === currentUserProfile.uid && o.status === 'completed' && (o.productIds?.includes(prodId) || o.productId === prodId));
+    }
+    addReviewBox.style.display = (hasCompletedOrder || window.checkIsAdmin()) ? 'block' : 'none';
+  }
+
+  const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'reviews'), where('productId', '==', prodId));
+  unsubscribeReviews = onSnapshot(q, (snap) => {
+    const list = document.getElementById('productReviewsList'); if (!list) return; list.replaceChildren();
+    const revs = []; snap.forEach(d => revs.push({ id: d.id, ...d.data() }));
+    window.storeState.reviews = window.storeState.reviews.filter(r => r.productId !== prodId).concat(revs);
+    revs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    const detailBadge = document.getElementById('detailBadge');
+    if (revs.length > 0) { const avgRating = (revs.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / revs.length).toFixed(1); if(detailBadge) detailBadge.textContent = `⭐ ${avgRating} (${revs.length} تقييم)`; }
+    if (!revs.length) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تقييمات لهذا المنتج حتى الآن.</p>'; } 
+    else { revs.forEach(r => { list.innerHTML += `<div style="background: #0b0b12; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; position: relative;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: ${window.checkIsAdmin() ? '50px' : '0'};"><strong style="color: var(--accent-neon);">${window.sanitizeText(r.userName || 'مستخدم')} <span style="font-size:10px; color:var(--text-muted); font-weight:normal; margin-right:5px;">- ${window.formatDate(r.createdAt)}</span></strong><span>${'⭐'.repeat(Number(r.rating) || 5)}</span></div><p style="color: var(--text-main); line-height: 1.5;">${window.sanitizeText(r.comment)}</p>${window.checkIsAdmin() ? `<button onclick="window.deleteReview('${r.id}')" style="position:absolute; left:10px; top:10px; background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; z-index:10;">حذف 🗑️</button>` : ''}</div>`; }); }
+  });
+};
+
+window.deleteReview = async (reviewId) => {
+  if (!window.checkIsAdmin() || !confirm('متأكد إنك عايز تحذف التقييم ده؟')) return;
+  try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reviews', reviewId)); window.showToast('تم حذف التقييم بنجاح', 'success'); } catch (e) {}
+};
 
 window.openProductDetails = (id) => {
   const prod = window.storeState.products.find(p => p.id === id); if (!prod) return;
@@ -427,18 +453,66 @@ window.openProductDetails = (id) => {
   document.getElementById('detailOldPrice').textContent = convertedOld ? `${convertedOld} ${currency}` : '';
   document.getElementById('detailBadge').textContent = badge;
   
+  // 🌟 استرجاع عرض الوصف المنسق
   const descContainer = document.getElementById('detailDescContainer');
   if (descContainer) {
     descContainer.replaceChildren();
-    const p = document.createElement('p'); p.innerHTML = linkify(desc || ''); p.style.cssText = 'color: var(--text-main); line-height: 1.8;';
-    descContainer.appendChild(p);
+    const descLines = (desc || '').split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (descLines.length > 1 || (descLines.length === 1 && descLines[0].startsWith('-'))) {
+      const ul = document.createElement('ul'); ul.style.cssText = 'padding-right: 20px; line-height: 1.8; color: var(--text-main);';
+      descLines.forEach(line => { const li = document.createElement('li'); li.innerHTML = linkify(line.replace(/^[-*•]\s*/, '')); ul.appendChild(li); });
+      descContainer.appendChild(ul);
+    } else {
+      const p = document.createElement('p'); p.innerHTML = linkify(desc || ''); p.style.cssText = 'color: var(--text-main); line-height: 1.8;';
+      descContainer.appendChild(p);
+    }
   }
+
+  // 🌟 استرجاع عرض الأسئلة الشائعة (FAQ)
+  const faqContainer = document.getElementById('detailFaqContainer');
+  const faqList = document.getElementById('detailFaqList');
+  if (prod.faqText && prod.faqText.trim()) {
+      faqContainer.style.display = 'block'; faqList.innerHTML = '';
+      const blocks = prod.faqText.split(/\n\n+/);
+      blocks.forEach(block => {
+          const lines = block.split('\n').filter(l => l.trim());
+          if (lines.length >= 2) {
+              const q = lines[0].replace(/^(سؤال|س|Q):\s*/i, '');
+              const a = lines.slice(1).join('<br>').replace(/^(إجابة|ج|جواب|A):\s*/i, '');
+              faqList.innerHTML += `<div class="faq-item"><button class="faq-question">${window.sanitizeText(q)}</button><div class="faq-answer">${linkify(a)}</div></div>`;
+          }
+      });
+      document.querySelectorAll('.faq-question').forEach(btn => {
+          btn.onclick = () => { btn.classList.toggle('active'); const ans = btn.nextElementSibling; ans.classList.toggle('open'); };
+      });
+  } else { faqContainer.style.display = 'none'; }
   
+  // 🌟 استرجاع معرض الصور (Gallery)
   const imgBox = document.getElementById('detailImageBox');
+  const galleryBox = document.getElementById('detailImageGallery');
   const mainImgUrl = prod.bannerUrl || prod.imgUrl;
+  
   if(imgBox) {
     if(mainImgUrl) { imgBox.style.backgroundImage = `url('${mainImgUrl}')`; imgBox.style.border = 'none'; imgBox.textContent = ''; }
-    else { imgBox.style.backgroundImage = 'none'; imgBox.textContent = prod.imgText || title; }
+    else { imgBox.style.backgroundImage = 'none'; imgBox.textContent = prod.imgText || title; imgBox.style.cursor = 'default'; }
+  }
+  
+  if(galleryBox) {
+      galleryBox.replaceChildren();
+      const allImages = [];
+      if (prod.imgUrl) allImages.push(prod.imgUrl);
+      if (prod.bannerUrl) allImages.push(prod.bannerUrl);
+      if (prod.gallery && Array.isArray(prod.gallery)) allImages.push(...prod.gallery);
+      const uniqueImages = [...new Set(allImages)]; 
+      
+      if (uniqueImages.length > 1) {
+          uniqueImages.forEach((imgSrc) => {
+              const thumb = document.createElement('img');
+              thumb.src = imgSrc; thumb.className = 'gallery-thumb';
+              thumb.onclick = () => { document.getElementById('lightboxImg').src = imgSrc; document.getElementById('lightboxModal').style.display = 'flex'; };
+              galleryBox.appendChild(thumb);
+          });
+      }
   }
 
   const stockEl = document.getElementById('detailStock'); const addBtn = document.getElementById('detailAddToCartBtn');
@@ -451,7 +525,8 @@ window.openProductDetails = (id) => {
       addBtn.textContent = translations[currentLang].out_of_stock; addBtn.disabled = true; addBtn.classList.add('out-of-stock-badge');
     }
   }
-  window.loadProductReviews(id); showView('details');
+  window.loadProductReviews(id); 
+  showView('details');
 };
 
 window.updateCartBadge = () => {
@@ -466,12 +541,19 @@ window.addToCartDirect = (prodId, event) => {
   const prod = window.storeState.products.find(p => p.id === prodId);
   if (prod && prod.inStock) { window.storeState.cart.push(prod); window.updateCartBadge(); window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); }
 };
-document.getElementById('detailAddToCartBtn')?.addEventListener('click', () => window.addToCartDirect(currentProductId));
+
+// 🌟 استرجاع زرار اقتراح السلة (Cross-Sell)
+window.addToCartCross = (id) => {
+    const p = window.storeState.products.find(x => x.id === id);
+    if(p) { window.storeState.cart.push(p); window.updateCartBadge(); window.renderCartModal(); window.showToast('تم إضافة الاقتراح للسلة!', 'success'); }
+};
 
 window.removeFromCart = (index) => { window.storeState.cart.splice(index, 1); window.updateCartBadge(); window.renderCartModal(); };
 
 window.renderCartModal = () => {
   const list = document.getElementById('cartItemsList');
+  const crossSellSection = document.getElementById('cartCrossSellSection');
+  const crossSellList = document.getElementById('cartCrossSellList');
   const totalDisplay = document.getElementById('cartTotalPriceDisplay');
   const currency = document.getElementById('currencySelect').value;
   const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
@@ -480,19 +562,39 @@ window.renderCartModal = () => {
     list.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px 0;">السلة فارغة حالياً.</p>';
     totalDisplay.textContent = `0 ${currency}`;
     document.getElementById('proceedToCheckoutBtn').disabled = true;
+    if(crossSellSection) crossSellSection.style.display = 'none';
     return;
   }
   
   document.getElementById('proceedToCheckoutBtn').disabled = false;
-  list.innerHTML = ''; let total = 0;
+  list.innerHTML = ''; let total = 0; let currentCartIds = [];
+  
   window.storeState.cart.forEach((p, idx) => {
     const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
-    const itemPrice = p.price * rate; total += itemPrice;
+    const itemPrice = p.price * rate; total += itemPrice; currentCartIds.push(p.id);
     list.innerHTML += `<div class="cart-item"><div class="cart-item-info"><div class="cart-item-title">${window.sanitizeText(title)}</div><div class="cart-item-price">${itemPrice.toFixed(currency==='EGP'?0:2)} ${currency}</div></div><button type="button" class="remove-cart-btn" onclick="window.removeFromCart(${idx})" title="حذف">🗑️</button></div>`;
   });
   totalDisplay.textContent = `${total.toFixed(currency==='EGP'?0:2)} ${currency}`;
+
+  // 🌟 استرجاع قسم اقتراحات السلة
+  if(crossSellSection && crossSellList) {
+      let suggestions = [];
+      window.storeState.cart.forEach(p => { if (p.crossSellIds) suggestions.push(...p.crossSellIds); });
+      suggestions = [...new Set(suggestions)].filter(id => !currentCartIds.includes(id)); 
+      if(suggestions.length > 0) {
+          crossSellList.innerHTML = '';
+          suggestions.forEach(sId => {
+              const sProd = window.storeState.products.find(x => x.id === sId && x.inStock);
+              if(sProd) {
+                  const sTitle = currentLang === 'ar' ? (sProd.titleAr || sProd.title) : (sProd.titleEn || sProd.title);
+                  const sPrice = (sProd.price * rate).toFixed(currency === 'EGP' ? 0 : 2);
+                  crossSellList.innerHTML += `<div class="cross-sell-item" style="min-width: 150px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; text-align: center;"><div class="cross-sell-img" style="background-image:url('${sProd.imgUrl}'); height: 60px; background-size: cover; background-position: center; border-radius: 5px; margin-bottom: 5px;"></div><div class="cross-sell-title" style="font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px;">${sTitle}</div><div class="cross-sell-price" style="font-size: 12px; color: var(--accent-neon); font-weight: bold; margin-bottom: 5px;">+${sPrice}${currency}</div><button class="add-cross-btn submit-btn" style="padding: 4px; font-size: 11px;" onclick="window.addToCartCross('${sProd.id}')">إضافة</button></div>`;
+              }
+          });
+          crossSellSection.style.display = crossSellList.innerHTML ? 'block' : 'none';
+      } else { crossSellSection.style.display = 'none'; }
+  }
 };
-document.getElementById('cartBtnNav')?.addEventListener('click', () => { window.renderCartModal(); document.getElementById('cartModal').style.display = 'flex'; });
 
 // ==========================================
 // 6. لوحة المستخدم ومتتبع الطلبات المرئي
@@ -505,7 +607,6 @@ window.renderUserOrders = () => {
   myOrders.forEach(o => {
      const div = document.createElement('div'); div.style.cssText = 'background: #0b0b12; border: 1px solid var(--border-color); border-radius: 9px; padding: 14px; margin-bottom: 15px;';
      
-     // 🌟 دمج متتبع الطلبات (Order Tracker)
      const trackerHTML = `
       <div class="order-tracker">
         <div class="tracker-step ${o.status === 'pending' || o.status === 'completed' ? 'active' : ''} ${o.status === 'cancelled' ? 'cancelled' : ''}">
@@ -543,6 +644,24 @@ window.renderUserWishlist = () => {
 // ==========================================
 // 7. الشراء وإنهاء الطلب (Checkout)
 // ==========================================
+const updateCheckoutPriceDisplay = () => {
+  if (!window.storeState.cart.length) return;
+  const currency = document.getElementById('currencySelect').value; 
+  const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
+  let totalPrice = 0, titles = [];
+  
+  window.storeState.cart.forEach(p => { 
+    const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
+    totalPrice += (p.price * rate); titles.push(title); 
+  });
+  
+  if (activeDiscount > 0) totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
+  const finalPrice = totalPrice.toFixed(currency === 'EGP' ? 0 : 2);
+  const discountText = activeDiscount > 0 ? ` (بعد خصم ${activeDiscount}%)` : '';
+  const selectedProductInput = document.getElementById('selectedProduct');
+  if (selectedProductInput) selectedProductInput.value = `${titles.join(' + ')}\nالإجمالي: (${finalPrice} ${currency})${discountText}`;
+};
+
 const updatePaymentInfoBox = () => {
   const methodSelect = document.getElementById('paymentMethod'); if (!methodSelect) return;
   const method = methodSelect.value, payments = window.storeState.payments || {}; let targetVal = "";
@@ -572,6 +691,7 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
         totalPrice += (p.price * rate); productTitles.push(title); productIds.push(p.id); 
     });
     
+    if (activeDiscount > 0) totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
     totalPrice = Number(totalPrice.toFixed(currency === 'EGP' ? 0 : 2));
 
     const paymentMethod = document.getElementById('paymentMethod').value;
@@ -580,7 +700,6 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
     const customerData = window.sanitizeText(document.getElementById('customerData').value);
     const newOrderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
 
-    // دمج نظام استنزاف المخزون بالـ Transactions 
     for (const p of window.storeState.cart) {
       if (p.stockQuantity !== undefined) {
          const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id);
@@ -594,10 +713,11 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
       }
     }
 
-    await setDoc(newOrderRef, { uid: currentUserProfile.uid, userEmail: currentUserProfile.email, productIds, productId: productIds[0], productName: productTitles.join(' + '), finalPrice: totalPrice, currency, discountApplied: 0, promoCodeUsed: "", paymentMethod, senderInfo, transactionId, customerData, receiptImage: receiptBase64, status: 'pending', deliveredCode: '', createdAt: serverTimestamp() });
+    await setDoc(newOrderRef, { uid: currentUserProfile.uid, userEmail: currentUserProfile.email, productIds, productId: productIds[0], productName: productTitles.join(' + '), finalPrice: totalPrice, currency, discountApplied: activeDiscount, promoCodeUsed: activeDiscount > 0 ? document.getElementById('promoCodeInput').value.trim() : "", paymentMethod, senderInfo, transactionId, customerData, receiptImage: receiptBase64, status: 'pending', deliveredCode: '', createdAt: serverTimestamp() });
 
     window.storeState.cart = []; window.updateCartBadge();
     document.getElementById('checkoutModal').style.display = 'none'; document.getElementById('checkoutForm').reset();
+    activeDiscount = 0;
     window.showToast('🎉 تم إرسال طلبك بنجاح! راجع "حسابي" لمتابعة الحالة.', 'success');
     
   } catch (err) { window.showToast(err.message || 'حدث خطأ، تأكد من اتصالك.', 'error'); } 
@@ -605,7 +725,18 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
 });
 
 // ==========================================
-// 8. المزامنة والتشغيل (Initialization)
+// 8. أزرار المشاركة (Share API)
+// ==========================================
+const handleShare = async (title, text, url) => {
+  if (navigator.share) {
+    try { await navigator.share({ title, text, url }); } catch(err) { console.log('Share canceled'); }
+  } else { navigator.clipboard.writeText(url); window.showToast('تم نسخ الرابط! 📋', 'success'); }
+};
+document.getElementById('shareBtn')?.addEventListener('click', () => handleShare('BN MAX Store', 'أفضل متجر للخدمات الرقمية!', window.location.href));
+document.getElementById('shareProductBtn')?.addEventListener('click', () => { const title = document.getElementById('detailTitle').textContent; handleShare(title, `شاهد هذا المنتج الرائع على BN MAX: ${title}`, window.location.href); });
+
+// ==========================================
+// 9. المزامنة والتشغيل (Initialization)
 // ==========================================
 const loadSeoFromDB = (data) => {
   if(data.seo) {
@@ -633,6 +764,9 @@ const initApp = () => {
       loadSeoFromDB(data);
       initCountdown(window.storeState.bannerExpiry); updatePaymentInfoBox(); window.renderPromoSlider(); window.renderCategoriesBar();
       if(isDataLoaded) window.renderProducts(); 
+      
+      const whatsappBtn = document.getElementById('whatsappBtn'); 
+      if(whatsappBtn) whatsappBtn.href = `https://wa.me/${window.storeState.whatsapp}?text=استفسار:`;
     }
   });
 
@@ -654,7 +788,7 @@ const initApp = () => {
       
       if (window.checkIsAdmin()) {
         document.getElementById('adminBtnNav').style.display = 'block';
-        window.injectAdminDashboard();
+        if(window.injectAdminDashboard) window.injectAdminDashboard();
       } else { 
         document.getElementById('adminBtnNav').style.display = 'none'; 
       }
@@ -666,7 +800,22 @@ const initApp = () => {
     }
   });
 
-  // Events listeners Setup
+  // 🌟 استرجاع أوامر النقر العلوية (Top Nav Links) 
+  document.querySelectorAll('.nav-link').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+      const cat = e.target.dataset.cat || 'all';
+      e.target.classList.add('active');
+      currentCategory = cat; currentPage = 1; window.renderCategoriesBar(); window.renderProducts();
+      showView('home');
+    });
+  });
+
+  document.getElementById('adminBtnNav')?.addEventListener('click', () => { 
+      if(window.checkIsAdmin()) document.getElementById('adminModal').style.display = 'flex'; 
+  });
+
+  document.getElementById('detailAddToCartBtn')?.addEventListener('click', () => window.addToCartDirect(currentProductId));
   document.getElementById('currencySelect')?.addEventListener('change', () => { window.renderProducts(); window.renderCartModal(); });
   document.getElementById('paymentMethod')?.addEventListener('change', updatePaymentInfoBox);
   
@@ -683,12 +832,68 @@ const initApp = () => {
     if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول أولاً!', 'error');
     if (!window.storeState.cart.length) return;
     document.getElementById('cartModal').style.display = 'none'; 
+    activeDiscount = 0; document.getElementById('promoCodeInput').value = ''; 
+    if(document.getElementById('promoMsg')) document.getElementById('promoMsg').textContent = '';
+    updateCheckoutPriceDisplay();
+    updatePaymentInfoBox();
     document.getElementById('checkoutModal').style.display = 'flex';
   });
 
+  document.getElementById('applyPromoBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('promoCodeInput').value.trim(), msgEl = document.getElementById('promoMsg');
+    if (!input) return;
+    if (window.storeState.promoCode && input.toLowerCase() === window.storeState.promoCode.toLowerCase() && window.storeState.promoDiscount > 0) {
+      activeDiscount = window.storeState.promoDiscount; msgEl.textContent = `تم تطبيق خصم ${activeDiscount}% بنجاح! ✅`; msgEl.style.color = 'var(--success)';
+    } else { activeDiscount = 0; msgEl.textContent = 'كود الخصم غير صحيح أو منتهي! ❌'; msgEl.style.color = 'var(--danger)'; }
+    updateCheckoutPriceDisplay();
+  });
+
+  document.getElementById('copyBtnText')?.addEventListener('click', () => {
+    const addressText = document.getElementById('paymentAddressDisplay')?.textContent;
+    if (addressText && addressText.includes('غير مضاف')) return window.showToast('لا يوجد رقم للنسخ حالياً', 'error');
+    if (addressText) navigator.clipboard.writeText(addressText).then(() => window.showToast('📋 تم نسخ رقم الحساب بنجاح!', 'success'));
+  });
+
+  document.getElementById('submitReviewBtn')?.addEventListener('click', async () => {
+    if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول لإضافة تقييم!', 'error');
+    if (!currentProductId) return;
+    
+    const comment = window.sanitizeText(document.getElementById('reviewCommentText').value), rating = document.getElementById('reviewRating').value;
+    if (!comment) return window.showToast('اكتب تعليقاً أولاً!', 'error');
+    const submitBtn = document.getElementById('submitReviewBtn'), origBtnText = submitBtn.textContent;
+    submitBtn.textContent = 'جاري الإرسال ⏳...'; submitBtn.disabled = true;
+    try {
+      await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'reviews')), { productId: currentProductId, uid: currentUserProfile.uid, userName: currentUserProfile.name, rating: Number(rating), comment, createdAt: serverTimestamp() });
+      document.getElementById('reviewCommentText').value = ''; window.showToast('⭐ تم إضافة تقييمك بنجاح!', 'success');
+    } catch (e) { window.showToast('حدث خطأ أثناء إرسال التقييم', 'error'); } finally { submitBtn.textContent = origBtnText; submitBtn.disabled = false; }
+  });
+
+  document.getElementById('tabBtnOrders')?.addEventListener('click', () => { document.getElementById('tabBtnOrders').classList.add('active'); document.getElementById('tabBtnWishlist').classList.remove('active'); document.getElementById('userOrdersSection').style.display = 'block'; document.getElementById('userWishlistSection').style.display = 'none'; });
+  document.getElementById('tabBtnWishlist')?.addEventListener('click', () => { document.getElementById('tabBtnWishlist').classList.add('active'); document.getElementById('tabBtnOrders').classList.remove('active'); document.getElementById('userWishlistSection').style.display = 'block'; document.getElementById('userOrdersSection').style.display = 'none'; window.renderUserWishlist(); });
+
+  document.getElementById('shopNowBtn')?.addEventListener('click', () => { document.getElementById('productGrid').scrollIntoView({ behavior: 'smooth' }); });
+
   document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none')));
-  
   document.getElementById('searchInput')?.addEventListener('input', () => { currentPage = 1; window.renderProducts(); });
+
+  // 🌟 استرجاع تأثيرات تكبير الصور والنجوم
+  document.getElementById('detailImageBox')?.addEventListener('click', (e) => {
+    const bgImg = e.target.style.backgroundImage.slice(4, -1).replace(/"/g, "");
+    if (bgImg && bgImg !== 'none') { document.getElementById('lightboxImg').src = bgImg; document.getElementById('lightboxModal').style.display = 'flex'; }
+  });
+  document.getElementById('closeLightboxBtn')?.addEventListener('click', () => { document.getElementById('lightboxModal').style.display = 'none'; });
+  document.getElementById('lightboxModal')?.addEventListener('click', (e) => { if(e.target.id === 'lightboxModal') document.getElementById('lightboxModal').style.display = 'none'; });
+
+  document.querySelectorAll('#interactiveStars .star').forEach(star => {
+    star.addEventListener('click', (e) => {
+      const val = Number(e.target.getAttribute('data-value'));
+      document.getElementById('reviewRating').value = val;
+      document.querySelectorAll('#interactiveStars .star').forEach(s => {
+        if(Number(s.getAttribute('data-value')) <= val) s.classList.add('active');
+        else s.classList.remove('active');
+      });
+    });
+  });
 };
 
 initApp();
