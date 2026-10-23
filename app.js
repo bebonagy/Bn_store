@@ -48,6 +48,7 @@ window.editingProductId = null;
 window.adminOrdersLimit = 20;
 
 let currentProductId = null;
+window.currentSelectedVariant = null; // متغير لحفظ الباقة المختارة
 let activeDiscount = 0;
 let unsubscribeOrders = null;
 let unsubscribeReviews = null;
@@ -101,7 +102,8 @@ const translations = {
     ft_copy: "© 2026 BN MAX. جميع الحقوق محفوظة.", ft_slogan: "عالمك الرقمي... مهمتنا 🚀",
     reset_pass_desc: "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.",
     btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول", google_login: "الدخول بواسطة Google",
-    nav_categories: "الأقسام", nav_search: "بحث", nav_wishlist: "المفضلة"
+    nav_categories: "الأقسام", nav_search: "بحث", nav_wishlist: "المفضلة",
+    qi_account: "نوع الحساب", qi_warranty: "الضمان", qi_region: "التفعيل", sys_req: "متطلبات التشغيل", select_variant: "اختر الباقة / النسخة:"
   },
   en: {
     nav_home: "Home", nav_games: "Games", nav_keys: "Digital Keys", nav_software: "Software", nav_subs: "Subscriptions", nav_gifts: "Gift Cards", nav_deals: "Deals",
@@ -130,7 +132,8 @@ const translations = {
     ft_copy: "© 2026 BN MAX. All rights reserved.", ft_slogan: "Your Digital World... Our Mission 🚀",
     reset_pass_desc: "Enter your registered email and we will send you a password reset link.",
     btn_send_reset: "Send Reset Link", back_to_login: "Back to Login", google_login: "Login with Google",
-    nav_categories: "Categories", nav_search: "Search", nav_wishlist: "Wishlist"
+    nav_categories: "Categories", nav_search: "Search", nav_wishlist: "Wishlist",
+    qi_account: "Account Type", qi_warranty: "Warranty", qi_region: "Region", sys_req: "System Requirements", select_variant: "Select Variant:"
   }
 };
 
@@ -328,12 +331,16 @@ window.renderProducts = () => {
     const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
     const badge = currentLang === 'ar' ? (prod.badgeAr || prod.badge) : (prod.badgeEn || prod.badge);
     
-    const convertedPrice = currency === 'EGP' ? prod.price.toFixed(0) : (prod.price / rate).toFixed(2);
-    const convertedOld = (prod.oldPrice && prod.oldPrice > prod.price) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
+    // إظهار سعر أول باقة لو المنتج فيه باقات
+    let displayPrice = prod.price;
+    if(prod.variants && prod.variants.length > 0) displayPrice = prod.variants[0].price;
+
+    const convertedPrice = currency === 'EGP' ? displayPrice.toFixed(0) : (displayPrice / rate).toFixed(2);
+    const convertedOld = (prod.oldPrice && prod.oldPrice > displayPrice) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
     const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
     const isWished = window.storeState.wishlist.includes(prod.id);
     
-    const discountPercent = (prod.oldPrice && prod.oldPrice > prod.price) ? Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100) : 0;
+    const discountPercent = (prod.oldPrice && prod.oldPrice > displayPrice) ? Math.round(((prod.oldPrice - displayPrice) / prod.oldPrice) * 100) : 0;
     const discountBadgeHTML = discountPercent > 0 ? `<span class="product-discount-badge">-${discountPercent}%</span>` : '';
     
     let ratingVal = 5.0, ratingCount = 0;
@@ -429,14 +436,10 @@ window.loadProductReviews = (prodId) => {
   });
 };
 
-window.deleteReview = async (reviewId) => {
-  if (!window.checkIsAdmin() || !confirm('متأكد إنك عايز تحذف التقييم ده؟')) return;
-  try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reviews', reviewId)); window.showToast('تم حذف التقييم بنجاح', 'success'); } catch (e) {}
-};
-
 window.openProductDetails = (id) => {
   const prod = window.storeState.products.find(p => p.id === id); if (!prod) return;
   currentProductId = id; window.updateDetailWishlistBtn();
+  window.currentSelectedVariant = null; // Reset Variant
 
   const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
   const desc = currentLang === 'ar' ? (prod.descAr || prod.desc) : (prod.descEn || prod.desc);
@@ -444,15 +447,93 @@ window.openProductDetails = (id) => {
 
   const currency = document.getElementById('currencySelect').value;
   const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
-  const convertedPrice = currency === 'EGP' ? prod.price.toFixed(0) : (prod.price / rate).toFixed(2);
-  const convertedOld = (prod.oldPrice && prod.oldPrice > prod.price) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
   const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
 
   document.getElementById('detailTitle').textContent = title;
-  document.getElementById('detailPrice').textContent = `${convertedPrice} ${currency}`;
-  document.getElementById('detailOldPrice').textContent = convertedOld ? `${convertedOld} ${currency}` : '';
   document.getElementById('detailBadge').textContent = badge;
   
+  // 1. نظام الباقات (Variants)
+  const variantsContainer = document.getElementById('detailVariantsContainer');
+  const variantsList = document.getElementById('detailVariants');
+  let currentDisplayPrice = prod.price;
+  
+  if (prod.variants && prod.variants.length > 0) {
+      variantsContainer.style.display = 'block';
+      variantsList.innerHTML = '';
+      window.currentSelectedVariant = prod.variants[0]; // الافتراضي
+      currentDisplayPrice = window.currentSelectedVariant.price;
+      
+      prod.variants.forEach((v, idx) => {
+          const btn = document.createElement('button');
+          btn.className = `variant-btn ${idx === 0 ? 'active' : ''}`;
+          btn.textContent = currentLang === 'ar' ? v.nameAr : v.nameEn;
+          btn.onclick = () => {
+              document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+              window.currentSelectedVariant = v;
+              // تحديث السعر
+              const vPrice = currency === 'EGP' ? v.price.toFixed(0) : (v.price / rate).toFixed(2);
+              document.getElementById('detailPrice').textContent = `${vPrice} ${currency}`;
+              document.getElementById('detailOldPrice').textContent = ''; 
+          };
+          variantsList.appendChild(btn);
+      });
+  } else {
+      variantsContainer.style.display = 'none';
+  }
+
+  // تحديث السعر الأساسي
+  const convertedPrice = currency === 'EGP' ? currentDisplayPrice.toFixed(0) : (currentDisplayPrice / rate).toFixed(2);
+  const convertedOld = (!prod.variants || prod.variants.length === 0) && (prod.oldPrice && prod.oldPrice > currentDisplayPrice) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
+  document.getElementById('detailPrice').textContent = `${convertedPrice} ${currency}`;
+  document.getElementById('detailOldPrice').textContent = convertedOld ? `${convertedOld} ${currency}` : '';
+
+  // 2. منصة اللعبة (Platform)
+  const platformDiv = document.getElementById('detailPlatform');
+  const platformLogo = document.getElementById('detailPlatformLogo');
+  const platformName = document.getElementById('detailPlatformName');
+  const platformsData = {
+      steam: { name: 'Steam', icon: 'https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg' },
+      epic: { name: 'Epic Games', icon: 'https://upload.wikimedia.org/wikipedia/commons/3/31/Epic_Games_logo.svg' },
+      playstation: { name: 'PlayStation', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/00/PlayStation_logo.svg' },
+      xbox: { name: 'Xbox', icon: 'https://upload.wikimedia.org/wikipedia/commons/d/d7/Xbox_logo_%282019%29.svg' },
+      nintendo: { name: 'Nintendo', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Nintendo.svg' },
+      ubisoft: { name: 'Ubisoft', icon: 'https://upload.wikimedia.org/wikipedia/commons/7/78/Ubisoft_logo.svg' },
+      ea: { name: 'EA App', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Electronic-Arts-Logo.svg' },
+      battlenet: { name: 'Battle.net', icon: 'https://upload.wikimedia.org/wikipedia/commons/2/22/Battle.net_Icon.svg' }
+  };
+  
+  if (prod.platform && platformsData[prod.platform] && prod.category === 'games') {
+      platformDiv.style.display = 'flex';
+      platformLogo.src = platformsData[prod.platform].icon;
+      platformName.textContent = platformsData[prod.platform].name;
+  } else {
+      platformDiv.style.display = 'none';
+  }
+
+  // 3. المعلومات السريعة (Quick Info Box)
+  const quickInfoBox = document.getElementById('detailQuickInfo');
+  if (prod.quickInfo && (prod.quickInfo.accountAr || prod.quickInfo.warrantyAr || prod.quickInfo.regionAr)) {
+      quickInfoBox.style.display = 'flex';
+      document.getElementById('qiAccountVal').textContent = currentLang === 'ar' ? (prod.quickInfo.accountAr || '-') : (prod.quickInfo.accountEn || '-');
+      document.getElementById('qiWarrantyVal').textContent = currentLang === 'ar' ? (prod.quickInfo.warrantyAr || '-') : (prod.quickInfo.warrantyEn || '-');
+      document.getElementById('qiRegionVal').textContent = currentLang === 'ar' ? (prod.quickInfo.regionAr || '-') : (prod.quickInfo.regionEn || '-');
+  } else {
+      quickInfoBox.style.display = 'none';
+  }
+
+  // 4. متطلبات التشغيل (Requirements)
+  const reqContainer = document.getElementById('detailRequirementsContainer');
+  const reqContent = document.getElementById('detailRequirementsContent');
+  const reqText = currentLang === 'ar' ? prod.reqAr : prod.reqEn;
+  if (prod.category === 'games' && reqText) {
+      reqContainer.style.display = 'block';
+      reqContent.innerHTML = linkify(reqText).replace(/\n/g, '<br>');
+  } else {
+      reqContainer.style.display = 'none';
+  }
+
+  // الوصف
   const descContainer = document.getElementById('detailDescContainer');
   if (descContainer) {
     descContainer.replaceChildren();
@@ -467,6 +548,7 @@ window.openProductDetails = (id) => {
     }
   }
 
+  // الأسئلة الشائعة
   const faqContainer = document.getElementById('detailFaqContainer');
   const faqList = document.getElementById('detailFaqList');
   if (prod.faqText && prod.faqText.trim()) {
@@ -485,6 +567,7 @@ window.openProductDetails = (id) => {
       });
   } else { faqContainer.style.display = 'none'; }
   
+  // الصور
   const imgBox = document.getElementById('detailImageBox');
   const galleryBox = document.getElementById('detailImageGallery');
   const mainImgUrl = prod.bannerUrl || prod.imgUrl;
@@ -512,6 +595,7 @@ window.openProductDetails = (id) => {
       }
   }
 
+  // التوفر
   const stockEl = document.getElementById('detailStock'); const addBtn = document.getElementById('detailAddToCartBtn');
   if (stockEl && addBtn) {
     if (inStock) {
@@ -533,15 +617,36 @@ window.updateCartBadge = () => {
   if (badgeMobile) { badgeMobile.textContent = window.storeState.cart.length; badgeMobile.style.display = window.storeState.cart.length > 0 ? 'flex' : 'none'; }
 };
 
+// دالة الإضافة للسلة المحدثة لتدعم الباقات
 window.addToCartDirect = (prodId, event) => {
   if (event) event.stopPropagation();
   const prod = window.storeState.products.find(p => p.id === prodId);
-  if (prod && prod.inStock) { window.storeState.cart.push(prod); window.updateCartBadge(); window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); }
+  if (prod && prod.inStock) {
+      // عمل نسخة من المنتج عشان نقدر نعدل السعر والاسم بناءً على الباقة المختارة
+      let cartItem = JSON.parse(JSON.stringify(prod)); 
+      cartItem.cartItemId = Date.now() + Math.random(); // معرف فريد داخل السلة
+      
+      if (!event && window.currentSelectedVariant && window.currentProductId === prodId) {
+          // إضافة من داخل صفحة المنتج بناءً على الباقة المختارة
+          cartItem.price = window.currentSelectedVariant.price;
+          cartItem.titleAr = (prod.titleAr || prod.title) + ` - ${window.currentSelectedVariant.nameAr}`;
+          cartItem.titleEn = (prod.titleEn || prod.title) + ` - ${window.currentSelectedVariant.nameEn}`;
+      } else if (prod.variants && prod.variants.length > 0) {
+          // الإضافة المباشرة من الواجهة الرئيسية لمنتج به باقات (يأخذ الباقة الأولى افتراضياً)
+          cartItem.price = prod.variants[0].price;
+          cartItem.titleAr = (prod.titleAr || prod.title) + ` - ${prod.variants[0].nameAr}`;
+          cartItem.titleEn = (prod.titleEn || prod.title) + ` - ${prod.variants[0].nameEn}`;
+      }
+      
+      window.storeState.cart.push(cartItem); 
+      window.updateCartBadge(); 
+      window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); 
+  }
 };
 
 window.addToCartCross = (id) => {
     const p = window.storeState.products.find(x => x.id === id);
-    if(p) { window.storeState.cart.push(p); window.updateCartBadge(); window.renderCartModal(); window.showToast('تم إضافة الاقتراح للسلة!', 'success'); }
+    if(p) { window.addToCartDirect(id); window.renderCartModal(); window.showToast('تم إضافة الاقتراح للسلة!', 'success'); }
 };
 
 window.removeFromCart = (index) => { window.storeState.cart.splice(index, 1); window.updateCartBadge(); window.renderCartModal(); };
