@@ -5,7 +5,7 @@
   --bg-color: #060609;
   --card-bg: #0d0d14;
   --card-border: #1a1a2e;
-  --border-color: #1a1a2e; /* 🛠️ تم إضافة هذا المتغير لحل مشكلة اختفاء الحدود */
+  --border-color: #1a1a2e; 
   --accent-neon: #00f2ff;
   --accent-purple: #b500ff;
   --accent-glow: rgba(0, 242, 255, 0.4);
@@ -309,7 +309,7 @@ html[dir="rtl"] .search-icon {
   background: #0b0b12; 
   border: 1px solid var(--card-border); 
   padding: 12px 15px 12px 45px; 
-  border-radius: 20px; /* جعلناه دائري أكثر حسب التصميم */
+  border-radius: 20px; 
   color: #fff; 
   font-size: 13px; 
   transition: 0.3s; 
@@ -535,7 +535,7 @@ html[dir="rtl"] .search-input {
   color: #000; 
   border: none; 
   padding: 14px 30px; 
-  border-radius: 30px; /* زرار دائري زي التصميم */
+  border-radius: 30px; 
   font-weight: 900; 
   font-size: 15px; 
   cursor: pointer; 
@@ -876,7 +876,7 @@ html[dir="rtl"] .search-input {
 
 .buy-btn { 
   background: transparent; 
-  color: var(--accent-purple); /* تعديل للون البنفسجي زي التصميم */
+  color: var(--accent-purple); 
   border: 1px solid var(--accent-purple); 
   padding: 10px; 
   width: 100%; 
@@ -1220,7 +1220,7 @@ html[dir="rtl"] .search-input {
   gap: 8px; 
 }
 
-/* كلاس تقسيم الإدارة اللي كان منسي وتمت إضافته */
+/* كلاس تقسيم الإدارة */
 .grid-2 { 
   display: grid; 
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
@@ -1291,7 +1291,7 @@ html[dir="rtl"] .search-input {
 
 .whatsapp-float { 
   position: fixed; 
-  bottom: 80px; /* اترفع شوية عشان شريط الموبايل السفلي */
+  bottom: 80px; 
   inset-inline-end: 30px; 
   background: #25d366; 
   color: #000; 
@@ -1416,14 +1416,86 @@ html[dir="ltr"] .faq-question {
 }
 
 /* ==========================================
-   13. إصلاحات وتنسيقات الموبايل (RESPONSIVE & MOBILE NAV)
+   13. الإضافات الجديدة (Order Tracker)
+   ========================================== */
+.order-tracker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 25px 0 15px 0;
+  position: relative;
+  padding: 0 10px;
+}
+
+.order-tracker::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: var(--border-color);
+  z-index: 1;
+  transform: translateY(-50%);
+}
+
+.tracker-step {
+  position: relative;
+  z-index: 2;
+  background: #0b0b12;
+  border: 2px solid var(--border-color);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-muted);
+  transition: 0.4s;
+}
+
+.tracker-step.active {
+  border-color: #ffcc00;
+  color: #ffcc00;
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+}
+
+.tracker-step.completed {
+  background: var(--success);
+  border-color: var(--success);
+  color: #000;
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
+}
+
+.tracker-step.cancelled {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
+}
+
+.tracker-label {
+  position: absolute;
+  top: 35px;
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-weight: bold;
+}
+
+.tracker-step.active .tracker-label { color: #ffcc00; }
+.tracker-step.completed .tracker-label { color: var(--success); }
+.tracker-step.cancelled .tracker-label { color: var(--danger); }
+
+
+/* ==========================================
+   14. إصلاحات وتنسيقات الموبايل (RESPONSIVE & MOBILE NAV)
    ========================================== */
 @media(max-width: 900px) {
   
-  /* إخفاء هيدر الكمبيوتر المزعج وإظهار هيدر الموبايل */
   .desktop-header-wrapper { display: none; }
   
-  /* قائمة الموبايل لو عايز تفتحها (هيدر الكمبيوتر ينزل كقائمة) */
   .desktop-header-wrapper.show-mobile-menu { 
     display: flex !important; 
     position: fixed; 
@@ -1449,7 +1521,6 @@ html[dir="ltr"] .faq-question {
   
   .desktop-header-wrapper.show-mobile-menu .logo { display: none; }
   
-  /* إظهار هيدر الموبايل الجديد */
   .mobile-header-wrapper { 
     display: flex !important; 
     justify-content: space-between; 
@@ -1475,7 +1546,6 @@ html[dir="ltr"] .faq-question {
     border-color: var(--accent-neon); 
   }
 
-  /* إظهار شريط التنقل السفلي */
   .mobile-bottom-nav { 
     display: flex !important; 
     position: fixed; 
@@ -1507,10 +1577,9 @@ html[dir="ltr"] .faq-question {
   .bottom-nav-item .icon { font-size: 20px; }
   .bottom-nav-item.active { color: var(--accent-neon); }
   
-  body { padding-bottom: 70px; } /* عشان مساحة الشريط السفلي */
-  .whatsapp-float { bottom: 85px; } /* رفع زرار الواتس */
+  body { padding-bottom: 70px; } 
+  .whatsapp-float { bottom: 85px; } 
 
-  /* تظبيط البانر الرئيسي عشان ياخد حجم الشاشة صح */
   .hero-banner-box { 
     padding: 30px 15px !important; 
     text-align: center; 
@@ -1519,7 +1588,6 @@ html[dir="ltr"] .faq-question {
   
   .hero-title { font-size: 32px; }
   
-  /* إحصائيات الثقة تترص بالطول بدل العرض */
   .hero-stats-row { 
     flex-direction: column !important; 
     align-items: center; 
@@ -1536,7 +1604,6 @@ html[dir="ltr"] .faq-question {
 }
 
 @media(max-width: 600px) {
-  /* رص الأقسام 2 جنب بعض في الشاشات الصغيرة */
   .categories-grid-bar { 
     grid-template-columns: repeat(2, 1fr) !important; 
     gap: 10px; 
@@ -1551,7 +1618,6 @@ html[dir="ltr"] .faq-question {
   
   .category-icon { margin: 0 auto; }
   
-  /* تظبيط شبكة المنتجات */
   .product-grid { 
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
     gap: 15px; 
