@@ -567,7 +567,7 @@ window.renderCartModal = () => {
   
   window.storeState.cart.forEach((p, idx) => {
     const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
-    const itemPrice = p.price * rate; total += itemPrice; currentCartIds.push(p.id);
+    const itemPrice = currency === 'EGP' ? p.price : (p.price / rate); total += itemPrice;
     list.innerHTML += `<div class="cart-item"><div class="cart-item-info"><div class="cart-item-title">${window.sanitizeText(title)}</div><div class="cart-item-price">${itemPrice.toFixed(currency==='EGP'?0:2)} ${currency}</div></div><button type="button" class="remove-cart-btn" onclick="window.removeFromCart(${idx})" title="حذف">🗑️</button></div>`;
   });
   totalDisplay.textContent = `${total.toFixed(currency==='EGP'?0:2)} ${currency}`;
@@ -582,7 +582,7 @@ window.renderCartModal = () => {
               const sProd = window.storeState.products.find(x => x.id === sId && x.inStock);
               if(sProd) {
                   const sTitle = currentLang === 'ar' ? (sProd.titleAr || sProd.title) : (sProd.titleEn || sProd.title);
-                  const sPrice = (sProd.price * rate).toFixed(currency === 'EGP' ? 0 : 2);
+                  const sPrice = currency === 'EGP' ? sProd.price.toFixed(0) : (sProd.price / rate).toFixed(2);
                   crossSellList.innerHTML += `<div class="cross-sell-item" style="min-width: 150px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; text-align: center;"><div class="cross-sell-img" style="background-image:url('${sProd.imgUrl}'); height: 60px; background-size: cover; background-position: center; border-radius: 5px; margin-bottom: 5px;"></div><div class="cross-sell-title" style="font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px;">${sTitle}</div><div class="cross-sell-price" style="font-size: 12px; color: var(--accent-neon); font-weight: bold; margin-bottom: 5px;">+${sPrice}${currency}</div><button class="add-cross-btn submit-btn" style="padding: 4px; font-size: 11px;" onclick="window.addToCartCross('${sProd.id}')">إضافة</button></div>`;
               }
           });
@@ -629,7 +629,8 @@ window.renderUserWishlist = () => {
   const currency = document.getElementById('currencySelect').value, rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
   wishedProducts.forEach(prod => {
     const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
-    const convertedPrice = (prod.price * rate).toFixed(currency === 'EGP' ? 0 : 2); const card = document.createElement('div'); card.className = 'product-card'; card.style.padding = '15px';
+    const convertedPrice = currency === 'EGP' ? prod.price.toFixed(0) : (prod.price / rate).toFixed(2);
+    const card = document.createElement('div'); card.className = 'product-card'; card.style.padding = '15px';
     card.onclick = (e) => { if(e.target.classList.contains('wishlist-icon-btn')) return; document.getElementById('userAccountModal').style.display = 'none'; window.openProductDetails(prod.id); };
     card.innerHTML = `<div style="position:relative;"><button type="button" class="wishlist-icon-btn active" style="top:5px; left:5px; width:25px; height:25px; font-size:12px;" onclick="window.toggleWishlist('${prod.id}', event)">❤️</button><div class="product-img" style="height:100px; background-image: url('${prod.imgUrl}'); border: ${prod.imgUrl ? 'none' : ''}">${prod.imgUrl ? '' : window.sanitizeText(prod.imgText || title)}</div><h3 class="product-title" style="font-size:14px;">${window.sanitizeText(title)}</h3><div class="product-price" style="font-size:16px;">${convertedPrice} ${currency}</div></div>`;
     grid.appendChild(card);
@@ -647,7 +648,7 @@ const updateCheckoutPriceDisplay = () => {
   
   window.storeState.cart.forEach(p => { 
     const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
-    totalPrice += (p.price * rate); titles.push(title); 
+    totalPrice += currency === 'EGP' ? p.price : (p.price / rate); titles.push(title);
   });
   
   if (activeDiscount > 0) totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
@@ -683,7 +684,7 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
     let totalPrice = 0, productTitles = [], productIds = [];
     window.storeState.cart.forEach(p => { 
         const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
-        totalPrice += (p.price * rate); productTitles.push(title); productIds.push(p.id); 
+        totalPrice += currency === 'EGP' ? p.price : (p.price / rate); productTitles.push(title); productIds.push(p.id);
     });
     
     if (activeDiscount > 0) totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
