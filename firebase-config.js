@@ -5,7 +5,7 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase
 
 const firebaseConfig = Object.freeze({
   apiKey: "AIzaSyBkt-5W1vLcGvWgJTv95KbpbrnMf7Rm0JU",
-  authDomain: "bn-max.com",
+  authDomain: "bn-store-4f0c0.firebaseapp.com",
   projectId: "bn-store-4f0c0",
   storageBucket: "bn-store-4f0c0.firebasestorage.app",
   messagingSenderId: "281646513182",
