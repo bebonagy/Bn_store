@@ -17,6 +17,22 @@ window.initAdminTabs = () => {
 
 window.copyCustomerData = (text) => navigator.clipboard.writeText(text).then(() => window.showToast('تم النسخ 📋', 'success'));
 
+// إدارة النسخ والباقات مؤقتاً في الواجهة
+window.addVariantInput = (v = {nameAr: '', nameEn: '', price: ''}) => {
+  const list = document.getElementById('variantsList');
+  if(!list) return;
+  const div = document.createElement('div');
+  div.className = 'admin-item-row variant-row';
+  div.style.alignItems = 'flex-end';
+  div.innerHTML = `
+      <div class="form-group" style="margin-bottom:0; flex:1;"><label>الاسم (عربي)</label><input type="text" class="var-ar" placeholder="مثال: شهر" value="${v.nameAr}"></div>
+      <div class="form-group" style="margin-bottom:0; flex:1;"><label>الاسم (En)</label><input type="text" class="var-en" placeholder="1 Month" value="${v.nameEn}"></div>
+      <div class="form-group" style="margin-bottom:0; flex:1;"><label>السعر (EGP)</label><input type="number" class="var-price" value="${v.price}"></div>
+      <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="margin-bottom:2px; padding: 13px 15px;">✕</button>
+  `;
+  list.appendChild(div);
+};
+
 // 1. حقن واجهة الإدارة (HTML)
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer'); if(!container) return;
@@ -35,6 +51,7 @@ window.injectAdminDashboard = () => {
     <div id="tab-products" class="tab-content">
       <div class="admin-section" id="productFormSection">
         <h4>📦 إضافة أو تعديل منتج</h4>
+        
         <div class="grid-2">
           <div class="form-group"><label>اسم المنتج (عربي)</label><input type="text" id="newProdTitleAr"></div>
           <div class="form-group"><label>اسم المنتج (إنجليزي)</label><input type="text" id="newProdTitleEn"></div>
@@ -44,14 +61,52 @@ window.injectAdminDashboard = () => {
           <div class="form-group"><label>الكمية المتاحة</label><input type="number" id="newProdStock"></div>
           <div class="form-group"><label>الشارة (عربي)</label><input type="text" id="newProdBadgeAr" placeholder="تسليم فوري"></div>
           <div class="form-group"><label>الشارة (إنجليزي)</label><input type="text" id="newProdBadgeEn" placeholder="Instant Delivery"></div>
+          <div class="form-group">
+            <label>منصة اللعبة (اختياري - للألعاب فقط)</label>
+            <select id="newProdPlatform">
+              <option value="">-- بدون منصة --</option>
+              <option value="steam">Steam</option>
+              <option value="epic">Epic Games</option>
+              <option value="playstation">PlayStation</option>
+              <option value="xbox">Xbox</option>
+              <option value="nintendo">Nintendo</option>
+              <option value="ubisoft">Ubisoft</option>
+              <option value="ea">EA App</option>
+              <option value="battlenet">Battle.net</option>
+            </select>
+          </div>
+          <div class="form-group"><label>مؤشر وقت التسليم</label><input type="text" id="newProdDeliveryTime" placeholder="مثال: ⚡ تسليم فوري"></div>
         </div>
+
+        <div class="admin-section" style="border-color: var(--accent-neon); background: rgba(0,242,255,0.02);">
+            <h4 style="color: var(--accent-neon);">💎 الباقات والنسخ المتعددة (Variants)</h4>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">اتركها فارغة إذا كان المنتج بخصائص وسعر واحد فقط.</p>
+            <div id="variantsList" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 15px;"></div>
+            <button type="button" class="submit-btn" style="background:transparent; border:1px dashed var(--accent-neon); color:var(--accent-neon); width:100%;" onclick="window.addVariantInput()">+ إضافة باقة / نسخة جديدة</button>
+        </div>
+
+        <div class="admin-section" style="background: rgba(0,0,0,0.2);">
+            <h4>⚡ المعلومات السريعة (Quick Info Box)</h4>
+            <div class="grid-2">
+                <div class="form-group"><label>نوع الحساب (عربي)</label><input type="text" id="qiAccountAr" placeholder="مثال: حساب خاص"></div>
+                <div class="form-group"><label>نوع الحساب (إنجليزي)</label><input type="text" id="qiAccountEn" placeholder="مثال: Private Account"></div>
+                <div class="form-group"><label>مدة الضمان (عربي)</label><input type="text" id="qiWarrantyAr" placeholder="مثال: 30 يوم"></div>
+                <div class="form-group"><label>مدة الضمان (إنجليزي)</label><input type="text" id="qiWarrantyEn" placeholder="مثال: 30 Days"></div>
+                <div class="form-group"><label>المنطقة / التفعيل (عربي)</label><input type="text" id="qiRegionAr" placeholder="مثال: عالمي"></div>
+                <div class="form-group"><label>المنطقة / التفعيل (إنجليزي)</label><input type="text" id="qiRegionEn" placeholder="مثال: Global"></div>
+            </div>
+        </div>
+
+        <div class="admin-section" style="background: rgba(0,0,0,0.2);">
+            <h4>⚙️ متطلبات تشغيل اللعبة (للألعاب فقط)</h4>
+            <div class="form-group"><label>المتطلبات (عربي)</label><textarea id="newProdReqAr" rows="3" placeholder="مثال: \nالمعالج: Core i5\nالرام: 8GB..."></textarea></div>
+            <div class="form-group"><label>المتطلبات (إنجليزي)</label><textarea id="newProdReqEn" rows="3" placeholder="Processor: Core i5\nRAM: 8GB..."></textarea></div>
+        </div>
+
         <div class="form-group"><label>صورة الغلاف</label><input type="file" id="newProdImgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
         <div class="form-group"><label>الصورة الداخلية (البانر)</label><input type="file" id="newProdBannerFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
         <div class="form-group"><label>معرض الصور الإضافية</label><input type="file" id="newProdGallery" multiple accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
-        <div class="grid-2">
-           <div class="form-group"><label>مؤشر وقت التسليم</label><input type="text" id="newProdDeliveryTime" placeholder="مثال: ⚡ تسليم فوري"></div>
-           <div class="form-group"><label>🛒 اقتراحات السلة (ID)</label><input type="text" id="newProdCrossSell" placeholder="مثال: 171234, 175678"></div>
-        </div>
+        <div class="form-group"><label>🛒 اقتراحات السلة (ID)</label><input type="text" id="newProdCrossSell" placeholder="مثال: 171234, 175678"></div>
         <div class="form-group"><label>❓ الأسئلة الشائعة</label><textarea id="newProdFaq" rows="2"></textarea></div>
         <div class="form-group"><label>🏦 خزنة الأكواد الذكية (كود في كل سطر)</label><textarea id="newProdVault" style="font-family: monospace; direction: ltr;" rows="3"></textarea></div>
         <div class="form-group"><label>الوصف (عربي)</label><textarea id="newProdDescAr" rows="3"></textarea></div>
@@ -123,7 +178,7 @@ window.loadAdminData = () => {
   window.renderAdminStats();
 };
 
-// 2. تحديث العملات التلقائي عبر API مجاني (بدون مفتاح)
+// 2. تحديث العملات التلقائي
 window.autoUpdateCurrencies = async () => {
   const btn = document.getElementById('autoCurrencyBtn');
   const origText = btn.innerHTML;
@@ -243,7 +298,7 @@ window.updateOrderStatus = async (orderId, status) => {
   } catch(e) { window.showToast('خطأ في التحديث', 'error'); }
 };
 
-// 5. إدارة المنتجات
+// 5. إدارة المنتجات وتحديث دالة الحفظ
 window.saveProduct = async () => {
   if (!window.checkIsAdmin()) return;
   const titleAr = document.getElementById('newProdTitleAr').value, titleEn = document.getElementById('newProdTitleEn').value;
@@ -258,10 +313,32 @@ window.saveProduct = async () => {
   const vaultCodes = document.getElementById('newProdVault')?.value || '';
   let crossSellIds = crossSellStr.split(',').map(id => id.trim()).filter(id => id);
   
+  // استخراج الإضافات الجديدة
+  const platform = document.getElementById('newProdPlatform')?.value || '';
+  const reqAr = document.getElementById('newProdReqAr')?.value || '';
+  const reqEn = document.getElementById('newProdReqEn')?.value || '';
+  const quickInfo = {
+    accountAr: document.getElementById('qiAccountAr')?.value || '',
+    accountEn: document.getElementById('qiAccountEn')?.value || '',
+    warrantyAr: document.getElementById('qiWarrantyAr')?.value || '',
+    warrantyEn: document.getElementById('qiWarrantyEn')?.value || '',
+    regionAr: document.getElementById('qiRegionAr')?.value || '',
+    regionEn: document.getElementById('qiRegionEn')?.value || ''
+  };
+
+  // استخراج الباقات والنسخ
+  const variants = [];
+  document.querySelectorAll('#variantsList .variant-row').forEach(row => {
+    const nameAr = row.querySelector('.var-ar').value.trim();
+    const nameEn = row.querySelector('.var-en').value.trim();
+    const vPrice = Number(row.querySelector('.var-price').value);
+    if(nameAr && vPrice > 0) variants.push({ nameAr, nameEn, price: vPrice });
+  });
+  
   const coverInput = document.getElementById('newProdImgFileInput'), bannerInput = document.getElementById('newProdBannerFileInput'), galleryInput = document.getElementById('newProdGallery');
   const btn = document.getElementById('saveProductBtn');
 
-  if (!titleAr || price <= 0) return window.showToast('تأكد من الاسم والسعر!', 'error');
+  if (!titleAr || price <= 0) return window.showToast('تأكد من الاسم والسعر الأساسي!', 'error');
   const origText = btn.textContent; btn.textContent = 'جاري الحفظ ⏳...'; btn.disabled = true;
 
   try {
@@ -270,7 +347,11 @@ window.saveProduct = async () => {
     let gallery = window.editingProductId ? (window.storeState.products.find(p => p.id === window.editingProductId)?.gallery || []) : [];
     if (galleryInput && galleryInput.files.length > 0) { gallery = []; for (let i = 0; i < galleryInput.files.length; i++) { const base64 = await new Promise(res => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.readAsDataURL(galleryInput.files[i]); }); gallery.push(base64); } }
 
-    const prodData = { titleAr, titleEn, descAr, descEn, price, oldPrice, category, badgeAr, badgeEn, imgUrl, bannerUrl, gallery, deliveryTime, faqText, crossSellIds, vaultCodes, inStock: stockQuantity > 0, stockQuantity };
+    const prodData = { 
+      titleAr, titleEn, descAr, descEn, price, oldPrice, category, badgeAr, badgeEn, imgUrl, bannerUrl, gallery, 
+      deliveryTime, faqText, crossSellIds, vaultCodes, inStock: stockQuantity > 0, stockQuantity,
+      platform, reqAr, reqEn, quickInfo, variants
+    };
 
     if (window.editingProductId) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); window.showToast('✏️ تم التعديل!', 'success'); } 
     else { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); window.showToast('📦 تمت الإضافة!', 'success'); }
@@ -288,12 +369,32 @@ window.editProduct = (id) => {
   document.getElementById('newProdDeliveryTime').value = p.deliveryTime || ''; document.getElementById('newProdFaq').value = p.faqText || '';
   document.getElementById('newProdCrossSell').value = p.crossSellIds ? p.crossSellIds.join(', ') : ''; document.getElementById('newProdVault').value = p.vaultCodes || '';
   
+  // الخانات الجديدة
+  document.getElementById('newProdPlatform').value = p.platform || '';
+  document.getElementById('newProdReqAr').value = p.reqAr || '';
+  document.getElementById('newProdReqEn').value = p.reqEn || '';
+  if(p.quickInfo) {
+      document.getElementById('qiAccountAr').value = p.quickInfo.accountAr || '';
+      document.getElementById('qiAccountEn').value = p.quickInfo.accountEn || '';
+      document.getElementById('qiWarrantyAr').value = p.quickInfo.warrantyAr || '';
+      document.getElementById('qiWarrantyEn').value = p.quickInfo.warrantyEn || '';
+      document.getElementById('qiRegionAr').value = p.quickInfo.regionAr || '';
+      document.getElementById('qiRegionEn').value = p.quickInfo.regionEn || '';
+  }
+  
+  const list = document.getElementById('variantsList');
+  if (list) {
+      list.replaceChildren();
+      if (p.variants && p.variants.length > 0) { p.variants.forEach(v => window.addVariantInput(v)); }
+  }
+
   window.editingProductId = id; document.getElementById('saveProductBtn').innerHTML = '💾 حفظ التعديلات'; document.getElementById('cancelEditBtn').style.display = 'block'; document.getElementById('productFormSection').scrollIntoView({behavior: 'smooth'});
 };
 
 window.cancelEdit = () => {
   window.editingProductId = null; document.getElementById('saveProductBtn').innerHTML = '➕ إضافة المنتج'; document.getElementById('cancelEditBtn').style.display = 'none';
-  document.querySelectorAll('#productFormSection input, #productFormSection textarea').forEach(el => { if(el.id.startsWith('newProd')) el.value = ''; });
+  document.querySelectorAll('#productFormSection input, #productFormSection textarea, #productFormSection select').forEach(el => { if(el.id.startsWith('newProd') || el.id.startsWith('qi')) el.value = ''; });
+  const list = document.getElementById('variantsList'); if(list) list.replaceChildren();
 };
 
 window.renderAdminProducts = () => {
