@@ -934,3 +934,40 @@ const initApp = () => {
 };
 
 initApp();
+document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => {
+  if (!window.storeState.cart.length) return window.showToast('السلة فارغة!', 'error');
+  
+  const senderInfo = document.getElementById('senderInfo')?.value.trim() || 'غير مسجل';
+  const transactionId = document.getElementById('transactionIdInput')?.value.trim() || 'غير مسجل';
+  const customerData = document.getElementById('customerData')?.value.trim() || 'غير مسجل';
+  const paymentMethod = document.getElementById('paymentMethod')?.value || 'غير محدد';
+  
+  const currency = document.getElementById('currencySelect').value;
+  let totalPrice = 0;
+  let productTitles = [];
+  
+  window.storeState.cart.forEach(p => {
+    const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
+    totalPrice += Number(p.price || 0);
+    productTitles.push(title);
+  });
+  
+  const finalPriceText = `${totalPrice} ${currency}`;
+  const whatsappNumber = window.storeState.whatsapp || '201200898990';
+  
+  const message = `السلام عليكم، لقد قمت بطلب جديد من متجر BN MAX 🚀:\n\n` +
+                  `📦 *المنتجات:* ${productTitles.join(' + ')}\n` +
+                  `💰 *الإجمالي:* ${finalPriceText}\n` +
+                  `💳 *طريقة الدفع:* ${paymentMethod}\n` +
+                  `🔢 *رقم العملية:* ${transactionId}\n` +
+                  `📱 *رقم التحويل:* ${senderInfo}\n` +
+                  `👤 *بيانات الاستلام:* ${customerData}\n\n` +
+                  `يرجى مراجعة الطلب وتأكيده!`;
+                  
+  const encodedMessage = encodeURIComponent(message);
+  const whatsappURL = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+  
+  window.open(whatsappURL, '_blank');
+  window.showToast('💬 تم تحويلك للواتساب لإرسال تفاصيل الطلب!', 'success');
+});
+
