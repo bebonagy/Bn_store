@@ -782,6 +782,8 @@ const initApp = () => {
       
       const whatsappBtn = document.getElementById('whatsappBtn'); 
       if(whatsappBtn) whatsappBtn.href = `https://wa.me/${window.storeState.whatsapp}?text=استفسار:`;
+      const footerContactBtn = document.getElementById('footerContactBtn');
+      if(footerContactBtn) footerContactBtn.href = `https://wa.me/${window.storeState.whatsapp}?text=استفسار من قسم اتصل بنا:`;
     }
   });
 
