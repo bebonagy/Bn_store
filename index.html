@@ -116,7 +116,7 @@
   
   <!-- 🔄 1. الواجهة الرئيسية (Home) -->
   <div id="homeView" class="view-section active-view">
-    <!-- السلايدر الرئيسي (يتم حقنه من الجافاسكريبت) -->
+    <!-- السلايدر الرئيسي -->
     <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none;"></section>
 
     <!-- Hero Banner الجديد المطابق للتصميم مع دعم الترجمة -->
@@ -135,10 +135,8 @@
       </div>
     </section>
 
-    <!-- شريط الأقسام (تم تفريغه ليتم بناؤه ديناميكياً من app.js) -->
-    <div class="categories-grid-bar" id="categoriesBar">
-      <!-- الـ JS هيحط الأقسام هنا -->
-    </div>
+    <!-- شريط الأقسام -->
+    <div class="categories-grid-bar" id="categoriesBar"></div>
 
     <!-- بانر الفلاش سيل -->
     <div class="flash-sale-banner" id="flashSaleBanner" style="display:none;">
@@ -159,7 +157,7 @@
     <div class="product-grid" id="productGrid"></div>
     <div class="pagination-container" id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; margin-bottom: 40px;"></div>
 
-    <!-- البانرات الترويجية السفلية (مربوطة بأوامر حقيقية) -->
+    <!-- البانرات الترويجية السفلية -->
     <section class="promo-banners-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
       <div class="promo-banner-card" style="background: linear-gradient(135deg, #0a0a16, #1a0f2e); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; position: relative; overflow: hidden;">
         <h3 style="color: #fff; font-size: 22px; font-weight: 900; margin-bottom: 5px;" data-i18n="promo_1_sub">Limited Time Offer</h3>
@@ -195,6 +193,12 @@
         <div class="details-info-box" style="flex: 1.5; min-width: 300px; position: relative;">
           <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer;">🤍</button>
           
+          <!-- لوجو المنصة (سيتم إظهاره ديناميكياً للألعاب فقط) -->
+          <div id="detailPlatform" style="display: none; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <img id="detailPlatformLogo" src="" alt="Platform" style="width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">
+            <span id="detailPlatformName" style="color: var(--text-muted); font-size: 13px; font-weight: bold;"></span>
+          </div>
+
           <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-left: 60px; margin-bottom: 10px;">
             <h2 id="detailTitle" class="details-title" style="margin-bottom: 0;"></h2>
             <button type="button" id="shareProductBtn" style="background: rgba(0,242,255,.1); color: #00f2ff; border: 1px solid #00f2ff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 18px;" title="مشاركة المنتج">📤</button>
@@ -207,6 +211,31 @@
             <span id="detailPrice" class="product-price" style="font-size:28px;"></span>
           </div>
 
+          <!-- نظام الباقات والنسخ -->
+          <div id="detailVariantsContainer" style="display:none; margin-bottom: 20px;">
+            <label style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: block; font-weight: bold;" data-i18n="select_variant">اختر الباقة / النسخة:</label>
+            <div id="detailVariants" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+          </div>
+
+          <!-- صندوق المعلومات السريعة -->
+          <div id="detailQuickInfo" style="display:none; background:rgba(0, 242, 255, 0.03); border:1px solid var(--border-color); border-radius:10px; padding:15px; margin-bottom:20px; display:flex; gap:15px; flex-wrap:wrap; justify-content: space-between;">
+             <div class="quick-info-item" style="display:flex; flex-direction:column; align-items:center; flex:1; min-width:80px; text-align:center;">
+                <span style="font-size:18px; margin-bottom:5px;">👤</span>
+                <span style="font-size:11px; color:var(--text-muted); margin-bottom:2px;" data-i18n="qi_account">نوع الحساب</span>
+                <strong id="qiAccountVal" style="font-size:13px; color:#fff;"></strong>
+             </div>
+             <div class="quick-info-item" style="display:flex; flex-direction:column; align-items:center; flex:1; min-width:80px; text-align:center; border-inline-start:1px solid var(--border-color); border-inline-end:1px solid var(--border-color);">
+                <span style="font-size:18px; margin-bottom:5px;">🛡️</span>
+                <span style="font-size:11px; color:var(--text-muted); margin-bottom:2px;" data-i18n="qi_warranty">الضمان</span>
+                <strong id="qiWarrantyVal" style="font-size:13px; color:#fff;"></strong>
+             </div>
+             <div class="quick-info-item" style="display:flex; flex-direction:column; align-items:center; flex:1; min-width:80px; text-align:center;">
+                <span style="font-size:18px; margin-bottom:5px;">🌍</span>
+                <span style="font-size:11px; color:var(--text-muted); margin-bottom:2px;" data-i18n="qi_region">التفعيل</span>
+                <strong id="qiRegionVal" style="font-size:13px; color:#fff;"></strong>
+             </div>
+          </div>
+
           <div id="detailDeliveryBadge" class="delivery-badge" style="display:none; margin-bottom: 15px;"></div>
           
           <div class="stock-status" style="margin-bottom: 20px; font-weight: bold; font-size: 16px;">
@@ -214,6 +243,13 @@
           </div>
           
           <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
+          
+          <!-- قسم متطلبات التشغيل (يظهر للألعاب فقط) -->
+          <div id="detailRequirementsContainer" style="display:none; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border-inline-start: 3px solid var(--accent-neon);">
+            <h4 style="color:var(--accent-neon); margin-bottom:10px; font-size:15px; display:flex; align-items:center; gap:8px;"><span style="font-size:18px;">⚙️</span> <span data-i18n="sys_req">متطلبات التشغيل</span></h4>
+            <div id="detailRequirementsContent" style="font-size:13px; color:var(--text-main); line-height:1.8;"></div>
+          </div>
+
           <div id="detailFaqContainer" class="faq-container" style="display:none; margin-bottom: 20px;">
             <h4 style="color: var(--accent-neon); margin-bottom: 10px; font-size: 15px;" data-i18n="faq_title">💡 أسئلة شائعة</h4>
             <div id="detailFaqList"></div>
@@ -335,7 +371,7 @@
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="no_account">ليس لديك حساب؟</span> <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);" data-i18n="create_account">إنشاء حساب جديد</a></p>
       </div>
       
-      <!-- نافذة استعادة الباسورد الفرعية داخل المودال (الخاصة بـ BN MAX) -->
+      <!-- نافذة استعادة الباسورد الفرعية -->
       <div id="authViewReset" style="display:none;">
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;" data-i18n="reset_pass_desc">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.</p>
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="resetEmailInput" placeholder="example@gmail.com"></div>
@@ -343,7 +379,7 @@
         <button type="button" id="backToLoginFromReset" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;" data-i18n="back_to_login">رجوع لتسجيل الدخول</button>
       </div>
 
-      <!-- واجهة التسجيل وتوليد الـ OTP -->
+      <!-- واجهة التسجيل -->
       <div id="authViewRegister" style="display:none;">
         <div class="form-group"><label data-i18n="full_name">الاسم الكامل</label><input type="text" id="regName" placeholder="اسمك"></div>
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="regEmail" placeholder="example@gmail.com"></div>
@@ -353,7 +389,7 @@
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="have_account">لديك حساب بالفعل؟</span> <a href="#" id="showLoginBtn" style="color:var(--accent-neon);" data-i18n="btn_login">تسجيل الدخول</a></p>
       </div>
 
-      <!-- نافذة إدخال الـ OTP (الجديدة كلياً) -->
+      <!-- نافذة إدخال الـ OTP -->
       <div id="authViewOTP" style="display:none;">
         <p style="font-size: 13px; color: var(--success); margin-bottom: 15px; text-align: center; line-height: 1.5;">تم إرسال كود التفعيل (OTP) إلى بريدك الإلكتروني بنجاح. برجاء تفقد صندوق الوارد أو البريد المزعج (Spam).</p>
         <div class="form-group"><label>كود التفعيل</label><input type="text" id="regOTP" placeholder="أدخل الكود (6 أرقام)" style="text-align: center; font-size: 20px; letter-spacing: 5px; font-weight: bold;"></div>
@@ -416,7 +452,7 @@
         </div>
         <div class="form-group"><label data-i18n="sender_info">رقم / حساب التحويل</label><input type="text" id="senderInfo" required placeholder="رقم محفظتك أو حسابك"></div>
         
-        <!-- حقل رقم العملية الجديد -->
+        <!-- حقل رقم العملية -->
         <div class="form-group"><label>رقم العملية (Transaction ID)</label><input type="text" id="transactionIdInput" required placeholder="أدخل رقم العملية لتأكيد التحويل"></div>
 
         <div class="form-group"><label data-i18n="receive_data">بيانات الاستلام</label><input type="text" id="customerData" required placeholder="أدخل الآيدي أو الإيميل"></div>
