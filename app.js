@@ -328,7 +328,6 @@ window.renderProducts = () => {
     const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
     const badge = currentLang === 'ar' ? (prod.badgeAr || prod.badge) : (prod.badgeEn || prod.badge);
     
-    // تم التعديل إلى القسمة هنا بنجاح
     const convertedPrice = currency === 'EGP' ? prod.price.toFixed(0) : (prod.price / rate).toFixed(2);
     const convertedOld = (prod.oldPrice && prod.oldPrice > prod.price) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
     const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
@@ -445,7 +444,6 @@ window.openProductDetails = (id) => {
 
   const currency = document.getElementById('currencySelect').value;
   const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
-  // تم التعديل إلى القسمة هنا بنجاح
   const convertedPrice = currency === 'EGP' ? prod.price.toFixed(0) : (prod.price / rate).toFixed(2);
   const convertedOld = (prod.oldPrice && prod.oldPrice > prod.price) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
   const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
@@ -570,7 +568,6 @@ window.renderCartModal = () => {
   window.storeState.cart.forEach((p, idx) => {
     const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
     currentCartIds.push(p.id);
-    // تم التعديل إلى القسمة هنا بنجاح
     const itemPrice = currency === 'EGP' ? p.price : (p.price / rate); total += itemPrice;
     list.innerHTML += `<div class="cart-item"><div class="cart-item-info"><div class="cart-item-title">${window.sanitizeText(title)}</div><div class="cart-item-price">${itemPrice.toFixed(currency==='EGP'?0:2)} ${currency}</div></div><button type="button" class="remove-cart-btn" onclick="window.removeFromCart(${idx})" title="حذف">🗑️</button></div>`;
   });
@@ -586,7 +583,6 @@ window.renderCartModal = () => {
               const sProd = window.storeState.products.find(x => x.id === sId && x.inStock);
               if(sProd) {
                   const sTitle = currentLang === 'ar' ? (sProd.titleAr || sProd.title) : (sProd.titleEn || sProd.title);
-                  // تم التعديل إلى القسمة هنا بنجاح
                   const sPrice = currency === 'EGP' ? sProd.price.toFixed(0) : (sProd.price / rate).toFixed(2);
                   crossSellList.innerHTML += `<div class="cross-sell-item" style="min-width: 150px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; text-align: center;"><div class="cross-sell-img" style="background-image:url('${sProd.imgUrl}'); height: 60px; background-size: cover; background-position: center; border-radius: 5px; margin-bottom: 5px;"></div><div class="cross-sell-title" style="font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px;">${sTitle}</div><div class="cross-sell-price" style="font-size: 12px; color: var(--accent-neon); font-weight: bold; margin-bottom: 5px;">+${sPrice}${currency}</div><button class="add-cross-btn submit-btn" style="padding: 4px; font-size: 11px;" onclick="window.addToCartCross('${sProd.id}')">إضافة</button></div>`;
               }
@@ -634,7 +630,6 @@ window.renderUserWishlist = () => {
   const currency = document.getElementById('currencySelect').value, rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
   wishedProducts.forEach(prod => {
     const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
-    // تم التعديل إلى القسمة هنا بنجاح
     const convertedPrice = currency === 'EGP' ? prod.price.toFixed(0) : (prod.price / rate).toFixed(2);
     const card = document.createElement('div'); card.className = 'product-card'; card.style.padding = '15px';
     card.onclick = (e) => { if(e.target.classList.contains('wishlist-icon-btn')) return; document.getElementById('userAccountModal').style.display = 'none'; window.openProductDetails(prod.id); };
@@ -654,7 +649,6 @@ const updateCheckoutPriceDisplay = () => {
   
   window.storeState.cart.forEach(p => { 
     const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
-    // تم التعديل إلى القسمة هنا بنجاح
     totalPrice += currency === 'EGP' ? p.price : (p.price / rate); titles.push(title);
   });
   
@@ -691,7 +685,6 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
     let totalPrice = 0, productTitles = [], productIds = [];
     window.storeState.cart.forEach(p => { 
         const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
-        // تم التعديل إلى القسمة هنا بنجاح
         totalPrice += currency === 'EGP' ? p.price : (p.price / rate); productTitles.push(title); productIds.push(p.id);
     });
     
@@ -934,6 +927,17 @@ const initApp = () => {
 };
 
 initApp();
+
+// ربط زرار فتح السلة للملف الشخصي والهيدر بكل دقة
+document.getElementById('cartBtnNav')?.addEventListener('click', () => {
+  const cartModal = document.getElementById('cartModal');
+  if (cartModal) {
+    cartModal.style.display = 'flex';
+    window.renderCartModal();
+  }
+});
+
+// كود زرار الواتساب للطلبات الفورية
 document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => {
   if (!window.storeState.cart.length) return window.showToast('السلة فارغة!', 'error');
   
@@ -970,4 +974,3 @@ document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => 
   window.open(whatsappURL, '_blank');
   window.showToast('💬 تم تحويلك للواتساب لإرسال تفاصيل الطلب!', 'success');
 });
-
