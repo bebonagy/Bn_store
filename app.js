@@ -453,7 +453,6 @@ window.openProductDetails = (id) => {
   document.getElementById('detailOldPrice').textContent = convertedOld ? `${convertedOld} ${currency}` : '';
   document.getElementById('detailBadge').textContent = badge;
   
-  // 🌟 استرجاع عرض الوصف المنسق
   const descContainer = document.getElementById('detailDescContainer');
   if (descContainer) {
     descContainer.replaceChildren();
@@ -468,7 +467,6 @@ window.openProductDetails = (id) => {
     }
   }
 
-  // 🌟 استرجاع عرض الأسئلة الشائعة (FAQ)
   const faqContainer = document.getElementById('detailFaqContainer');
   const faqList = document.getElementById('detailFaqList');
   if (prod.faqText && prod.faqText.trim()) {
@@ -487,7 +485,6 @@ window.openProductDetails = (id) => {
       });
   } else { faqContainer.style.display = 'none'; }
   
-  // 🌟 استرجاع معرض الصور (Gallery)
   const imgBox = document.getElementById('detailImageBox');
   const galleryBox = document.getElementById('detailImageGallery');
   const mainImgUrl = prod.bannerUrl || prod.imgUrl;
@@ -542,7 +539,6 @@ window.addToCartDirect = (prodId, event) => {
   if (prod && prod.inStock) { window.storeState.cart.push(prod); window.updateCartBadge(); window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); }
 };
 
-// 🌟 استرجاع زرار اقتراح السلة (Cross-Sell)
 window.addToCartCross = (id) => {
     const p = window.storeState.products.find(x => x.id === id);
     if(p) { window.storeState.cart.push(p); window.updateCartBadge(); window.renderCartModal(); window.showToast('تم إضافة الاقتراح للسلة!', 'success'); }
@@ -576,7 +572,6 @@ window.renderCartModal = () => {
   });
   totalDisplay.textContent = `${total.toFixed(currency==='EGP'?0:2)} ${currency}`;
 
-  // 🌟 استرجاع قسم اقتراحات السلة
   if(crossSellSection && crossSellList) {
       let suggestions = [];
       window.storeState.cart.forEach(p => { if (p.crossSellIds) suggestions.push(...p.crossSellIds); });
@@ -738,6 +733,17 @@ document.getElementById('shareProductBtn')?.addEventListener('click', () => { co
 // ==========================================
 // 9. المزامنة والتشغيل (Initialization)
 // ==========================================
+window.loadMoreAdminOrders = () => { 
+  window.adminOrdersLimit += 20; 
+  if(currentUserProfile) {
+      const q = window.checkIsAdmin() ? query(collection(db, 'artifacts', appId, 'public', 'data', 'orders'), orderBy('createdAt', 'desc'), limit(window.adminOrdersLimit)) : query(collection(db, 'artifacts', appId, 'public', 'data', 'orders'), where('uid', '==', currentUserProfile.uid));
+      unsubscribeOrders = onSnapshot(q, snap => {
+         const ords = []; snap.forEach(d => ords.push({id: d.id, ...d.data()})); window.storeState.orders = ords.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+         window.renderUserOrders(); if(window.checkIsAdmin()) { window.renderAdminOrders(); window.renderAdminStats(); }
+      });
+  }
+};
+
 const loadSeoFromDB = (data) => {
   if(data.seo) {
     if(data.seo.title) { document.getElementById('metaTitle').textContent = data.seo.title; document.getElementById('metaOgTitle').content = data.seo.title; }
@@ -782,6 +788,7 @@ const initApp = () => {
   initAuth(translations, currentLang, (user, profile) => {
     currentUserProfile = profile;
     const loginBtn = document.getElementById('loginBtnNav');
+    
     if (user) {
       loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = 'var(--accent-neon)'; 
       if(document.getElementById('accountUserName')) document.getElementById('accountUserName').textContent = profile.name;
@@ -789,6 +796,26 @@ const initApp = () => {
       if (window.checkIsAdmin()) {
         document.getElementById('adminBtnNav').style.display = 'block';
         if(window.injectAdminDashboard) window.injectAdminDashboard();
+        
+        // 🌟 زرار الإدارة المفقود داخل حسابي
+        let adminBtnInModal = document.getElementById('adminBtnInModal');
+        if (!adminBtnInModal) {
+           const accountModalContent = document.querySelector('#userAccountModal .modal-content');
+           if(accountModalContent) {
+             const btn = document.createElement('button'); btn.id = 'adminBtnInModal'; btn.className = 'submit-btn'; btn.style.cssText = 'width:100%; margin-bottom:15px; background:var(--accent-purple); color:#fff; font-size:16px; box-shadow:0 0 15px var(--purple-glow);';
+             btn.innerHTML = '⚙️ الدخول للوحة تحكم الإدارة'; btn.onclick = () => { document.getElementById('userAccountModal').style.display = 'none'; document.getElementById('adminModal').style.display = 'flex'; };
+             accountModalContent.insertBefore(btn, accountModalContent.querySelector('.user-tabs-container'));
+           }
+        }
+
+        // 🌟 قائمة المستخدمين المفقودة
+        if(unsubscribeUsers) unsubscribeUsers();
+        unsubscribeUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
+           const usrs = []; snap.forEach(d => usrs.push({id: d.id, ...d.data()})); 
+           window.storeState.users = usrs; 
+           if(window.renderAdminUsers) window.renderAdminUsers();
+        });
+
       } else { 
         document.getElementById('adminBtnNav').style.display = 'none'; 
       }
@@ -796,11 +823,13 @@ const initApp = () => {
     } else {
       loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = '';
       document.getElementById('adminBtnNav').style.display = 'none';
-      if (unsubscribeOrders) { unsubscribeOrders(); unsubscribeOrders = null; } window.storeState.orders = []; window.renderUserOrders();
+      if (document.getElementById('adminBtnInModal')) document.getElementById('adminBtnInModal').remove();
+      if(unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
+      if (unsubscribeOrders) { unsubscribeOrders(); unsubscribeOrders = null; } 
+      window.storeState.orders = []; window.renderUserOrders();
     }
   });
 
-  // 🌟 استرجاع أوامر النقر العلوية (Top Nav Links) 
   document.querySelectorAll('.nav-link').forEach(btn => {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
@@ -876,7 +905,6 @@ const initApp = () => {
   document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none')));
   document.getElementById('searchInput')?.addEventListener('input', () => { currentPage = 1; window.renderProducts(); });
 
-  // 🌟 استرجاع تأثيرات تكبير الصور والنجوم
   document.getElementById('detailImageBox')?.addEventListener('click', (e) => {
     const bgImg = e.target.style.backgroundImage.slice(4, -1).replace(/"/g, "");
     if (bgImg && bgImg !== 'none') { document.getElementById('lightboxImg').src = bgImg; document.getElementById('lightboxModal').style.display = 'flex'; }
