@@ -38,17 +38,17 @@ window.compressImage = (base64Src, maxWidth = 800, quality = 0.7) => {
 window.storeState = {
   bannerAr: "⚡ عروض الكريسماس والخدمات الرقمية!", bannerExpiry: "", whatsapp: "201200898990",
   rates: { SAR: 0.077, AED: 0.075, USD: 0.020 }, payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
-  promoCode: "", promoDiscount: 0, products: [], orders: [], reviews: [], slides: [], users: [],
+  promos: [], products: [], orders: [], reviews: [], slides: [], users: [],
   categories: [ { id: 'games', name: 'Games' }, { id: 'keys', name: 'Digital Keys' }, { id: 'software', name: 'Software' }, { id: 'subs', name: 'Subscriptions' }, { id: 'gifts', name: 'Gift Cards' }, { id: 'deals', name: 'Deals' } ],
-  wishlist: JSON.parse(localStorage.getItem('bn_store_wishlist')) || [], cart: []
+  wishlist: [], cart: []
 };
 
 let currentUserProfile = null;
 window.editingProductId = null;
 window.adminOrdersLimit = 20;
 
-let currentProductId = null;
-window.currentSelectedVariant = null; // متغير لحفظ الباقة المختارة
+window.currentProductId = null; // تم تعديل النطاق ليصبح عاماً لحل مشكلة السلة
+window.currentSelectedVariant = null; 
 let activeDiscount = 0;
 let unsubscribeOrders = null;
 let unsubscribeReviews = null;
@@ -103,7 +103,8 @@ const translations = {
     reset_pass_desc: "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.",
     btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول", google_login: "الدخول بواسطة Google",
     nav_categories: "الأقسام", nav_search: "بحث", nav_wishlist: "المفضلة",
-    qi_account: "نوع الحساب", qi_warranty: "الضمان", qi_region: "التفعيل", sys_req: "متطلبات التشغيل", select_variant: "اختر الباقة / النسخة:"
+    qi_account: "نوع الحساب", qi_warranty: "الضمان", qi_region: "التفعيل", sys_req: "متطلبات التشغيل", select_variant: "اختر الباقة / النسخة:",
+    btn_select_variant: "⚙️ اختيار الباقة"
   },
   en: {
     nav_home: "Home", nav_games: "Games", nav_keys: "Digital Keys", nav_software: "Software", nav_subs: "Subscriptions", nav_gifts: "Gift Cards", nav_deals: "Deals",
@@ -133,7 +134,8 @@ const translations = {
     reset_pass_desc: "Enter your registered email and we will send you a password reset link.",
     btn_send_reset: "Send Reset Link", back_to_login: "Back to Login", google_login: "Login with Google",
     nav_categories: "Categories", nav_search: "Search", nav_wishlist: "Wishlist",
-    qi_account: "Account Type", qi_warranty: "Warranty", qi_region: "Region", sys_req: "System Requirements", select_variant: "Select Variant:"
+    qi_account: "Account Type", qi_warranty: "Warranty", qi_region: "Region", sys_req: "System Requirements", select_variant: "Select Variant:",
+    btn_select_variant: "⚙️ Select Variant"
   }
 };
 
@@ -331,15 +333,22 @@ window.renderProducts = () => {
     const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
     const badge = currentLang === 'ar' ? (prod.badgeAr || prod.badge) : (prod.badgeEn || prod.badge);
     
-    // إظهار سعر أول باقة لو المنتج فيه باقات
     let displayPrice = prod.price;
     if(prod.variants && prod.variants.length > 0) displayPrice = prod.variants[0].price;
 
     const convertedPrice = currency === 'EGP' ? displayPrice.toFixed(0) : (displayPrice / rate).toFixed(2);
     const convertedOld = (prod.oldPrice && prod.oldPrice > displayPrice) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
-    const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
-    const isWished = window.storeState.wishlist.includes(prod.id);
     
+    // فحص المخزون الذكي (يدعم الباقات)
+    const hasVariants = prod.variants && prod.variants.length > 0;
+    let inStock = false;
+    if (hasVariants) {
+       inStock = prod.variants.some(v => v.stockQuantity === undefined || v.stockQuantity > 0);
+    } else {
+       inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
+    }
+
+    const isWished = window.storeState.wishlist.includes(prod.id);
     const discountPercent = (prod.oldPrice && prod.oldPrice > displayPrice) ? Math.round(((prod.oldPrice - displayPrice) / prod.oldPrice) * 100) : 0;
     const discountBadgeHTML = discountPercent > 0 ? `<span class="product-discount-badge">-${discountPercent}%</span>` : '';
     
@@ -350,6 +359,10 @@ window.renderProducts = () => {
         ratingCount = prodRevs.length;
     }
     const ratingHTML = ratingCount > 0 ? `<div class="product-rating">⭐ ${ratingVal} (${ratingCount})</div>` : `<div class="product-rating">⭐ 5.0 (0)</div>`;
+
+    // زر الإضافة للسلة الذكي (يحول لصفحة المنتج لو فيه باقات)
+    const btnText = inStock ? (hasVariants ? translations[currentLang].btn_select_variant : translations[currentLang].btn_add_to_cart) : translations[currentLang].out_of_stock;
+    const btnAction = inStock ? (hasVariants ? `window.openProductDetails('${prod.id}')` : `window.addToCartDirect('${prod.id}', event)`) : '';
 
     const card = document.createElement('div'); card.className = 'product-card';
     card.onclick = (e) => { if(e.target.classList.contains('wishlist-icon-btn') || e.target.classList.contains('buy-btn')) return; window.openProductDetails(prod.id); };
@@ -365,7 +378,7 @@ window.renderProducts = () => {
       </div>
       <div>
         <div class="product-price-box">${convertedOld ? `<span class="old-price">${convertedOld} ${currency}</span>` : ''}<span class="product-price">${convertedPrice} ${currency}</span></div>
-        <button type="button" class="buy-btn ${inStock ? '' : 'out-of-stock-badge'}" onclick="window.addToCartDirect('${prod.id}', event)" ${inStock ? '' : 'disabled'}>${inStock ? translations[currentLang].btn_add_to_cart : translations[currentLang].out_of_stock}</button>
+        <button type="button" class="buy-btn ${inStock ? '' : 'out-of-stock-badge'} ${hasVariants ? 'select-variant-btn' : ''}" onclick="${btnAction}" ${inStock ? '' : 'disabled'}>${btnText}</button>
       </div>
     `;
     grid.appendChild(card);
@@ -396,18 +409,28 @@ const showView = (viewName) => {
 // ==========================================
 window.toggleWishlist = (prodId, event) => {
   if (event) event.stopPropagation();
-  let wl = window.storeState.wishlist;
-  if (wl.includes(prodId)) { wl = wl.filter(id => id !== prodId); window.showToast('تم الإزالة من المفضلة 💔', 'normal'); } 
-  else { wl.push(prodId); window.showToast('تم الإضافة للمفضلة ❤️', 'success'); }
-  window.storeState.wishlist = wl; localStorage.setItem('bn_store_wishlist', JSON.stringify(wl));
-  window.renderProducts(); window.updateDetailWishlistBtn();
+  if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول لإضافة المنتجات للمفضلة!', 'error');
+
+  let wl = window.storeState.wishlist || [];
+  if (wl.includes(prodId)) { 
+    wl = wl.filter(id => id !== prodId); 
+    window.showToast('تم الإزالة من المفضلة 💔', 'normal'); 
+  } else { 
+    wl.push(prodId); 
+    window.showToast('تم الإضافة للمفضلة ❤️', 'success'); 
+  }
+  
+  window.storeState.wishlist = wl; 
+  window.renderProducts(); 
+  window.updateDetailWishlistBtn();
   if(document.getElementById('userWishlistSection')?.style.display === 'block') window.renderUserWishlist();
-  if(currentUserProfile) { updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserProfile.uid), { wishlist: wl }).catch(()=>{}); }
+  
+  updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUserProfile.uid), { wishlist: wl }).catch(()=>{});
 };
 
 window.updateDetailWishlistBtn = () => {
-  const btn = document.getElementById('toggleWishlistBtn'); if(!btn || !currentProductId) return;
-  const isWished = window.storeState.wishlist.includes(currentProductId);
+  const btn = document.getElementById('toggleWishlistBtn'); if(!btn || !window.currentProductId) return;
+  const isWished = window.storeState.wishlist.includes(window.currentProductId);
   btn.textContent = isWished ? '❤️' : '🤍'; btn.style.color = isWished ? 'var(--danger)' : '#fff'; btn.style.borderColor = isWished ? 'var(--danger)' : 'var(--border-color)';
 };
 
@@ -430,7 +453,7 @@ window.loadProductReviews = (prodId) => {
     revs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
     const detailBadge = document.getElementById('detailBadge');
-    if (revs.length > 0) { const avgRating = (revs.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / revs.length).toFixed(1); if(detailBadge) detailBadge.textContent = `⭐ ${avgRating} (${revs.length} تقييم)`; }
+    if (revs.length > 0) { const avgRating = (revs.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / revs.length).toFixed(1); if(detailBadge && !detailBadge.textContent) detailBadge.textContent = `⭐ ${avgRating} (${revs.length} تقييم)`; }
     if (!revs.length) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تقييمات لهذا المنتج حتى الآن.</p>'; } 
     else { revs.forEach(r => { list.innerHTML += `<div style="background: #0b0b12; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; position: relative;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: ${window.checkIsAdmin() ? '50px' : '0'};"><strong style="color: var(--accent-neon);">${window.sanitizeText(r.userName || 'مستخدم')} <span style="font-size:10px; color:var(--text-muted); font-weight:normal; margin-right:5px;">- ${window.formatDate(r.createdAt)}</span></strong><span>${'⭐'.repeat(Number(r.rating) || 5)}</span></div><p style="color: var(--text-main); line-height: 1.5;">${window.sanitizeText(r.comment)}</p>${window.checkIsAdmin() ? `<button onclick="window.deleteReview('${r.id}')" style="position:absolute; left:10px; top:10px; background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; z-index:10;">حذف 🗑️</button>` : ''}</div>`; }); }
   });
@@ -438,8 +461,9 @@ window.loadProductReviews = (prodId) => {
 
 window.openProductDetails = (id) => {
   const prod = window.storeState.products.find(p => p.id === id); if (!prod) return;
-  currentProductId = id; window.updateDetailWishlistBtn();
+  window.currentProductId = id; 
   window.currentSelectedVariant = null; // Reset Variant
+  window.updateDetailWishlistBtn();
 
   const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
   const desc = currentLang === 'ar' ? (prod.descAr || prod.desc) : (prod.descEn || prod.desc);
@@ -447,12 +471,12 @@ window.openProductDetails = (id) => {
 
   const currency = document.getElementById('currencySelect').value;
   const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
-  const inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
+  let inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
 
   document.getElementById('detailTitle').textContent = title;
   document.getElementById('detailBadge').textContent = badge;
   
-  // 1. نظام الباقات (Variants)
+  // 1. نظام الباقات (Variants) وتحديث السعر
   const variantsContainer = document.getElementById('detailVariantsContainer');
   const variantsList = document.getElementById('detailVariants');
   let currentDisplayPrice = prod.price;
@@ -460,21 +484,41 @@ window.openProductDetails = (id) => {
   if (prod.variants && prod.variants.length > 0) {
       variantsContainer.style.display = 'block';
       variantsList.innerHTML = '';
-      window.currentSelectedVariant = prod.variants[0]; // الافتراضي
+      
+      // اختيار أول باقة متاحة افتراضياً
+      const firstAvailable = prod.variants.find(v => v.stockQuantity === undefined || v.stockQuantity > 0) || prod.variants[0];
+      window.currentSelectedVariant = firstAvailable; 
       currentDisplayPrice = window.currentSelectedVariant.price;
       
-      prod.variants.forEach((v, idx) => {
+      // تحديث حالة المخزون بناءً على الباقات
+      inStock = prod.variants.some(v => v.stockQuantity === undefined || v.stockQuantity > 0);
+      
+      prod.variants.forEach((v) => {
+          const vInStock = v.stockQuantity === undefined || v.stockQuantity > 0;
           const btn = document.createElement('button');
-          btn.className = `variant-btn ${idx === 0 ? 'active' : ''}`;
+          btn.className = `variant-btn ${window.currentSelectedVariant === v ? 'active' : ''}`;
           btn.textContent = currentLang === 'ar' ? v.nameAr : v.nameEn;
+          if (!vInStock) {
+              btn.style.opacity = '0.5';
+              btn.style.textDecoration = 'line-through';
+              btn.title = translations[currentLang].out_of_stock;
+          }
+          
           btn.onclick = () => {
+              if(!vInStock) return;
               document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('active'));
               btn.classList.add('active');
               window.currentSelectedVariant = v;
-              // تحديث السعر
               const vPrice = currency === 'EGP' ? v.price.toFixed(0) : (v.price / rate).toFixed(2);
               document.getElementById('detailPrice').textContent = `${vPrice} ${currency}`;
               document.getElementById('detailOldPrice').textContent = ''; 
+              
+              // تحديث حالة المخزون بالأسفل
+              const stockEl = document.getElementById('detailStock');
+              if (stockEl) {
+                  stockEl.textContent = (v.stockQuantity !== undefined) ? `${v.stockQuantity} ${translations[currentLang].piece}` : translations[currentLang].available; 
+                  stockEl.style.color = 'var(--success)';
+              }
           };
           variantsList.appendChild(btn);
       });
@@ -482,7 +526,6 @@ window.openProductDetails = (id) => {
       variantsContainer.style.display = 'none';
   }
 
-  // تحديث السعر الأساسي
   const convertedPrice = currency === 'EGP' ? currentDisplayPrice.toFixed(0) : (currentDisplayPrice / rate).toFixed(2);
   const convertedOld = (!prod.variants || prod.variants.length === 0) && (prod.oldPrice && prod.oldPrice > currentDisplayPrice) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
   document.getElementById('detailPrice').textContent = `${convertedPrice} ${currency}`;
@@ -533,7 +576,7 @@ window.openProductDetails = (id) => {
       reqContainer.style.display = 'none';
   }
 
-  // الوصف
+  // الوصف والأسئلة والصور..
   const descContainer = document.getElementById('detailDescContainer');
   if (descContainer) {
     descContainer.replaceChildren();
@@ -548,7 +591,6 @@ window.openProductDetails = (id) => {
     }
   }
 
-  // الأسئلة الشائعة
   const faqContainer = document.getElementById('detailFaqContainer');
   const faqList = document.getElementById('detailFaqList');
   if (prod.faqText && prod.faqText.trim()) {
@@ -567,7 +609,6 @@ window.openProductDetails = (id) => {
       });
   } else { faqContainer.style.display = 'none'; }
   
-  // الصور
   const imgBox = document.getElementById('detailImageBox');
   const galleryBox = document.getElementById('detailImageGallery');
   const mainImgUrl = prod.bannerUrl || prod.imgUrl;
@@ -595,11 +636,19 @@ window.openProductDetails = (id) => {
       }
   }
 
-  // التوفر
-  const stockEl = document.getElementById('detailStock'); const addBtn = document.getElementById('detailAddToCartBtn');
+  // التوفر وزر الإضافة
+  const stockEl = document.getElementById('detailStock'); 
+  const addBtn = document.getElementById('detailAddToCartBtn');
   if (stockEl && addBtn) {
     if (inStock) {
-      stockEl.textContent = (prod.stockQuantity !== undefined) ? `${prod.stockQuantity} ${translations[currentLang].piece}` : translations[currentLang].available; stockEl.style.color = 'var(--success)';
+      let qtyText = translations[currentLang].available;
+      if (window.currentSelectedVariant && window.currentSelectedVariant.stockQuantity !== undefined) {
+         qtyText = `${window.currentSelectedVariant.stockQuantity} ${translations[currentLang].piece}`;
+      } else if (!window.currentSelectedVariant && prod.stockQuantity !== undefined) {
+         qtyText = `${prod.stockQuantity} ${translations[currentLang].piece}`;
+      }
+      stockEl.textContent = qtyText;
+      stockEl.style.color = 'var(--success)';
       addBtn.textContent = translations[currentLang].btn_add_to_cart; addBtn.disabled = false; addBtn.classList.remove('out-of-stock-badge');
     } else {
       stockEl.textContent = translations[currentLang].out_of_stock; stockEl.style.color = 'var(--danger)';
@@ -617,25 +666,26 @@ window.updateCartBadge = () => {
   if (badgeMobile) { badgeMobile.textContent = window.storeState.cart.length; badgeMobile.style.display = window.storeState.cart.length > 0 ? 'flex' : 'none'; }
 };
 
-// دالة الإضافة للسلة المحدثة لتدعم الباقات
+// دالة الإضافة للسلة المحدثة لتدعم الباقات والمتغير العام بشكل صحيح
 window.addToCartDirect = (prodId, event) => {
   if (event) event.stopPropagation();
   const prod = window.storeState.products.find(p => p.id === prodId);
+  
   if (prod && prod.inStock) {
-      // عمل نسخة من المنتج عشان نقدر نعدل السعر والاسم بناءً على الباقة المختارة
       let cartItem = JSON.parse(JSON.stringify(prod)); 
-      cartItem.cartItemId = Date.now() + Math.random(); // معرف فريد داخل السلة
+      cartItem.cartItemId = Date.now() + Math.random(); 
       
+      // التعديل: قراءة currentProductId من window، ومقارنته بشكل صحيح
       if (!event && window.currentSelectedVariant && window.currentProductId === prodId) {
-          // إضافة من داخل صفحة المنتج بناءً على الباقة المختارة
           cartItem.price = window.currentSelectedVariant.price;
           cartItem.titleAr = (prod.titleAr || prod.title) + ` - ${window.currentSelectedVariant.nameAr}`;
           cartItem.titleEn = (prod.titleEn || prod.title) + ` - ${window.currentSelectedVariant.nameEn}`;
+          cartItem.variantId = window.currentSelectedVariant.id || window.currentSelectedVariant.nameEn;
       } else if (prod.variants && prod.variants.length > 0) {
-          // الإضافة المباشرة من الواجهة الرئيسية لمنتج به باقات (يأخذ الباقة الأولى افتراضياً)
           cartItem.price = prod.variants[0].price;
           cartItem.titleAr = (prod.titleAr || prod.title) + ` - ${prod.variants[0].nameAr}`;
           cartItem.titleEn = (prod.titleEn || prod.title) + ` - ${prod.variants[0].nameEn}`;
+          cartItem.variantId = prod.variants[0].id || prod.variants[0].nameEn;
       }
       
       window.storeState.cart.push(cartItem); 
@@ -744,7 +794,7 @@ window.renderUserWishlist = () => {
 };
 
 // ==========================================
-// 7. الشراء وإنهاء الطلب (Checkout)
+// 7. الشراء وإنهاء الطلب (Checkout - Batch Transaction)
 // ==========================================
 const updateCheckoutPriceDisplay = () => {
   if (!window.storeState.cart.length) return;
@@ -788,6 +838,7 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
     const receiptBase64 = await window.compressImage(document.getElementById('receiptPreview').src);
     const currency = document.getElementById('currencySelect').value, rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
     let totalPrice = 0, productTitles = [], productIds = [];
+    
     window.storeState.cart.forEach(p => { 
         const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
         totalPrice += currency === 'EGP' ? p.price : (p.price / rate); productTitles.push(title); productIds.push(p.id);
@@ -802,20 +853,63 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
     const customerData = window.sanitizeText(document.getElementById('customerData').value);
     const newOrderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
 
-    for (const p of window.storeState.cart) {
-      if (p.stockQuantity !== undefined) {
-         const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id);
-         await runTransaction(db, async (transaction) => {
-             const sfDoc = await transaction.get(prodRef);
-             if (!sfDoc.exists()) throw "المنتج غير موجود!";
-             const newStock = sfDoc.data().stockQuantity - 1;
-             if (newStock < 0) throw "نفذت الكمية أثناء إتمام الطلب!";
-             transaction.update(prodRef, { stockQuantity: newStock, inStock: newStock > 0 });
-         });
-      }
-    }
+    // التعديل: المعاملة المجمعة لحماية المخزون وإدارته (Variants & Global)
+    await runTransaction(db, async (transaction) => {
+        const updates = new Map();
+        
+        for (const p of window.storeState.cart) {
+            const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id);
+            const sfDoc = await transaction.get(prodRef);
+            if (!sfDoc.exists()) throw new Error(`المنتج غير موجود!`);
+            
+            const data = updates.has(p.id) ? updates.get(p.id) : sfDoc.data();
+            
+            if (p.variantId && data.variants && data.variants.length > 0) {
+                const vIndex = data.variants.findIndex(v => (v.id || v.nameEn) === p.variantId);
+                if (vIndex !== -1 && data.variants[vIndex].stockQuantity !== undefined) {
+                    const newVStock = data.variants[vIndex].stockQuantity - 1;
+                    if (newVStock < 0) throw new Error(`نفذت كمية الباقة لمنتج ${p.titleAr || p.title}!`);
+                    data.variants[vIndex].stockQuantity = newVStock;
+                }
+            } else if (data.stockQuantity !== undefined) {
+                const newStock = data.stockQuantity - 1;
+                if (newStock < 0) throw new Error(`نفذت الكمية لمنتج ${p.titleAr || p.title}!`);
+                data.stockQuantity = newStock;
+                data.inStock = newStock > 0;
+            }
+            updates.set(p.id, data);
+        }
 
-    await setDoc(newOrderRef, { uid: currentUserProfile.uid, userEmail: currentUserProfile.email, productIds, productId: productIds[0], productName: productTitles.join(' + '), finalPrice: totalPrice, currency, discountApplied: activeDiscount, promoCodeUsed: activeDiscount > 0 ? document.getElementById('promoCodeInput').value.trim() : "", paymentMethod, senderInfo, transactionId, customerData, receiptImage: receiptBase64, status: 'pending', deliveredCode: '', createdAt: serverTimestamp() });
+        // كتابة جميع التعديلات في قاعدة البيانات دفعة واحدة
+        for (const [id, data] of updates.entries()) {
+            transaction.update(doc(db, 'artifacts', appId, 'public', 'data', 'products', id), {
+                stockQuantity: data.stockQuantity,
+                inStock: data.inStock !== undefined ? data.inStock : (data.stockQuantity > 0),
+                variants: data.variants || []
+            });
+        }
+
+        // تسجيل الطلب
+        transaction.set(newOrderRef, { 
+            uid: currentUserProfile.uid, 
+            userEmail: currentUserProfile.email, 
+            productIds, 
+            productId: productIds[0], 
+            productName: productTitles.join(' + '), 
+            finalPrice: totalPrice, 
+            currency, 
+            discountApplied: activeDiscount, 
+            promoCodeUsed: activeDiscount > 0 ? document.getElementById('promoCodeInput').value.trim() : "", 
+            paymentMethod, 
+            senderInfo, 
+            transactionId, 
+            customerData, 
+            receiptImage: receiptBase64, 
+            status: 'pending', 
+            deliveredCode: '', 
+            createdAt: serverTimestamp() 
+        });
+    });
 
     window.storeState.cart = []; window.updateCartBadge();
     document.getElementById('checkoutModal').style.display = 'none'; document.getElementById('checkoutForm').reset();
@@ -872,6 +966,14 @@ const initApp = () => {
       const data = snap.data(); window.storeState.whatsapp = data.whatsapp || "201200898990";
       if(data.rates) window.storeState.rates = data.rates; window.storeState.payments = data.payments || { instapay: "", vodafone: "", orange: "", crypto: "" };
       window.storeState.bannerAr = data.bannerAr || ""; window.storeState.bannerExpiry = data.bannerExpiry || ""; 
+      
+      // الكوبونات الديناميكية المتعددة
+      window.storeState.promos = data.promos || [];
+      // الكوبون القديم (لضمان التوافق)
+      if(data.promoCode && data.promoDiscount) {
+         window.storeState.promos.push({ code: data.promoCode, discount: data.promoDiscount });
+      }
+
       if(data.slides) window.storeState.slides = data.slides; if(data.categories) window.storeState.categories = data.categories;
       
       loadSeoFromDB(data);
@@ -901,6 +1003,11 @@ const initApp = () => {
     if (user) {
       loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = 'var(--accent-neon)'; 
       if(document.getElementById('accountUserName')) document.getElementById('accountUserName').textContent = profile.name;
+      
+      // تحميل المفضلة الخاصة بالحساب
+      window.storeState.wishlist = profile.wishlist || [];
+      window.updateDetailWishlistBtn();
+      window.renderProducts();
       
       if (window.checkIsAdmin()) {
         document.getElementById('adminBtnNav').style.display = 'block';
@@ -933,7 +1040,16 @@ const initApp = () => {
       if (document.getElementById('adminBtnInModal')) document.getElementById('adminBtnInModal').remove();
       if(unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
       if (unsubscribeOrders) { unsubscribeOrders(); unsubscribeOrders = null; } 
-      window.storeState.orders = []; window.renderUserOrders();
+      
+      // تفريغ البيانات عند تسجيل الخروج (علاج الثغرة)
+      window.storeState.orders = []; 
+      window.storeState.cart = [];
+      window.storeState.wishlist = [];
+      window.renderUserOrders();
+      window.renderUserWishlist();
+      window.updateCartBadge();
+      if(document.getElementById('cartModal')) window.renderCartModal();
+      window.renderProducts();
     }
   });
 
@@ -951,11 +1067,10 @@ const initApp = () => {
       if(window.checkIsAdmin()) document.getElementById('adminModal').style.display = 'flex'; 
   });
 
-  document.getElementById('detailAddToCartBtn')?.addEventListener('click', () => window.addToCartDirect(currentProductId));
+  document.getElementById('detailAddToCartBtn')?.addEventListener('click', () => window.addToCartDirect(window.currentProductId));
   document.getElementById('currencySelect')?.addEventListener('change', () => { window.renderProducts(); window.renderCartModal(); });
   document.getElementById('paymentMethod')?.addEventListener('change', updatePaymentInfoBox);
   
-  // تفعيل زر الرجوع للصفحة الرئيسية من تفاصيل المنتج
   document.getElementById('backToHomeBtn')?.addEventListener('click', () => {
     showView('home');
   });
@@ -981,11 +1096,22 @@ const initApp = () => {
   });
 
   document.getElementById('applyPromoBtn')?.addEventListener('click', () => {
-    const input = document.getElementById('promoCodeInput').value.trim(), msgEl = document.getElementById('promoMsg');
+    const input = document.getElementById('promoCodeInput').value.trim().toLowerCase();
+    const msgEl = document.getElementById('promoMsg');
     if (!input) return;
-    if (window.storeState.promoCode && input.toLowerCase() === window.storeState.promoCode.toLowerCase() && window.storeState.promoDiscount > 0) {
-      activeDiscount = window.storeState.promoDiscount; msgEl.textContent = `تم تطبيق خصم ${activeDiscount}% بنجاح! ✅`; msgEl.style.color = 'var(--success)';
-    } else { activeDiscount = 0; msgEl.textContent = 'كود الخصم غير صحيح أو منتهي! ❌'; msgEl.style.color = 'var(--danger)'; }
+    
+    // التحقق من مصفوفة الكوبونات الديناميكية
+    const promo = window.storeState.promos?.find(p => p.code.toLowerCase() === input);
+    
+    if (promo && (!promo.expiry || new Date(promo.expiry) > new Date())) {
+      activeDiscount = promo.discount; 
+      msgEl.textContent = `تم تطبيق خصم ${activeDiscount}% بنجاح! ✅`; 
+      msgEl.style.color = 'var(--success)';
+    } else { 
+      activeDiscount = 0; 
+      msgEl.textContent = 'كود الخصم غير صحيح أو منتهي! ❌'; 
+      msgEl.style.color = 'var(--danger)'; 
+    }
     updateCheckoutPriceDisplay();
   });
 
@@ -997,14 +1123,14 @@ const initApp = () => {
 
   document.getElementById('submitReviewBtn')?.addEventListener('click', async () => {
     if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول لإضافة تقييم!', 'error');
-    if (!currentProductId) return;
+    if (!window.currentProductId) return;
     
     const comment = window.sanitizeText(document.getElementById('reviewCommentText').value), rating = document.getElementById('reviewRating').value;
     if (!comment) return window.showToast('اكتب تعليقاً أولاً!', 'error');
     const submitBtn = document.getElementById('submitReviewBtn'), origBtnText = submitBtn.textContent;
     submitBtn.textContent = 'جاري الإرسال ⏳...'; submitBtn.disabled = true;
     try {
-      await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'reviews')), { productId: currentProductId, uid: currentUserProfile.uid, userName: currentUserProfile.name, rating: Number(rating), comment, createdAt: serverTimestamp() });
+      await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'reviews')), { productId: window.currentProductId, uid: currentUserProfile.uid, userName: currentUserProfile.name, rating: Number(rating), comment, createdAt: serverTimestamp() });
       document.getElementById('reviewCommentText').value = ''; window.showToast('⭐ تم إضافة تقييمك بنجاح!', 'success');
     } catch (e) { window.showToast('حدث خطأ أثناء إرسال التقييم', 'error'); } finally { submitBtn.textContent = origBtnText; submitBtn.disabled = false; }
   });
