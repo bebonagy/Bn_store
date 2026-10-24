@@ -7,6 +7,14 @@ export let currentUserProfile = null;
 export const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
 let tempRegistrationData = null;
 
+// 🔒 دالة تشفير كود التفعيل (SHA-256) لمنع قراءته أو اختراقه من المتصفح
+const hashOTP = async (otp, email) => {
+  const msgUint8 = new TextEncoder().encode(otp + email + "BN_MAX_SECURE");
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   // 1. معالجة نتيجة الـ Redirect بدقة وفور عودة المستخدم لضمان تسجيل الدخول بنجاح
   getRedirectResult(auth).then(async (result) => {
@@ -61,7 +69,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     }
   });
 
-  // 3. تسجيل الدخول بجوجل (محاولة Popup، ولو محظورة يحول لـ Redirect بذكاء)
+  // 3. تسجيل الدخول بجوجل
   document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -129,7 +137,9 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     
     try {
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        tempRegistrationData = { name, email, pass, otp: otpCode };
+        // حفظ النسخة المشفرة فقط من الكود لحمايته
+        const otpHash = await hashOTP(otpCode, email);
+        tempRegistrationData = { name, email, pass, otpHash };
         
         if (typeof emailjs !== 'undefined') {
             const customMessage = `كود التفعيل الخاص بك هو:<div class="otp-box">${otpCode}</div>لا تشارك هذا الكود مع أحد.`;
@@ -148,7 +158,11 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   document.getElementById('doVerifyOTPBtn')?.addEventListener('click', async () => {
     const inputOTP = document.getElementById('regOTP').value.trim();
     if (!inputOTP) return window.showToast('أدخل كود التفعيل!', 'error');
-    if (!tempRegistrationData || inputOTP !== tempRegistrationData.otp) return window.showToast('❌ الكود غير صحيح!', 'error');
+    if (!tempRegistrationData) return window.showToast('انتهت الجلسة، يرجى التسجيل مجدداً.', 'error');
+    
+    // تشفير مدخل المستخدم ومقارنته بالهاش المخزن
+    const inputHash = await hashOTP(inputOTP, tempRegistrationData.email);
+    if (inputHash !== tempRegistrationData.otpHash) return window.showToast('❌ الكود غير صحيح!', 'error');
 
     const btn = document.getElementById('doVerifyOTPBtn'); const origText = btn.textContent;
     btn.textContent = 'جاري الإنشاء ⏳...'; btn.disabled = true;
