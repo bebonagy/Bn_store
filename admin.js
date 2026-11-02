@@ -30,7 +30,6 @@ window.addPromoInput = (p = {code: '', discount: '', expiry: ''}) => {
   list.appendChild(div);
 };
 
-// 🦅 حقن واجهة الإدارة مضاف إليها إعدادات كافر الموقع (Hero Banner)
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer'); 
   if(!container || container.innerHTML.includes('adminStatsGrid')) return; 
@@ -196,7 +195,6 @@ window.loadAdminData = () => {
   window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminStats();
 };
 
-// 🦅 حفظ إعدادات الكافر الثابت (Hero Banner)
 window.saveHeroConfig = async () => {
   try {
       const bgInput = document.getElementById('heroBgFileInput');
@@ -476,6 +474,7 @@ window.renderAdminProducts = () => {
     list.insertAdjacentHTML('beforeend', html);
   });
 };
+
 window.deleteProduct = async (id) => { if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return; try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); window.showToast('تم الحذف', 'success'); } catch (e) { console.error(e); window.showToast('فشل الحذف', 'error'); } };
 
 window.addSlide = async () => { 
@@ -532,7 +531,11 @@ window.deleteSlide = async (idx) => {
 window.renderAdminSlides = () => { 
   const list = document.getElementById('adminSlidesList'); 
   if(list) {
-      list.innerHTML = (window.storeState.slides||[]).map((s,i) => `<div class="admin-item-row"><span style="flex:1;">${s.title}</span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
+      if (!window.storeState.slides || window.storeState.slides.length === 0) {
+          list.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center; padding:15px;">لا يوجد صور في السلايدر حالياً.</p>';
+      } else {
+          list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row"><span style="flex:1;">${s.title}</span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
+      }
   }
 };
 
