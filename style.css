@@ -899,12 +899,14 @@ html[dir="rtl"] .search-input {
   box-shadow: 0 0 15px var(--purple-glow); 
 }
 
+/* تنسيق زرار "إضافة للسلة" وهو مغلق قبل اختيار الباقة */
 .buy-btn:disabled, .out-of-stock-badge { 
   background: #151520; 
   color: var(--text-muted); 
   border-color: var(--border-color); 
   cursor: not-allowed; 
   box-shadow: none; 
+  opacity: 0.6;
 }
 
 .empty-products-msg { 
@@ -1373,15 +1375,20 @@ html[dir="rtl"] .search-input {
   font-size: 14px; 
 }
 
+/* تعديل حجم زرار سلة المشتريات عشان يكون أوضح وأسهل في الموبايل */
 .remove-cart-btn { 
   background: transparent; 
   color: var(--danger); 
   border: 1px solid var(--border-color); 
-  width: 35px; 
-  height: 35px; 
+  width: 45px; 
+  height: 45px; 
+  font-size: 18px; 
   border-radius: 8px; 
   cursor: pointer; 
   transition: 0.3s; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .remove-cart-btn:hover { 
