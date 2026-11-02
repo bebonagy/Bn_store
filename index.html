@@ -54,7 +54,6 @@
         <span class="logo-sub">DIGITAL MARKETPLACE</span>
       </div>
 
-      <!-- روابط الهيدر المحدثة بـ data-i18n للترجمة -->
       <nav class="top-nav-links">
         <button class="nav-link active" data-target="homeView" data-i18n="nav_home">Home</button>
         <button class="nav-link" data-cat="games" data-i18n="nav_games">Games</button>
@@ -109,7 +108,6 @@
       </button>
     </div>
   </div>
-
 </header>
 
 <main class="app-container container">
@@ -117,7 +115,10 @@
   <!-- 🔄 1. الواجهة الرئيسية (Home) -->
   <div id="homeView" class="view-section active-view">
     <!-- السلايدر الرئيسي -->
-    <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none;"></section>
+    <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none;">
+       <div id="sliderTrack" class="slider-track"></div>
+       <div class="slider-dots" id="sliderDots"></div>
+    </section>
 
     <!-- Hero Banner الجديد المطابق للتصميم مع دعم الترجمة -->
     <section class="hero-banner-box">
@@ -179,8 +180,8 @@
   </div>
 
   <!-- 🔄 2. واجهة تفاصيل المنتج -->
-  <div id="productDetailsView" style="display:none;">
-    <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;" data-i18n="btn_back">🔙 رجوع</button>
+  <div id="productDetailsView" class="view-section" style="display:none;">
+    <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px; background:transparent; border:1px solid var(--accent-neon); color:var(--accent-neon); padding:8px 15px; border-radius:8px; cursor:pointer;" data-i18n="btn_back">🔙 رجوع</button>
     <div class="product-details-container" style="flex-direction: column;">
       <div style="display: flex; flex-wrap: wrap; gap: 30px; width: 100%;">
         <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
@@ -193,7 +194,6 @@
         <div class="details-info-box" style="flex: 1.5; min-width: 300px; position: relative;">
           <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer;">🤍</button>
           
-          <!-- لوجو المنصة (سيتم إظهاره ديناميكياً للألعاب فقط) -->
           <div id="detailPlatform" style="display: none; align-items: center; gap: 8px; margin-bottom: 10px;">
             <img id="detailPlatformLogo" src="" alt="Platform" style="width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">
             <span id="detailPlatformName" style="color: var(--text-muted); font-size: 13px; font-weight: bold;"></span>
@@ -244,7 +244,6 @@
           
           <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
           
-          <!-- قسم متطلبات التشغيل (يظهر للألعاب فقط) -->
           <div id="detailRequirementsContainer" style="display:none; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border-inline-start: 3px solid var(--accent-neon);">
             <h4 style="color:var(--accent-neon); margin-bottom:10px; font-size:15px; display:flex; align-items:center; gap:8px;"><span style="font-size:18px;">⚙️</span> <span data-i18n="sys_req">متطلبات التشغيل</span></h4>
             <div id="detailRequirementsContent" style="font-size:13px; color:var(--text-main); line-height:1.8;"></div>
@@ -288,6 +287,24 @@
       </div>
     </div>
   </div>
+
+  <!-- 🔄 3. واجهة الإدارة (Admin View - مفصولة كصفحة) -->
+  <div id="adminView" class="view-section" style="display:none; background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid var(--accent-neon); box-shadow: 0 0 40px rgba(0,242,255,0.1); margin-top: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+          <h3 style="color: #fff; margin: 0; font-size: 22px;">⚙️ لوحة تحكم BN MAX</h3>
+          <button type="button" class="cancel-btn" onclick="window.navigate('home')" style="padding: 6px 12px; font-size: 14px;">🔙 رجوع للمتجر</button>
+      </div>
+      <div class="admin-tabs" id="adminTabs" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
+        <button class="tab-btn active" data-target="tab-dashboard">📊 الرئيسية</button>
+        <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
+        <button class="tab-btn" data-target="tab-products">🛒 المنتجات</button>
+        <button class="tab-btn" data-target="tab-settings">⚙️ الإعدادات</button>
+        <button class="tab-btn" data-target="tab-seo">🔍 السيو (SEO)</button>
+      </div>
+      <div id="adminDashboardView">
+        <div id="adminSectionsContainer"></div>
+      </div>
+  </div>
 </main>
 
 <!-- الفوتر -->
@@ -303,13 +320,13 @@
   </div>
 </footer>
 
-<!-- 📱 شريط التنقل السفلي للموبايل (Bottom Navigation مع تصليح البحث والمفضلة) -->
+<!-- 📱 شريط التنقل السفلي للموبايل -->
 <nav class="mobile-bottom-nav" style="display: none;">
-  <button class="bottom-nav-item active" onclick="document.getElementById('logoBtn').click(); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+  <button class="bottom-nav-item active" onclick="window.navigate('home'); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
     <span class="icon">🏠</span>
     <span class="text" data-i18n="nav_home">Home</span>
   </button>
-  <button class="bottom-nav-item" onclick="document.getElementById('categoriesBar').scrollIntoView({behavior:'smooth', block:'center'}); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+  <button class="bottom-nav-item" onclick="if(document.getElementById('categoriesBar')) document.getElementById('categoriesBar').scrollIntoView({behavior:'smooth', block:'center'}); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
     <span class="icon">🗂️</span>
     <span class="text" data-i18n="nav_categories">Categories</span>
   </button>
@@ -338,7 +355,7 @@
       <h3><span data-i18n="cart_title">🛒 سلة المشتريات</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">✕</button></h3>
       <div id="cartItemsList" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px;"></div>
       <div id="cartCrossSellSection" style="display: none; background: rgba(0,242,255,0.05); border: 1px dashed var(--accent-neon); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-        <h4 style="font-size: 13px; color: var(--accent-neon); margin-bottom: 10px;" data-i18n="cart_suggestion">🔥 ضيف ده لطلبك ووفر:</h4>
+        <h4 style="font-size: 13px; color: var(--accent-neon); margin-bottom: 10px;" data-i18n="cart_suggestion">🔥 ضيف ده لطلب ووفر:</h4>
         <div id="cartCrossSellList" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;"></div>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; color:var(--accent-neon); margin-bottom:15px; border-top:1px solid var(--border-color); padding-top:15px;">
@@ -357,7 +374,7 @@
     </div>
   </div>
 
-  <!-- تسجيل الدخول واستعادة الباسورد المخصصة -->
+  <!-- تسجيل الدخول -->
   <div class="modal" id="authModal">
     <div class="modal-content">
       <h3 id="authModalTitle" data-i18n="auth_title">تسجيل الدخول / إنشاء حساب</h3>
@@ -371,9 +388,9 @@
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="no_account">ليس لديك حساب؟</span> <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);" data-i18n="create_account">إنشاء حساب جديد</a></p>
       </div>
       
-      <!-- نافذة استعادة الباسورد الفرعية -->
+      <!-- نافذة استعادة الباسورد -->
       <div id="authViewReset" style="display:none;">
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;" data-i18n="reset_pass_desc">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.</p>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;" data-i18n="reset_pass_desc">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور.</p>
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="resetEmailInput" placeholder="example@gmail.com"></div>
         <button type="button" class="submit-btn" id="doSendResetBtn" style="width:100%;" data-i18n="btn_send_reset">إرسال رابط الاستعادة</button>
         <button type="button" id="backToLoginFromReset" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;" data-i18n="back_to_login">رجوع لتسجيل الدخول</button>
@@ -391,7 +408,7 @@
 
       <!-- نافذة إدخال الـ OTP -->
       <div id="authViewOTP" style="display:none;">
-        <p style="font-size: 13px; color: var(--success); margin-bottom: 15px; text-align: center; line-height: 1.5;">تم إرسال كود التفعيل (OTP) إلى بريدك الإلكتروني بنجاح. برجاء تفقد صندوق الوارد أو البريد المزعج (Spam).</p>
+        <p style="font-size: 13px; color: var(--success); margin-bottom: 15px; text-align: center; line-height: 1.5;">تم إرسال كود التفعيل (OTP) إلى بريدك الإلكتروني بنجاح.</p>
         <div class="form-group"><label>كود التفعيل</label><input type="text" id="regOTP" placeholder="أدخل الكود (6 أرقام)" style="text-align: center; font-size: 20px; letter-spacing: 5px; font-weight: bold;"></div>
         <button type="button" class="submit-btn" id="doVerifyOTPBtn" style="width:100%;">تأكيد وإنشاء الحساب</button>
         <button type="button" id="backToRegFromOTP" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;">رجوع وتعديل البيانات</button>
@@ -451,10 +468,7 @@
           </div>
         </div>
         <div class="form-group"><label data-i18n="sender_info">رقم / حساب التحويل</label><input type="text" id="senderInfo" required placeholder="رقم محفظتك أو حسابك"></div>
-        
-        <!-- حقل رقم العملية -->
         <div class="form-group"><label>رقم العملية (Transaction ID)</label><input type="text" id="transactionIdInput" required placeholder="أدخل رقم العملية لتأكيد التحويل"></div>
-
         <div class="form-group"><label data-i18n="receive_data">بيانات الاستلام</label><input type="text" id="customerData" required placeholder="أدخل الآيدي أو الإيميل"></div>
         <div class="form-group">
           <label data-i18n="receipt_img">صورة إيصال التحويل (سكرين شوت)</label>
@@ -468,27 +482,10 @@
           </button>
           <button type="button" class="cancel-btn close-modal-btn" style="flex: 1; margin-top: 0;" data-i18n="btn_cancel">إلغاء</button>
            <button type="button" id="whatsappCheckoutBtn" class="submit-btn" style="flex: 1; background: #25d366; color: #000; border: none; display: flex; justify-content: center; align-items: center; gap: 8px;">
-           <span>💬 تأكيد وإرسال عبر الواتساب</span>
+           <span>💬 تأكيد عبر الواتساب</span>
            </button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- لوحة الإدارة -->
-  <div class="modal" id="adminModal">
-    <div class="modal-content large-modal" style="max-width: 900px;">
-      <h3><span>⚙️ لوحة تحكم BN MAX</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:5px 12px;">✕</button></h3>
-      <div class="admin-tabs" id="adminTabs" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
-        <button class="tab-btn active" data-target="tab-dashboard">📊 الرئيسية</button>
-        <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
-        <button class="tab-btn" data-target="tab-products">🛒 المنتجات</button>
-        <button class="tab-btn" data-target="tab-settings">⚙️ الإعدادات</button>
-        <button class="tab-btn" data-target="tab-seo">🔍 السيو (SEO)</button>
-      </div>
-      <div id="adminDashboardView">
-        <div id="adminSectionsContainer"></div>
-      </div>
     </div>
   </div>
 </div>
