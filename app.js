@@ -92,6 +92,10 @@ window.navigate = (view, id = null, pushState = true) => {
         if(footer) footer.style.display = 'block';
     }
 
+    // 🦅 تغيير اسم الصفحة ديناميكياً
+    if (view === 'home') document.title = 'BN MAX | Digital Marketplace';
+    else if (view === 'admin') document.title = 'لوحة التحكم | BN MAX';
+
     if (pushState) {
         if (view === 'details' && id) { history.pushState({ view: 'details', id }, '', '?product=' + id); } 
         else if (view === 'admin') { history.pushState({ view: 'admin' }, '', '?admin=true'); } 
@@ -482,6 +486,9 @@ window.openProductDetails = (id, pushState = true) => {
     const desc = currentLang === 'ar' ? (prod.descAr || prod.desc) : (prod.descEn || prod.desc);
     const badge = currentLang === 'ar' ? (prod.badgeAr || prod.badge) : (prod.badgeEn || prod.badge);
   
+    // 🦅 تغيير اسم التاب لاسم المنتج لظهوره في شير الواتساب
+    document.title = `${title} | BN MAX`;
+
     const currency = document.getElementById('currencySelect').value;
     const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
     let inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
@@ -635,10 +642,18 @@ window.openProductDetails = (id, pushState = true) => {
     window.navigate('details', id, pushState);
 };
 
+// 🦅 إضافة أنيميشن السلة
 window.updateCartBadge = () => {
     const badge = document.getElementById('cartCountBadge'); const badgeMobile = document.getElementById('cartCountBadgeMobile');
     if (badge) { badge.textContent = window.storeState.cart.length; badge.style.display = window.storeState.cart.length > 0 ? 'flex' : 'none'; }
     if (badgeMobile) { badgeMobile.textContent = window.storeState.cart.length; badgeMobile.style.display = window.storeState.cart.length > 0 ? 'flex' : 'none'; }
+
+    // تشغيل أنيميشن النبض (Bounce)
+    document.querySelectorAll('#cartBtnNav, .mobile-cart-btn').forEach(btn => {
+        btn.classList.remove('cart-bounce');
+        void btn.offsetWidth; // Trigger reflow
+        btn.classList.add('cart-bounce');
+    });
 };
 
 window.addToCartDirect = (prodId, event) => {
@@ -1026,7 +1041,7 @@ initApp();
 
 document.getElementById('cartBtnNav')?.addEventListener('click', () => { const cartModal = document.getElementById('cartModal'); if (cartModal) { cartModal.style.display = 'flex'; window.renderCartModal(); } });
 
-// 🦅 كود الواتساب المحدث (الحسابات، والخصم، والعملة بقت مظبوطة بالشعرة)
+// 🦅 كود الواتساب المحدث (تفريغ السلة وإغلاق النافذة بعد الطلب)
 document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => {
     if (!window.storeState.cart.length) return window.showToast('السلة فارغة!', 'error');
     
@@ -1044,12 +1059,10 @@ document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => 
     
     window.storeState.cart.forEach(p => { 
         const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title); 
-        // 🦅 حل مشكلة العملة (بيحسب سعر العملة المختارة بدقة)
         totalPrice += currency === 'EGP' ? Number(p.price || 0) : (Number(p.price || 0) / rate); 
         productTitles.push(title); 
     });
     
-    // 🦅 حل مشكلة الخصم (بيطبق الخصم لو العميل حاطط كوبون صح)
     if (activeDiscount > 0) {
         totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
     }
@@ -1070,4 +1083,15 @@ document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => 
     const encodedMessage = encodeURIComponent(message); 
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank'); 
     window.showToast('💬 تم تحويلك للواتساب لإرسال تفاصيل الطلب!', 'success');
+
+    // 🦅 تفريغ السلة وقفل المودال بعد الإرسال
+    window.storeState.cart = []; 
+    window.updateCartBadge();
+    document.getElementById('checkoutModal').style.display = 'none'; 
+    document.getElementById('checkoutForm').reset();
+    activeDiscount = 0; 
+    if(document.getElementById('promoCodeInput')) document.getElementById('promoCodeInput').value = '';
+    if(document.getElementById('promoMsg')) document.getElementById('promoMsg').textContent = '';
+    if(document.getElementById('cartModal')) document.getElementById('cartModal').style.display = 'none';
+    window.renderCartModal();
 });
