@@ -30,16 +30,42 @@ window.addPromoInput = (p = {code: '', discount: '', expiry: ''}) => {
   list.appendChild(div);
 };
 
-// 🦅 حماية لوحة الإدارة من التكرار 
+// 🦅 حقن واجهة الإدارة مضاف إليها إعدادات كافر الموقع (Hero Banner)
 window.injectAdminDashboard = () => {
   const container = document.getElementById('adminSectionsContainer'); 
-  if(!container || container.innerHTML.includes('adminStatsGrid')) return; // تم البناء مسبقاً لمنع مسح الحقول
+  if(!container || container.innerHTML.includes('adminStatsGrid')) return; 
 
   container.innerHTML = `
     <div id="tab-dashboard" class="tab-content active-tab">
       <div class="admin-section" style="border-color: var(--accent-neon);"><h4 style="color: var(--accent-neon); margin-bottom: 15px;">📊 إحصائيات المبيعات الدقيقة</h4><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;" id="adminStatsGrid"></div></div>
+      
+      <div class="admin-section">
+        <h4>🖼️ إدارة كافر الموقع الثابت (Hero Banner)</h4>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">يظهر هذا الكافر في حال لم تقم بإضافة أي صور في السلايدر المتحرك.</p>
+        <div class="grid-2">
+          <div class="form-group"><label>عنوان الكافر (عربي)</label><input type="text" id="heroTitleAr"></div>
+          <div class="form-group"><label>عنوان الكافر (English)</label><input type="text" id="heroTitleEn"></div>
+        </div>
+        <div class="form-group"><label>وصف الكافر (عربي)</label><textarea id="heroDescAr" rows="2"></textarea></div>
+        <div class="form-group"><label>وصف الكافر (English)</label><textarea id="heroDescEn" rows="2"></textarea></div>
+        <div class="grid-2">
+          <div class="form-group"><label>نص الزر (عربي)</label><input type="text" id="heroBtnAr"></div>
+          <div class="form-group"><label>نص الزر (English)</label><input type="text" id="heroBtnEn"></div>
+        </div>
+        <div class="form-group"><label>صورة خلفية الكافر (اختياري)</label><input type="file" id="heroBgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
+        <button type="button" class="submit-btn" style="width:100%;" onclick="window.saveHeroConfig()">💾 حفظ إعدادات الكافر</button>
+      </div>
+
       <div class="admin-section"><h4>⚡ إعدادات العروض</h4><div class="form-group"><label>نص الإعلان</label><input type="text" id="admBannerAr"></div><div class="form-group"><label>موعد انتهاء العرض</label><input type="datetime-local" id="admBannerExpiry" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div></div>
-      <div class="admin-section"><h4>🖼️ إدارة السلايدر (أقصى حد 6 صور)</h4><div class="form-group"><label>العنوان</label><input type="text" id="slideTitleInput"></div><div class="form-group"><label>الوصف</label><input type="text" id="slideDescInput"></div><div class="form-group"><label>صورة البانر</label><input type="file" id="slideImgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div><button type="button" class="submit-btn" id="saveSlideBtn" style="width:100%; margin-bottom:15px;" onclick="window.addSlide()">➕ إضافة للسلايدر</button><div id="adminSlidesList"></div></div>
+      
+      <div class="admin-section">
+        <h4>🖼️ إدارة السلايدر المتحرك (أقصى حد 6 صور)</h4>
+        <div class="form-group"><label>العنوان</label><input type="text" id="slideTitleInput"></div>
+        <div class="form-group"><label>الوصف</label><input type="text" id="slideDescInput"></div>
+        <div class="form-group"><label>صورة البانر</label><input type="file" id="slideImgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
+        <button type="button" class="submit-btn" id="saveSlideBtn" style="width:100%; margin-bottom:15px;" onclick="window.addSlide()">➕ إضافة للسلايدر</button>
+        <div id="adminSlidesList"></div>
+      </div>
     </div>
     
     <div id="tab-orders" class="tab-content">
@@ -50,7 +76,6 @@ window.injectAdminDashboard = () => {
     <div id="tab-products" class="tab-content">
       <div class="admin-section" id="productFormSection">
         <h4>📦 إضافة أو تعديل منتج</h4>
-        
         <div class="grid-2">
           <div class="form-group"><label>اسم المنتج (عربي)</label><input type="text" id="newProdTitleAr"></div>
           <div class="form-group"><label>اسم المنتج (إنجليزي)</label><input type="text" id="newProdTitleEn"></div>
@@ -150,6 +175,15 @@ window.loadAdminData = () => {
   
   setVal('admBannerAr', s.bannerAr); setVal('admBannerExpiry', s.bannerExpiry); setVal('admWhatsapp', s.whatsapp);
 
+  if (s.heroConfig) {
+      setVal('heroTitleAr', s.heroConfig.titleAr);
+      setVal('heroTitleEn', s.heroConfig.titleEn);
+      setVal('heroDescAr', s.heroConfig.descAr);
+      setVal('heroDescEn', s.heroConfig.descEn);
+      setVal('heroBtnAr', s.heroConfig.btnTextAr);
+      setVal('heroBtnEn', s.heroConfig.btnTextEn);
+  }
+
   const promosList = document.getElementById('promosList');
   if (promosList) {
       promosList.replaceChildren();
@@ -160,6 +194,42 @@ window.loadAdminData = () => {
   if (s.rates) { setVal('admRateSAR', s.rates.SAR); setVal('admRateAED', s.rates.AED); setVal('admRateUSD', s.rates.USD); }
 
   window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminStats();
+};
+
+// 🦅 حفظ إعدادات الكافر الثابت (Hero Banner)
+window.saveHeroConfig = async () => {
+  try {
+      const bgInput = document.getElementById('heroBgFileInput');
+      let bgUrl = window.storeState.heroConfig?.bgUrl || '';
+      
+      if (bgInput && bgInput.files[0]) {
+          const base64 = await new Promise((res, rej) => {
+              const r = new FileReader();
+              r.onload = async e => res(await window.compressImage(e.target.result, 1200, 0.6));
+              r.onerror = rej;
+              r.readAsDataURL(bgInput.files[0]);
+          });
+          bgUrl = base64;
+      }
+
+      const heroConfig = {
+          titleAr: document.getElementById('heroTitleAr').value.trim(),
+          titleEn: document.getElementById('heroTitleEn').value.trim(),
+          descAr: document.getElementById('heroDescAr').value.trim(),
+          descEn: document.getElementById('heroDescEn').value.trim(),
+          btnTextAr: document.getElementById('heroBtnAr').value.trim(),
+          btnTextEn: document.getElementById('heroBtnEn').value.trim(),
+          bgUrl
+      };
+
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { heroConfig }, { merge: true });
+      window.storeState.heroConfig = heroConfig;
+      window.renderPromoSlider();
+      window.showToast('✅ تم حفظ إعدادات كافر الموقع بنجاح!', 'success');
+  } catch (e) {
+      console.error(e);
+      window.showToast('فشل حفظ إعدادات الكافر', 'error');
+  }
 };
 
 window.autoUpdateCurrencies = async () => {
@@ -222,10 +292,8 @@ window.renderAdminOrders = () => {
   if(orders.length >= window.adminOrdersLimit) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
 };
 
-// 🦅 نظام استرجاع المخزون الذكي والدقيق (يعتمد على items array)
 window.refundOrderStock = async (order) => {
     if (!order) return;
-    
     if (order.items && Array.isArray(order.items)) {
         for (const item of order.items) {
             const prod = window.storeState.products.find(p => p.id === item.id);
@@ -242,7 +310,6 @@ window.refundOrderStock = async (order) => {
             }
         }
     } else if (order.productIds) {
-        // دعم احتياطي للطلبات القديمة قبل التحديث
         for (const pid of order.productIds) {
             const prod = window.storeState.products.find(p => p.id === pid);
             if (prod) {
@@ -264,7 +331,7 @@ window.refundOrderStock = async (order) => {
 };
 
 window.deleteAdminOrder = async (orderId) => { 
-  if (!window.checkIsAdmin() || !confirm('تأكيد الحذف النهائي؟ (سيتم إرجاع المنتجات للمخزون إن لم يكن الطلب ملغياً بالفعل)')) return; 
+  if (!window.checkIsAdmin() || !confirm('تأكيد الحذف النهائي؟ (سيتم إرجاع المنتجات للمخزون)')) return; 
   try { 
     const order = window.storeState.orders.find(o => o.id === orderId);
     if (order && order.status !== 'cancelled') await window.refundOrderStock(order);
@@ -304,11 +371,6 @@ window.updateOrderStatus = async (orderId, status) => {
     }
     
     await updateDoc(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
-    
-    if (status === 'completed' && typeof emailjs !== 'undefined' && order) {
-        const confirmMsg = `تهانينا! لقد تم اكتمال طلبك بنجاح.<br><strong>المنتجات:</strong> ${order.productName}<br><strong>تفاصيل الاستلام/الأكواد:</strong><br><div class="highlight-box"><p>${codeToDeliver || 'تم التنفيذ مباشرة في حسابك.'}</p></div>`;
-        emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: order.userEmail.split('@')[0], to_email: order.userEmail, custom_message: confirmMsg }).catch(err => console.log("Delivery Email Error"));
-    }
     window.showToast('تم التحديث!', 'success');
   } catch(e) { console.error(e); window.showToast('خطأ في التحديث', 'error'); }
 };
@@ -317,10 +379,8 @@ window.saveProduct = async () => {
   if (!window.checkIsAdmin()) return;
   const titleAr = document.getElementById('newProdTitleAr').value, titleEn = document.getElementById('newProdTitleEn').value;
   const price = Number(document.getElementById('newProdPrice').value), oldPrice = Number(document.getElementById('newProdOldPrice')?.value) || 0;
-  
   const stockInput = document.getElementById('newProdStock')?.value;
   const stockQuantity = stockInput ? Number(stockInput) : undefined;
-  
   const category = document.getElementById('newProdCat')?.value || 'games';
   const badgeAr = document.getElementById('newProdBadgeAr')?.value || '', badgeEn = document.getElementById('newProdBadgeEn')?.value || '';
   const descAr = document.getElementById('newProdDescAr')?.value || '', descEn = document.getElementById('newProdDescEn')?.value || '';
@@ -368,7 +428,7 @@ window.saveProduct = async () => {
     };
 
     if (window.editingProductId) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); window.showToast('✏️ تم التعديل!', 'success'); } 
-    else { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); window.showToast('📦 تمت الإضافة!', 'success'); }
+    else { await setDoc(doc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString())), prodData); window.showToast('📦 تمت الإضافة!', 'success'); }
     window.cancelEdit();
   } catch (e) { console.error(e); window.showToast('فشل العملية', 'error'); } finally { btn.textContent = origText; btn.disabled = false; }
 };
@@ -418,7 +478,6 @@ window.renderAdminProducts = () => {
 };
 window.deleteProduct = async (id) => { if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return; try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); window.showToast('تم الحذف', 'success'); } catch (e) { console.error(e); window.showToast('فشل الحذف', 'error'); } };
 
-// 🦅 حل مشكلة السلايدر النهائي
 window.addSlide = async () => { 
   const title = document.getElementById('slideTitleInput').value.trim();
   const desc = document.getElementById('slideDescInput').value.trim();
@@ -426,9 +485,8 @@ window.addSlide = async () => {
   const btn = document.getElementById('saveSlideBtn');
   
   if (!title || !fileInput || !fileInput.files[0]) return window.showToast('أدخل البيانات واختار صورة!', 'error');
-  
   const currentSlidesCount = window.storeState.slides ? window.storeState.slides.length : 0;
-  if (currentSlidesCount >= 6) return window.showToast('أقصى حد للسلايدر 6 صور عشان سرعة الموقع!', 'error');
+  if (currentSlidesCount >= 6) return window.showToast('أقصى حد للسلايدر 6 صور!', 'error');
   
   const origText = btn.textContent; btn.textContent = 'جاري الإضافة ⏳...'; btn.disabled = true;
   
@@ -441,13 +499,11 @@ window.addSlide = async () => {
         r.readAsDataURL(file);
     });
     
-    // ضغط قوي جداً للصور عشان متعديش الـ 1 ميجا بتوع Firestore
     const imgBase64 = await window.compressImage(base64Src, 1200, 0.6); 
     const slides = window.storeState.slides ? [...window.storeState.slides] : []; 
     slides.push({ title, desc, imgUrl: imgBase64 });
     
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true });
-    
     window.showToast('🖼️ تم إضافة البانر بنجاح!', 'success');
     
     document.getElementById('slideTitleInput').value = '';
@@ -456,13 +512,9 @@ window.addSlide = async () => {
     window.storeState.slides = slides;
     window.renderAdminSlides();
     window.renderPromoSlider();
-    
   } catch(e) {
-    console.error("Slider Add Error:", e);
-    window.showToast('فشل إضافة البانر، تأكد من حجم الصورة', 'error');
-  } finally { 
-    btn.textContent = origText; btn.disabled = false; 
-  }
+    console.error(e); window.showToast('فشل إضافة البانر', 'error');
+  } finally { btn.textContent = origText; btn.disabled = false; }
 };
 
 window.deleteSlide = async (idx) => { 
@@ -473,10 +525,16 @@ window.deleteSlide = async (idx) => {
     window.storeState.slides = slides;
     window.renderAdminSlides(); 
     window.renderPromoSlider();
+    window.showToast('🗑️ تم حذف بانر السلايدر', 'success');
   } catch(e) { console.error(e); }
 };
 
-window.renderAdminSlides = () => { const list = document.getElementById('adminSlidesList'); if(list) list.innerHTML = (window.storeState.slides||[]).map((s,i) => `<div class="admin-item-row"><span style="flex:1;">${s.title}</span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف</button></div>`).join(''); };
+window.renderAdminSlides = () => { 
+  const list = document.getElementById('adminSlidesList'); 
+  if(list) {
+      list.innerHTML = (window.storeState.slides||[]).map((s,i) => `<div class="admin-item-row"><span style="flex:1;">${s.title}</span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
+  }
+};
 
 window.saveGeneralSettings = async () => {
     try {
