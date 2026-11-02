@@ -2,7 +2,6 @@
 import { db, appId, ADMIN_UID } from './firebase-config.js';
 import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// دالة لتهيئة التبويبات داخل لوحة الإدارة
 window.initAdminTabs = () => {
   const tabBtns = document.querySelectorAll('#adminTabs .tab-btn');
   tabBtns.forEach(btn => {
@@ -17,47 +16,30 @@ window.initAdminTabs = () => {
 
 window.copyCustomerData = (text) => navigator.clipboard.writeText(text).then(() => window.showToast('تم النسخ 📋', 'success'));
 
-// إدارة النسخ والباقات الذكية (مع المخزون)
 window.addVariantInput = (v = {nameAr: '', nameEn: '', price: '', stockQuantity: ''}) => {
-  const list = document.getElementById('variantsList');
-  if(!list) return;
-  const div = document.createElement('div');
-  div.className = 'admin-item-row variant-row';
-  div.style.alignItems = 'flex-end';
-  div.innerHTML = `
-      <div class="form-group" style="margin-bottom:0; flex:1;"><label>الاسم (عربي)</label><input type="text" class="var-ar" placeholder="مثال: شهر" value="${v.nameAr}"></div>
-      <div class="form-group" style="margin-bottom:0; flex:1;"><label>الاسم (En)</label><input type="text" class="var-en" placeholder="1 Month" value="${v.nameEn}"></div>
-      <div class="form-group" style="margin-bottom:0; flex:1;"><label>السعر (EGP)</label><input type="number" class="var-price" value="${v.price}"></div>
-      <div class="form-group" style="margin-bottom:0; flex:1;"><label>الكمية (اختياري)</label><input type="number" class="var-stock" placeholder="غير محدود" value="${v.stockQuantity !== undefined ? v.stockQuantity : ''}"></div>
-      <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="margin-bottom:2px; padding: 13px 15px;">✕</button>
-  `;
+  const list = document.getElementById('variantsList'); if(!list) return;
+  const div = document.createElement('div'); div.className = 'admin-item-row variant-row'; div.style.alignItems = 'flex-end';
+  div.innerHTML = `<div class="form-group" style="margin-bottom:0; flex:1;"><label>الاسم (عربي)</label><input type="text" class="var-ar" placeholder="مثال: شهر" value="${v.nameAr}"></div><div class="form-group" style="margin-bottom:0; flex:1;"><label>الاسم (En)</label><input type="text" class="var-en" placeholder="1 Month" value="${v.nameEn}"></div><div class="form-group" style="margin-bottom:0; flex:1;"><label>السعر (EGP)</label><input type="number" class="var-price" value="${v.price}"></div><div class="form-group" style="margin-bottom:0; flex:1;"><label>الكمية (اختياري)</label><input type="number" class="var-stock" placeholder="غير محدود" value="${v.stockQuantity !== undefined ? v.stockQuantity : ''}"></div><button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="margin-bottom:2px; padding: 13px 15px;">✕</button>`;
   list.appendChild(div);
 };
 
-// إدارة الكوبونات الديناميكية
 window.addPromoInput = (p = {code: '', discount: '', expiry: ''}) => {
-  const list = document.getElementById('promosList');
-  if(!list) return;
-  const div = document.createElement('div');
-  div.className = 'admin-item-row promo-row';
-  div.style.alignItems = 'flex-end';
-  div.innerHTML = `
-      <div class="form-group" style="margin-bottom:0; flex:1;"><label>الكود</label><input type="text" class="promo-code" placeholder="مثال: MAX50" value="${p.code}"></div>
-      <div class="form-group" style="margin-bottom:0; flex:1;"><label>الخصم (%)</label><input type="number" class="promo-disc" placeholder="مثال: 10" value="${p.discount}"></div>
-      <div class="form-group" style="margin-bottom:0; flex:1.5;"><label>ينتهي في</label><input type="datetime-local" class="promo-exp" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;" value="${p.expiry}"></div>
-      <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="margin-bottom:2px; padding: 13px 15px;">✕</button>
-  `;
+  const list = document.getElementById('promosList'); if(!list) return;
+  const div = document.createElement('div'); div.className = 'admin-item-row promo-row'; div.style.alignItems = 'flex-end';
+  div.innerHTML = `<div class="form-group" style="margin-bottom:0; flex:1;"><label>الكود</label><input type="text" class="promo-code" placeholder="مثال: MAX50" value="${p.code}"></div><div class="form-group" style="margin-bottom:0; flex:1;"><label>الخصم (%)</label><input type="number" class="promo-disc" placeholder="مثال: 10" value="${p.discount}"></div><div class="form-group" style="margin-bottom:0; flex:1.5;"><label>ينتهي في</label><input type="datetime-local" class="promo-exp" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;" value="${p.expiry}"></div><button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="margin-bottom:2px; padding: 13px 15px;">✕</button>`;
   list.appendChild(div);
 };
 
-// 1. حقن واجهة الإدارة (HTML)
+// 🦅 حماية لوحة الإدارة من التكرار 
 window.injectAdminDashboard = () => {
-  const container = document.getElementById('adminSectionsContainer'); if(!container) return;
+  const container = document.getElementById('adminSectionsContainer'); 
+  if(!container || container.innerHTML.includes('adminStatsGrid')) return; // تم البناء مسبقاً لمنع مسح الحقول
+
   container.innerHTML = `
     <div id="tab-dashboard" class="tab-content active-tab">
       <div class="admin-section" style="border-color: var(--accent-neon);"><h4 style="color: var(--accent-neon); margin-bottom: 15px;">📊 إحصائيات المبيعات الدقيقة</h4><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;" id="adminStatsGrid"></div></div>
       <div class="admin-section"><h4>⚡ إعدادات العروض</h4><div class="form-group"><label>نص الإعلان</label><input type="text" id="admBannerAr"></div><div class="form-group"><label>موعد انتهاء العرض</label><input type="datetime-local" id="admBannerExpiry" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div></div>
-      <div class="admin-section"><h4>🖼️ إدارة السلايدر</h4><div class="form-group"><label>العنوان</label><input type="text" id="slideTitleInput"></div><div class="form-group"><label>الوصف</label><input type="text" id="slideDescInput"></div><div class="form-group"><label>صورة البانر</label><input type="file" id="slideImgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div><button type="button" class="submit-btn" id="saveSlideBtn" style="width:100%; margin-bottom:15px;" onclick="window.addSlide()">➕ إضافة للسلايدر</button><div id="adminSlidesList"></div></div>
+      <div class="admin-section"><h4>🖼️ إدارة السلايدر (أقصى حد 6 صور)</h4><div class="form-group"><label>العنوان</label><input type="text" id="slideTitleInput"></div><div class="form-group"><label>الوصف</label><input type="text" id="slideDescInput"></div><div class="form-group"><label>صورة البانر</label><input type="file" id="slideImgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div><button type="button" class="submit-btn" id="saveSlideBtn" style="width:100%; margin-bottom:15px;" onclick="window.addSlide()">➕ إضافة للسلايدر</button><div id="adminSlidesList"></div></div>
     </div>
     
     <div id="tab-orders" class="tab-content">
@@ -81,15 +63,7 @@ window.injectAdminDashboard = () => {
           <div class="form-group">
             <label>منصة اللعبة (اختياري)</label>
             <select id="newProdPlatform">
-              <option value="">-- بدون منصة --</option>
-              <option value="steam">Steam</option>
-              <option value="epic">Epic Games</option>
-              <option value="playstation">PlayStation</option>
-              <option value="xbox">Xbox</option>
-              <option value="nintendo">Nintendo</option>
-              <option value="ubisoft">Ubisoft</option>
-              <option value="ea">EA App</option>
-              <option value="battlenet">Battle.net</option>
+              <option value="">-- بدون منصة --</option><option value="steam">Steam</option><option value="epic">Epic Games</option><option value="playstation">PlayStation</option><option value="xbox">Xbox</option><option value="nintendo">Nintendo</option><option value="ubisoft">Ubisoft</option><option value="ea">EA App</option><option value="battlenet">Battle.net</option>
             </select>
           </div>
           <div class="form-group"><label>مؤشر وقت التسليم</label><input type="text" id="newProdDeliveryTime" placeholder="مثال: ⚡ تسليم فوري"></div>
@@ -158,10 +132,9 @@ window.injectAdminDashboard = () => {
     <div id="tab-seo" class="tab-content">
       <div class="admin-section">
         <h4>🔍 مدير محركات البحث (SEO)</h4>
-        <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">تحكم في الكلمات المفتاحية والوصف اللي بيظهر في جوجل عند البحث عن متجرك.</p>
         <div class="form-group"><label>عنوان الموقع (Meta Title)</label><input type="text" id="seoTitle" placeholder="BN MAX | متجر الخدمات الرقمية"></div>
-        <div class="form-group"><label>وصف الموقع (Meta Description)</label><textarea id="seoDesc" rows="3" placeholder="اكتب وصف جذاب للمتجر..."></textarea></div>
-        <div class="form-group"><label>الكلمات المفتاحية (Meta Keywords)</label><textarea id="seoKeywords" rows="2" placeholder="العاب، شحن، برامج، مفاتيح..."></textarea></div>
+        <div class="form-group"><label>وصف الموقع (Meta Description)</label><textarea id="seoDesc" rows="3"></textarea></div>
+        <div class="form-group"><label>الكلمات المفتاحية (Meta Keywords)</label><textarea id="seoKeywords" rows="2"></textarea></div>
         <button type="button" class="submit-btn" style="width:100%;" onclick="window.saveSeoSettings()">💾 حفظ إعدادات السيو</button>
       </div>
     </div>
@@ -171,45 +144,26 @@ window.injectAdminDashboard = () => {
   window.loadAdminData();
 };
 
-// تحميل وتعبئة بيانات الإعدادات في الحقول
 window.loadAdminData = () => {
   const s = window.storeState;
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   
-  setVal('admBannerAr', s.bannerAr);
-  setVal('admBannerExpiry', s.bannerExpiry);
-  setVal('admWhatsapp', s.whatsapp);
+  setVal('admBannerAr', s.bannerAr); setVal('admBannerExpiry', s.bannerExpiry); setVal('admWhatsapp', s.whatsapp);
 
   const promosList = document.getElementById('promosList');
   if (promosList) {
       promosList.replaceChildren();
-      if (s.promos && s.promos.length > 0) {
-          s.promos.forEach(p => window.addPromoInput(p));
-      }
+      if (s.promos && s.promos.length > 0) s.promos.forEach(p => window.addPromoInput(p));
   }
 
-  if (s.payments) {
-    setVal('admInstapay', s.payments.instapay);
-    setVal('admVodafone', s.payments.vodafone);
-    setVal('admCrypto', s.payments.crypto);
-  }
+  if (s.payments) { setVal('admInstapay', s.payments.instapay); setVal('admVodafone', s.payments.vodafone); setVal('admCrypto', s.payments.crypto); }
+  if (s.rates) { setVal('admRateSAR', s.rates.SAR); setVal('admRateAED', s.rates.AED); setVal('admRateUSD', s.rates.USD); }
 
-  if (s.rates) {
-    setVal('admRateSAR', s.rates.SAR);
-    setVal('admRateAED', s.rates.AED);
-    setVal('admRateUSD', s.rates.USD);
-  }
-
-  window.renderAdminProducts();
-  window.renderAdminOrders();
-  window.renderAdminSlides();
-  window.renderAdminStats();
+  window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminStats();
 };
 
-// 2. تحديث العملات التلقائي
 window.autoUpdateCurrencies = async () => {
-  const btn = document.getElementById('autoCurrencyBtn');
-  const origText = btn.innerHTML;
+  const btn = document.getElementById('autoCurrencyBtn'); const origText = btn.innerHTML;
   btn.innerHTML = 'جاري التحديث ⏳...'; btn.disabled = true;
   try {
     const res = await fetch('https://open.er-api.com/v6/latest/EGP');
@@ -218,16 +172,11 @@ window.autoUpdateCurrencies = async () => {
       document.getElementById('admRateSAR').value = (1 / data.rates.SAR).toFixed(4);
       document.getElementById('admRateAED').value = (1 / data.rates.AED).toFixed(4);
       document.getElementById('admRateUSD').value = (1 / data.rates.USD).toFixed(4);
-      window.showToast('تم تحديث الأسعار بقيمة العملة مقابل الجنيه! اضغط حفظ الإعدادات.', 'success');
+      window.showToast('تم تحديث الأسعار! اضغط حفظ الإعدادات.', 'success');
     }
-  } catch(e) { 
-    window.showToast('فشل جلب الأسعار من الخادم، راجع اتصالك.', 'error'); 
-  } finally {
-    btn.innerHTML = origText; btn.disabled = false;
-  }
+  } catch(e) { window.showToast('فشل جلب الأسعار.', 'error'); } finally { btn.innerHTML = origText; btn.disabled = false; }
 };
 
-// 3. عرض الإحصائيات والمستخدمين
 window.renderAdminUsers = () => {
     const list = document.getElementById('adminUsersList'); if(!list) return;
     list.innerHTML = window.storeState.users.map(u => `<div class="admin-item-row" style="display:flex; justify-content:space-between;"><div><strong style="color:var(--accent-neon);">${window.sanitizeText(u.name)}</strong><br><small style="color:var(--text-muted);">${window.sanitizeText(u.email)}</small></div><small style="color:var(--text-muted);">${window.formatDate(u.createdAt)}</small></div>`).join('');
@@ -252,11 +201,9 @@ window.renderAdminStats = () => {
   `;
 };
 
-// 4. إدارة الطلبات (مع إرجاع المخزون عند الإلغاء أو الحذف)
 window.renderAdminOrders = () => {
   const pendingList = document.getElementById('adminOrdersPending'), archivedList = document.getElementById('adminOrdersArchived');
   if (!pendingList || !archivedList) return; pendingList.replaceChildren(); archivedList.replaceChildren();
-
   const orders = window.storeState.orders || [], pendingOrders = orders.filter(o => o.status === 'pending'), archivedOrders = orders.filter(o => o.status !== 'pending');
   if (!pendingOrders.length) pendingList.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center;">لا توجد طلبات جديدة.</p>';
   if (!archivedOrders.length) archivedList.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center;">الأرشيف فارغ.</p>';
@@ -275,26 +222,42 @@ window.renderAdminOrders = () => {
   if(orders.length >= window.adminOrdersLimit) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
 };
 
-// إرجاع المخزون الذكي (سواء كان باقة أو منتج عام)
+// 🦅 نظام استرجاع المخزون الذكي والدقيق (يعتمد على items array)
 window.refundOrderStock = async (order) => {
-    if (!order || !order.productIds) return;
-    for (const pid of order.productIds) {
-        const prod = window.storeState.products.find(p => p.id === pid);
-        if (prod) {
-            // محاولة البحث إذا كانت الباقة هي التي اشتريت من خلال تفريغ اسم الطلب
-            let variantRefunded = false;
-            if (prod.variants && prod.variants.length > 0) {
-                // نمر على الباقات ونشوف مين اسمها موجود في اسم الطلب
-                const matchedVariantIndex = prod.variants.findIndex(v => order.productName.includes(v.nameEn) || order.productName.includes(v.nameAr));
-                if (matchedVariantIndex !== -1 && prod.variants[matchedVariantIndex].stockQuantity !== undefined) {
-                    prod.variants[matchedVariantIndex].stockQuantity += 1;
-                    variantRefunded = true;
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { variants: prod.variants });
+    if (!order) return;
+    
+    if (order.items && Array.isArray(order.items)) {
+        for (const item of order.items) {
+            const prod = window.storeState.products.find(p => p.id === item.id);
+            if (prod) {
+                if (item.variantId && prod.variants) {
+                    const vIndex = prod.variants.findIndex(v => (v.id || v.nameEn) === item.variantId);
+                    if (vIndex !== -1 && prod.variants[vIndex].stockQuantity !== undefined) {
+                        prod.variants[vIndex].stockQuantity += 1;
+                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { variants: prod.variants });
+                    }
+                } else if (prod.stockQuantity !== undefined) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + 1, inStock: true });
                 }
             }
-            // لو مالقاش باقة، يرجع للرصيد العام
-            if (!variantRefunded && prod.stockQuantity !== undefined) {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + 1, inStock: true });
+        }
+    } else if (order.productIds) {
+        // دعم احتياطي للطلبات القديمة قبل التحديث
+        for (const pid of order.productIds) {
+            const prod = window.storeState.products.find(p => p.id === pid);
+            if (prod) {
+                let variantRefunded = false;
+                if (prod.variants && prod.variants.length > 0) {
+                    const matchedVariantIndex = prod.variants.findIndex(v => order.productName.includes(v.nameEn) || order.productName.includes(v.nameAr));
+                    if (matchedVariantIndex !== -1 && prod.variants[matchedVariantIndex].stockQuantity !== undefined) {
+                        prod.variants[matchedVariantIndex].stockQuantity += 1;
+                        variantRefunded = true;
+                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { variants: prod.variants });
+                    }
+                }
+                if (!variantRefunded && prod.stockQuantity !== undefined) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + 1, inStock: true });
+                }
             }
         }
     }
@@ -304,12 +267,10 @@ window.deleteAdminOrder = async (orderId) => {
   if (!window.checkIsAdmin() || !confirm('تأكيد الحذف النهائي؟ (سيتم إرجاع المنتجات للمخزون إن لم يكن الطلب ملغياً بالفعل)')) return; 
   try { 
     const order = window.storeState.orders.find(o => o.id === orderId);
-    if (order && order.status !== 'cancelled') {
-        await window.refundOrderStock(order);
-    }
+    if (order && order.status !== 'cancelled') await window.refundOrderStock(order);
     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId)); 
     window.showToast('🗑️ تم الحذف', 'success'); 
-  } catch(e) {} 
+  } catch(e) { console.error(e); window.showToast('فشل الحذف', 'error'); } 
 };
 
 window.updateOrderStatus = async (orderId, status) => {
@@ -321,8 +282,7 @@ window.updateOrderStatus = async (orderId, status) => {
     
     if (status === 'cancelled') {
         await window.refundOrderStock(order);
-    } 
-    else if (status === 'completed' && !codeToDeliver && order && order.productIds && order.productIds.length > 0) {
+    } else if (status === 'completed' && !codeToDeliver && order && order.productIds && order.productIds.length > 0) {
         let multiCodesArr = [];
         for (const pid of order.productIds) {
             const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
@@ -349,18 +309,15 @@ window.updateOrderStatus = async (orderId, status) => {
         const confirmMsg = `تهانينا! لقد تم اكتمال طلبك بنجاح.<br><strong>المنتجات:</strong> ${order.productName}<br><strong>تفاصيل الاستلام/الأكواد:</strong><br><div class="highlight-box"><p>${codeToDeliver || 'تم التنفيذ مباشرة في حسابك.'}</p></div>`;
         emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: order.userEmail.split('@')[0], to_email: order.userEmail, custom_message: confirmMsg }).catch(err => console.log("Delivery Email Error"));
     }
-
     window.showToast('تم التحديث!', 'success');
-  } catch(e) { window.showToast('خطأ في التحديث', 'error'); }
+  } catch(e) { console.error(e); window.showToast('خطأ في التحديث', 'error'); }
 };
 
-// 5. إدارة المنتجات وتحديث دالة الحفظ (مع المخزون الذكي)
 window.saveProduct = async () => {
   if (!window.checkIsAdmin()) return;
   const titleAr = document.getElementById('newProdTitleAr').value, titleEn = document.getElementById('newProdTitleEn').value;
   const price = Number(document.getElementById('newProdPrice').value), oldPrice = Number(document.getElementById('newProdOldPrice')?.value) || 0;
   
-  // المخزون العام
   const stockInput = document.getElementById('newProdStock')?.value;
   const stockQuantity = stockInput ? Number(stockInput) : undefined;
   
@@ -377,28 +334,18 @@ window.saveProduct = async () => {
   const reqAr = document.getElementById('newProdReqAr')?.value || '';
   const reqEn = document.getElementById('newProdReqEn')?.value || '';
   const quickInfo = {
-    accountAr: document.getElementById('qiAccountAr')?.value || '',
-    accountEn: document.getElementById('qiAccountEn')?.value || '',
-    warrantyAr: document.getElementById('qiWarrantyAr')?.value || '',
-    warrantyEn: document.getElementById('qiWarrantyEn')?.value || '',
-    regionAr: document.getElementById('qiRegionAr')?.value || '',
-    regionEn: document.getElementById('qiRegionEn')?.value || ''
+    accountAr: document.getElementById('qiAccountAr')?.value || '', accountEn: document.getElementById('qiAccountEn')?.value || '',
+    warrantyAr: document.getElementById('qiWarrantyAr')?.value || '', warrantyEn: document.getElementById('qiWarrantyEn')?.value || '',
+    regionAr: document.getElementById('qiRegionAr')?.value || '', regionEn: document.getElementById('qiRegionEn')?.value || ''
   };
 
-  // استخراج الباقات والنسخ الذكية
   const variants = [];
   document.querySelectorAll('#variantsList .variant-row').forEach(row => {
     const nameAr = row.querySelector('.var-ar').value.trim();
     const nameEn = row.querySelector('.var-en').value.trim();
     const vPrice = Number(row.querySelector('.var-price').value);
     const vStock = row.querySelector('.var-stock').value;
-    
-    if(nameAr && vPrice > 0) {
-        variants.push({ 
-            nameAr, nameEn, price: vPrice, 
-            stockQuantity: vStock !== '' ? Number(vStock) : undefined 
-        });
-    }
+    if(nameAr && vPrice > 0) variants.push({ nameAr, nameEn, price: vPrice, stockQuantity: vStock !== '' ? Number(vStock) : undefined });
   });
   
   const coverInput = document.getElementById('newProdImgFileInput'), bannerInput = document.getElementById('newProdBannerFileInput'), galleryInput = document.getElementById('newProdGallery');
@@ -408,23 +355,22 @@ window.saveProduct = async () => {
   const origText = btn.textContent; btn.textContent = 'جاري الحفظ ⏳...'; btn.disabled = true;
 
   try {
-    let imgUrl = ''; if (coverInput && coverInput.files[0]) { imgUrl = await new Promise(res => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.readAsDataURL(coverInput.files[0]); }); } else if (window.editingProductId) { imgUrl = window.storeState.products.find(p => p.id === window.editingProductId)?.imgUrl || ''; }
-    let bannerUrl = ''; if (bannerInput && bannerInput.files[0]) { bannerUrl = await new Promise(res => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.readAsDataURL(bannerInput.files[0]); }); } else if (window.editingProductId) { bannerUrl = window.storeState.products.find(p => p.id === window.editingProductId)?.bannerUrl || ''; }
+    let imgUrl = ''; if (coverInput && coverInput.files[0]) { imgUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.onerror=rej; r.readAsDataURL(coverInput.files[0]); }); } else if (window.editingProductId) { imgUrl = window.storeState.products.find(p => p.id === window.editingProductId)?.imgUrl || ''; }
+    let bannerUrl = ''; if (bannerInput && bannerInput.files[0]) { bannerUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.onerror=rej; r.readAsDataURL(bannerInput.files[0]); }); } else if (window.editingProductId) { bannerUrl = window.storeState.products.find(p => p.id === window.editingProductId)?.bannerUrl || ''; }
     let gallery = window.editingProductId ? (window.storeState.products.find(p => p.id === window.editingProductId)?.gallery || []) : [];
-    if (galleryInput && galleryInput.files.length > 0) { gallery = []; for (let i = 0; i < galleryInput.files.length; i++) { const base64 = await new Promise(res => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.readAsDataURL(galleryInput.files[i]); }); gallery.push(base64); } }
+    if (galleryInput && galleryInput.files.length > 0) { gallery = []; for (let i = 0; i < galleryInput.files.length; i++) { const base64 = await new Promise((res,rej) => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.onerror=rej; r.readAsDataURL(galleryInput.files[i]); }); gallery.push(base64); } }
 
     const prodData = { 
       titleAr, titleEn, descAr, descEn, price, oldPrice, category, badgeAr, badgeEn, imgUrl, bannerUrl, gallery, 
       deliveryTime, faqText, crossSellIds, vaultCodes, 
       inStock: stockQuantity === undefined || stockQuantity > 0, 
-      stockQuantity,
-      platform, reqAr, reqEn, quickInfo, variants
+      stockQuantity, platform, reqAr, reqEn, quickInfo, variants
     };
 
     if (window.editingProductId) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); window.showToast('✏️ تم التعديل!', 'success'); } 
     else { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); window.showToast('📦 تمت الإضافة!', 'success'); }
     window.cancelEdit();
-  } catch (e) { window.showToast('فشل العملية', 'error'); } finally { btn.textContent = origText; btn.disabled = false; }
+  } catch (e) { console.error(e); window.showToast('فشل العملية', 'error'); } finally { btn.textContent = origText; btn.disabled = false; }
 };
 
 window.editProduct = (id) => {
@@ -437,26 +383,17 @@ window.editProduct = (id) => {
   document.getElementById('newProdDescAr').value = p.descAr || p.desc || ''; document.getElementById('newProdDescEn').value = p.descEn || p.desc || '';
   document.getElementById('newProdDeliveryTime').value = p.deliveryTime || ''; document.getElementById('newProdFaq').value = p.faqText || '';
   document.getElementById('newProdCrossSell').value = p.crossSellIds ? p.crossSellIds.join(', ') : ''; document.getElementById('newProdVault').value = p.vaultCodes || '';
-  
   document.getElementById('newProdPlatform').value = p.platform || '';
   document.getElementById('newProdReqAr').value = p.reqAr || '';
   document.getElementById('newProdReqEn').value = p.reqEn || '';
   if(p.quickInfo) {
-      document.getElementById('qiAccountAr').value = p.quickInfo.accountAr || '';
-      document.getElementById('qiAccountEn').value = p.quickInfo.accountEn || '';
-      document.getElementById('qiWarrantyAr').value = p.quickInfo.warrantyAr || '';
-      document.getElementById('qiWarrantyEn').value = p.quickInfo.warrantyEn || '';
-      document.getElementById('qiRegionAr').value = p.quickInfo.regionAr || '';
-      document.getElementById('qiRegionEn').value = p.quickInfo.regionEn || '';
-  } else {
-      document.querySelectorAll('#qiAccountAr, #qiAccountEn, #qiWarrantyAr, #qiWarrantyEn, #qiRegionAr, #qiRegionEn').forEach(el => el.value = '');
-  }
+      document.getElementById('qiAccountAr').value = p.quickInfo.accountAr || ''; document.getElementById('qiAccountEn').value = p.quickInfo.accountEn || '';
+      document.getElementById('qiWarrantyAr').value = p.quickInfo.warrantyAr || ''; document.getElementById('qiWarrantyEn').value = p.quickInfo.warrantyEn || '';
+      document.getElementById('qiRegionAr').value = p.quickInfo.regionAr || ''; document.getElementById('qiRegionEn').value = p.quickInfo.regionEn || '';
+  } else { document.querySelectorAll('#qiAccountAr, #qiAccountEn, #qiWarrantyAr, #qiWarrantyEn, #qiRegionAr, #qiRegionEn').forEach(el => el.value = ''); }
   
   const list = document.getElementById('variantsList');
-  if (list) {
-      list.replaceChildren();
-      if (p.variants && p.variants.length > 0) { p.variants.forEach(v => window.addVariantInput(v)); }
-  }
+  if (list) { list.replaceChildren(); if (p.variants && p.variants.length > 0) { p.variants.forEach(v => window.addVariantInput(v)); } }
 
   window.editingProductId = id; document.getElementById('saveProductBtn').innerHTML = '💾 حفظ التعديلات'; document.getElementById('cancelEditBtn').style.display = 'block'; document.getElementById('productFormSection').scrollIntoView({behavior: 'smooth'});
 };
@@ -470,73 +407,100 @@ window.cancelEdit = () => {
 window.renderAdminProducts = () => {
   const list = document.getElementById('adminProductsList'); if (!list) return; list.replaceChildren();
   window.storeState.products.forEach(p => {
-    // حساب التوفر بناءً على الباقات أو المنتج العام
     let statusText = '';
-    if (p.variants && p.variants.length > 0) {
-        statusText = p.variants.some(v => v.stockQuantity === undefined || v.stockQuantity > 0) ? `متاح ✅ (يحتوي باقات)` : 'باقات غير متاحة ⛔';
-    } else {
-        statusText = p.inStock && (p.stockQuantity === undefined || p.stockQuantity > 0) ? `متاح ✅ (${p.stockQuantity !== undefined ? p.stockQuantity : 'غير محدود'})` : 'نفذت الكمية ⛔';
-    }
+    if (p.variants && p.variants.length > 0) statusText = p.variants.some(v => v.stockQuantity === undefined || v.stockQuantity > 0) ? `متاح ✅ (يحتوي باقات)` : 'باقات غير متاحة ⛔';
+    else statusText = p.inStock && (p.stockQuantity === undefined || p.stockQuantity > 0) ? `متاح ✅ (${p.stockQuantity !== undefined ? p.stockQuantity : 'غير محدود'})` : 'نفذت الكمية ⛔';
 
     const title = p.titleAr || p.title || '';
     let html = `<div class="admin-item-row"><span style="flex:1; line-height:1.6;">${title} - ${p.price}EGP (ID: <strong>${p.id}</strong>) <br><small><strong>${statusText}</strong></small></span><div style="display:flex; gap:8px;"><button class="submit-btn" style="padding:6px 12px; font-size:12px; flex:0;" onclick="window.editProduct('${p.id}')">تعديل</button><button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button></div></div>`;
     list.insertAdjacentHTML('beforeend', html);
   });
 };
-window.deleteProduct = async (id) => { if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return; try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); window.showToast('تم الحذف', 'success'); } catch (e) {} };
+window.deleteProduct = async (id) => { if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return; try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); window.showToast('تم الحذف', 'success'); } catch (e) { console.error(e); window.showToast('فشل الحذف', 'error'); } };
 
-// 6. السلايدر
+// 🦅 حل مشكلة السلايدر النهائي
 window.addSlide = async () => { 
-  const title = document.getElementById('slideTitleInput').value.trim(), desc = document.getElementById('slideDescInput').value.trim(), fileInput = document.getElementById('slideImgFileInput'), btn = document.getElementById('saveSlideBtn');
-  if (!title || !fileInput || !fileInput.files[0]) return window.showToast('أدخل البيانات!', 'error');
+  const title = document.getElementById('slideTitleInput').value.trim();
+  const desc = document.getElementById('slideDescInput').value.trim();
+  const fileInput = document.getElementById('slideImgFileInput');
+  const btn = document.getElementById('saveSlideBtn');
+  
+  if (!title || !fileInput || !fileInput.files[0]) return window.showToast('أدخل البيانات واختار صورة!', 'error');
+  
+  const currentSlidesCount = window.storeState.slides ? window.storeState.slides.length : 0;
+  if (currentSlidesCount >= 6) return window.showToast('أقصى حد للسلايدر 6 صور عشان سرعة الموقع!', 'error');
+  
   const origText = btn.textContent; btn.textContent = 'جاري الإضافة ⏳...'; btn.disabled = true;
+  
   try {
-    const imgBase64 = await window.compressImage(fileInput.files[0].src || await new Promise(res=>{ const r = new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(fileInput.files[0]) }));
-    const slides = window.storeState.slides ? [...window.storeState.slides] : []; slides.push({ title, desc, imgUrl: imgBase64 });
+    const file = fileInput.files[0];
+    const base64Src = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.onerror = e => rej(e);
+        r.readAsDataURL(file);
+    });
+    
+    // ضغط قوي جداً للصور عشان متعديش الـ 1 ميجا بتوع Firestore
+    const imgBase64 = await window.compressImage(base64Src, 1200, 0.6); 
+    const slides = window.storeState.slides ? [...window.storeState.slides] : []; 
+    slides.push({ title, desc, imgUrl: imgBase64 });
+    
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true });
-    window.showToast('🖼️ تم إضافة البانر!', 'success');
-  } catch(e) {} finally { btn.textContent = origText; btn.disabled = false; }
+    
+    window.showToast('🖼️ تم إضافة البانر بنجاح!', 'success');
+    
+    document.getElementById('slideTitleInput').value = '';
+    document.getElementById('slideDescInput').value = '';
+    document.getElementById('slideImgFileInput').value = '';
+    window.storeState.slides = slides;
+    window.renderAdminSlides();
+    window.renderPromoSlider();
+    
+  } catch(e) {
+    console.error("Slider Add Error:", e);
+    window.showToast('فشل إضافة البانر، تأكد من حجم الصورة', 'error');
+  } finally { 
+    btn.textContent = origText; btn.disabled = false; 
+  }
 };
-window.deleteSlide = async (idx) => { const slides = [...window.storeState.slides]; slides.splice(idx, 1); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true }); window.renderAdminSlides(); };
+
+window.deleteSlide = async (idx) => { 
+  try {
+    const slides = [...window.storeState.slides]; 
+    slides.splice(idx, 1); 
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true }); 
+    window.storeState.slides = slides;
+    window.renderAdminSlides(); 
+    window.renderPromoSlider();
+  } catch(e) { console.error(e); }
+};
+
 window.renderAdminSlides = () => { const list = document.getElementById('adminSlidesList'); if(list) list.innerHTML = (window.storeState.slides||[]).map((s,i) => `<div class="admin-item-row"><span style="flex:1;">${s.title}</span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف</button></div>`).join(''); };
 
-// 7. حفظ إعدادات الموقع
 window.saveGeneralSettings = async () => {
     try {
         const rates = { SAR: Number(document.getElementById('admRateSAR').value), AED: Number(document.getElementById('admRateAED').value), USD: Number(document.getElementById('admRateUSD').value) };
         const payments = { instapay: document.getElementById('admInstapay').value, vodafone: document.getElementById('admVodafone').value, crypto: document.getElementById('admCrypto').value };
         const whatsapp = document.getElementById('admWhatsapp').value;
-        
-        // حفظ الكوبونات الديناميكية
         const promos = [];
         document.querySelectorAll('#promosList .promo-row').forEach(row => {
-            const code = row.querySelector('.promo-code').value.trim();
-            const discount = Number(row.querySelector('.promo-disc').value);
-            const expiry = row.querySelector('.promo-exp').value;
+            const code = row.querySelector('.promo-code').value.trim(); const discount = Number(row.querySelector('.promo-disc').value); const expiry = row.querySelector('.promo-exp').value;
             if(code && discount > 0) promos.push({ code, discount, expiry });
         });
-
-        const bannerAr = document.getElementById('admBannerAr').value;
-        const bannerExpiry = document.getElementById('admBannerExpiry').value;
-        
+        const bannerAr = document.getElementById('admBannerAr').value; const bannerExpiry = document.getElementById('admBannerExpiry').value;
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { rates, payments, promos, whatsapp, bannerAr, bannerExpiry }, { merge: true });
         window.showToast('تم حفظ الإعدادات بنجاح!', 'success');
-    } catch(e) { window.showToast('خطأ في الحفظ', 'error'); }
+    } catch(e) { console.error(e); window.showToast('خطأ في الحفظ', 'error'); }
 };
 
 window.saveSeoSettings = async () => {
     try {
-        const seo = {
-            title: document.getElementById('seoTitle').value.trim(),
-            desc: document.getElementById('seoDesc').value.trim(),
-            keywords: document.getElementById('seoKeywords').value.trim()
-        };
+        const seo = { title: document.getElementById('seoTitle').value.trim(), desc: document.getElementById('seoDesc').value.trim(), keywords: document.getElementById('seoKeywords').value.trim() };
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { seo }, { merge: true });
         window.showToast('✅ تم حفظ إعدادات السيو وتطبيقها!', 'success');
         if(seo.title) { document.getElementById('metaTitle').textContent = seo.title; document.getElementById('metaOgTitle').content = seo.title; }
         if(seo.desc) { document.getElementById('metaDesc').content = seo.desc; document.getElementById('metaOgDesc').content = seo.desc; }
         if(seo.keywords) document.getElementById('metaKeywords').content = seo.keywords;
-    } catch (e) {
-        window.showToast('خطأ في حفظ السيو', 'error');
-    }
+    } catch (e) { console.error(e); window.showToast('خطأ في حفظ السيو', 'error'); }
 };
