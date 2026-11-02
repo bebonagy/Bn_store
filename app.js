@@ -14,7 +14,7 @@ window.formatDate = (timestamp) => {
   return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-window.compressImage = (base64Src, maxWidth = 800, quality = 0.6) => {
+window.compressImage = (base64Src, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve, reject) => {
     if (!base64Src) return reject(new Error('لم يتم العثور على صورة المعاينة!'));
     const img = new Image();
@@ -53,7 +53,7 @@ let countdownInterval = null;
 let currentSlideIndex = 0;
 let slideInterval = null;
 let isDataLoaded = false;
-let initialAuthDone = false; // حماية مسار الأدمن
+let initialAuthDone = false; 
 let currentCategory = 'all';
 let currentPage = 1;
 const itemsPerPage = 12;
@@ -117,7 +117,6 @@ const handleUrlRouting = () => {
     else window.navigate('home', null, false);
 };
 
-// ... (نظام اللغات والـ UI زي ما هو من غير تغيير) ...
 const translations = {
     ar: {
       nav_home: "الرئيسية", nav_games: "ألعاب", nav_keys: "مفاتيح رقمية", nav_software: "برامج", nav_subs: "اشتراكات", nav_gifts: "بطاقات هدايا", nav_deals: "عروض",
@@ -763,7 +762,6 @@ const updatePaymentInfoBox = () => {
     const addressDisplay = document.getElementById('paymentAddressDisplay'); if (addressDisplay) addressDisplay.textContent = targetVal;
 };
 
-// 🦅 إضافة items للطلب عشان المخزون الذكي
 document.getElementById('checkoutForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserProfile || !window.storeState.cart.length) return;
@@ -827,7 +825,7 @@ document.getElementById('checkoutForm')?.addEventListener('submit', async (e) =>
           transaction.set(newOrderRef, { 
               uid: currentUserProfile.uid, 
               userEmail: currentUserProfile.email, 
-              items: cartItemsDetails, // 🦅 لحماية الاسترجاع
+              items: cartItemsDetails,
               productIds, productId: productIds[0], productName: productTitles.join(' + '), finalPrice: totalPrice, currency, 
               discountApplied: activeDiscount, promoCodeUsed: activeDiscount > 0 ? document.getElementById('promoCodeInput').value.trim() : "", 
               paymentMethod, senderInfo, transactionId, customerData, receiptImage: receiptBase64, status: 'pending', deliveredCode: '', createdAt: serverTimestamp() 
@@ -943,7 +941,6 @@ const initApp = () => {
         if(document.getElementById('cartModal')) window.renderCartModal(); window.renderProducts();
       }
 
-      // 🦅 حل مشكلة الروابط عند الدخول الأول للموقع (Initial Route Handling)
       if (!initialAuthDone) {
           initialAuthDone = true;
           handleUrlRouting();
@@ -1028,12 +1025,49 @@ const initApp = () => {
 initApp();
 
 document.getElementById('cartBtnNav')?.addEventListener('click', () => { const cartModal = document.getElementById('cartModal'); if (cartModal) { cartModal.style.display = 'flex'; window.renderCartModal(); } });
+
+// 🦅 كود الواتساب المحدث (الحسابات، والخصم، والعملة بقت مظبوطة بالشعرة)
 document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => {
     if (!window.storeState.cart.length) return window.showToast('السلة فارغة!', 'error');
-    const senderInfo = document.getElementById('senderInfo')?.value.trim() || 'غير مسجل'; const transactionId = document.getElementById('transactionIdInput')?.value.trim() || 'غير مسجل'; const customerData = document.getElementById('customerData')?.value.trim() || 'غير مسجل'; const paymentMethod = document.getElementById('paymentMethod')?.value || 'غير محدد';
-    const currency = document.getElementById('currencySelect').value; let totalPrice = 0; let productTitles = [];
-    window.storeState.cart.forEach(p => { const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title); totalPrice += Number(p.price || 0); productTitles.push(title); });
-    const finalPriceText = `${totalPrice} ${currency}`; const whatsappNumber = window.storeState.whatsapp || '201200898990';
-    const message = `السلام عليكم، لقد قمت بطلب جديد من متجر BN MAX 🚀:\n\n📦 *المنتجات:* ${productTitles.join(' + ')}\n💰 *الإجمالي:* ${finalPriceText}\n💳 *طريقة الدفع:* ${paymentMethod}\n🔢 *رقم العملية:* ${transactionId}\n📱 *رقم التحويل:* ${senderInfo}\n👤 *بيانات الاستلام:* ${customerData}\n\nيرجى مراجعة الطلب وتأكيده!`;
-    const encodedMessage = encodeURIComponent(message); window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank'); window.showToast('💬 تم تحويلك للواتساب لإرسال تفاصيل الطلب!', 'success');
+    
+    const senderInfo = document.getElementById('senderInfo')?.value.trim() || 'غير مسجل'; 
+    const transactionId = document.getElementById('transactionIdInput')?.value.trim() || 'غير مسجل'; 
+    const customerData = document.getElementById('customerData')?.value.trim() || 'غير مسجل'; 
+    const paymentMethod = document.getElementById('paymentMethod')?.value || 'غير محدد';
+    const promoCode = document.getElementById('promoCodeInput')?.value.trim() || 'لا يوجد';
+    
+    const currency = document.getElementById('currencySelect').value; 
+    const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
+    
+    let totalPrice = 0; 
+    let productTitles = [];
+    
+    window.storeState.cart.forEach(p => { 
+        const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title); 
+        // 🦅 حل مشكلة العملة (بيحسب سعر العملة المختارة بدقة)
+        totalPrice += currency === 'EGP' ? Number(p.price || 0) : (Number(p.price || 0) / rate); 
+        productTitles.push(title); 
+    });
+    
+    // 🦅 حل مشكلة الخصم (بيطبق الخصم لو العميل حاطط كوبون صح)
+    if (activeDiscount > 0) {
+        totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
+    }
+    
+    const finalPriceText = `${totalPrice.toFixed(currency === 'EGP' ? 0 : 2)} ${currency} ${activeDiscount > 0 ? '(بعد الخصم)' : ''}`; 
+    const whatsappNumber = window.storeState.whatsapp || '201200898990';
+    
+    const message = `السلام عليكم، لقد قمت بطلب جديد من متجر BN MAX 🚀:\n\n` +
+                    `📦 *المنتجات:* ${productTitles.join(' + ')}\n` +
+                    `💰 *الإجمالي:* ${finalPriceText}\n` +
+                    (activeDiscount > 0 ? `🎟️ *كوبون الخصم:* ${promoCode}\n` : '') +
+                    `💳 *طريقة الدفع:* ${paymentMethod}\n` +
+                    `🔢 *رقم العملية:* ${transactionId}\n` +
+                    `📱 *رقم التحويل:* ${senderInfo}\n` +
+                    `👤 *بيانات الاستلام:* ${customerData}\n\n` +
+                    `يرجى مراجعة الطلب وتأكيده!`;
+                    
+    const encodedMessage = encodeURIComponent(message); 
+    window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank'); 
+    window.showToast('💬 تم تحويلك للواتساب لإرسال تفاصيل الطلب!', 'success');
 });
