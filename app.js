@@ -235,7 +235,6 @@ const initCountdown = (expiryString) => {
     }, 1000);
 };
 
-// 🦅 دالة عرض السلايدر أو الكافر الديناميكي
 window.renderPromoSlider = () => {
   const container = document.getElementById('promoSlider');
   const track = document.getElementById('sliderTrack');
@@ -272,7 +271,6 @@ window.renderPromoSlider = () => {
           }, 4500); 
       }
   } else {
-      // لو مفيش سلايدر، اظهر الكافر المتحكم فيه من الإدارة
       container.style.display = 'none';
       heroBanner.style.display = 'flex';
       
@@ -916,7 +914,6 @@ const initApp = () => {
         if(data.rates) window.storeState.rates = data.rates; window.storeState.payments = data.payments || { instapay: "", vodafone: "", orange: "", crypto: "" };
         window.storeState.bannerAr = data.bannerAr || ""; window.storeState.bannerExpiry = data.bannerExpiry || ""; 
         
-        // 🦅 جلب إعدادات الكافر الديناميكي (Hero Config)
         window.storeState.heroConfig = data.heroConfig || {};
 
         window.storeState.promos = data.promos || [];
