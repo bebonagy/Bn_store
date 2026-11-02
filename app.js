@@ -34,6 +34,7 @@ window.compressImage = (base64Src, maxWidth = 800, quality = 0.7) => {
 
 window.storeState = {
   bannerAr: "", bannerExpiry: "", whatsapp: "201200898990",
+  heroConfig: { titleAr: "", titleEn: "", descAr: "", descEn: "", btnTextAr: "Shop Now", btnTextEn: "Shop Now", bgUrl: "" },
   rates: { SAR: 0.077, AED: 0.075, USD: 0.020 }, payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
   promos: [], products: [], orders: [], reviews: [], slides: [], users: [],
   categories: [ { id: 'games', name: 'Games' }, { id: 'keys', name: 'Digital Keys' }, { id: 'software', name: 'Software' }, { id: 'subs', name: 'Subscriptions' }, { id: 'gifts', name: 'Gift Cards' }, { id: 'deals', name: 'Deals' } ],
@@ -92,7 +93,6 @@ window.navigate = (view, id = null, pushState = true) => {
         if(footer) footer.style.display = 'block';
     }
 
-    // 🦅 تغيير اسم الصفحة ديناميكياً
     if (view === 'home') document.title = 'BN MAX | Digital Marketplace';
     else if (view === 'admin') document.title = 'لوحة التحكم | BN MAX';
 
@@ -125,8 +125,7 @@ const translations = {
     ar: {
       nav_home: "الرئيسية", nav_games: "ألعاب", nav_keys: "مفاتيح رقمية", nav_software: "برامج", nav_subs: "اشتراكات", nav_gifts: "بطاقات هدايا", nav_deals: "عروض",
       nav_account: "حسابي", search_placeholder: "ابحث عن ألعاب، مفاتيح، برامج...",
-      hero_badge: "🛡️ متجرك الرقمي الموثوق", hero_title: "BN MAX<br>أكثر من <span>مجرد مفاتيح</span>",
-      hero_desc: "ألعاب، برامج، بطاقات هدايا، اشتراكات والمزيد...<br>كل شيء في مكان واحد — سريع، آمن، وموثوق.",
+      hero_badge: "🛡️ متجرك الرقمي الموثوق",
       btn_shop_now: "تسوق الآن", hero_stat_1: "تسليم فوري", hero_stat_2: "100% أمان", hero_stat_3: "دعم 24/7",
       cat_all: "⚡ الكل", best_sellers: "🔥 المنتجات المميزة", best_sellers_sub: "منتجاتنا الأكثر مبيعاً",
       sort_default: "الترتيب الافتراضي", sort_cheap: "الأرخص أولاً", sort_expensive: "الأغلى أولاً",
@@ -156,8 +155,7 @@ const translations = {
     en: {
       nav_home: "Home", nav_games: "Games", nav_keys: "Digital Keys", nav_software: "Software", nav_subs: "Subscriptions", nav_gifts: "Gift Cards", nav_deals: "Deals",
       nav_account: "Account", search_placeholder: "Search for games, keys, software...",
-      hero_badge: "🛡️ YOUR TRUSTED DIGITAL STORE", hero_title: "BN MAX<br>MORE THAN <span>JUST KEYS</span>",
-      hero_desc: "Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.",
+      hero_badge: "🛡️ YOUR TRUSTED DIGITAL STORE",
       btn_shop_now: "Shop Now", hero_stat_1: "Instant Delivery", hero_stat_2: "100% Secure", hero_stat_3: "24/7 Support",
       cat_all: "⚡ All", best_sellers: "🔥 Best Sellers", best_sellers_sub: "Our most popular products",
       sort_default: "Default Sorting", sort_cheap: "Lowest Price", sort_expensive: "Highest Price",
@@ -236,38 +234,63 @@ const initCountdown = (expiryString) => {
       timerEl.textContent = timeString;
     }, 1000);
 };
-  
+
+// 🦅 دالة عرض السلايدر أو الكافر الديناميكي
 window.renderPromoSlider = () => {
-    const container = document.getElementById('promoSlider');
-    const track = document.getElementById('sliderTrack');
-    const dotsContainer = document.getElementById('sliderDots');
-    const heroBanner = document.querySelector('.hero-banner-box');
-    
-    if (!container || !track || !dotsContainer) return;
-    if (!window.storeState.slides || window.storeState.slides.length === 0) {
-        container.style.display = 'none'; 
-        if(heroBanner) heroBanner.style.display = 'flex';
-        return;
-    }
-    
-    container.style.display = 'block';
-    if(heroBanner) heroBanner.style.display = 'none';
-    track.replaceChildren(); dotsContainer.replaceChildren();
+  const container = document.getElementById('promoSlider');
+  const track = document.getElementById('sliderTrack');
+  const dotsContainer = document.getElementById('sliderDots');
+  const heroBanner = document.querySelector('.hero-banner-box');
   
-    window.storeState.slides.forEach((slide, idx) => {
-      const slideDiv = document.createElement('div');
-      slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
-      slideDiv.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${slide.imgUrl}')`;
-      slideDiv.innerHTML = `<div class="slider-content"><h2>${window.sanitizeText(slide.title)}</h2><p>${window.sanitizeText(slide.desc)}</p></div>`;
-      track.appendChild(slideDiv);
-      const dot = document.createElement('button');
-      dot.className = `slider-dot ${idx === 0 ? 'active' : ''}`;
-      dot.onclick = () => { currentSlideIndex = idx; updateSliderPosition(); };
-      dotsContainer.appendChild(dot);
-    });
+  if (!container || !track || !dotsContainer || !heroBanner) return;
   
-    if (slideInterval) clearInterval(slideInterval);
-    if (window.storeState.slides.length > 1) { slideInterval = setInterval(() => { currentSlideIndex = (currentSlideIndex + 1) % window.storeState.slides.length; updateSliderPosition(); }, 4500); }
+  const hasSlides = window.storeState.slides && window.storeState.slides.length > 0;
+
+  if (hasSlides) {
+      container.style.display = 'block';
+      heroBanner.style.display = 'none';
+      track.replaceChildren(); 
+      dotsContainer.replaceChildren();
+
+      window.storeState.slides.forEach((slide, idx) => {
+        const slideDiv = document.createElement('div');
+        slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
+        slideDiv.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${slide.imgUrl}')`;
+        slideDiv.innerHTML = `<div class="slider-content"><h2>${window.sanitizeText(slide.title)}</h2><p>${window.sanitizeText(slide.desc)}</p></div>`;
+        track.appendChild(slideDiv);
+        const dot = document.createElement('button');
+        dot.className = `slider-dot ${idx === 0 ? 'active' : ''}`;
+        dot.onclick = () => { currentSlideIndex = idx; updateSliderPosition(); };
+        dotsContainer.appendChild(dot);
+      });
+
+      if (slideInterval) clearInterval(slideInterval);
+      if (window.storeState.slides.length > 1) { 
+          slideInterval = setInterval(() => { 
+              currentSlideIndex = (currentSlideIndex + 1) % window.storeState.slides.length; 
+              updateSliderPosition(); 
+          }, 4500); 
+      }
+  } else {
+      // لو مفيش سلايدر، اظهر الكافر المتحكم فيه من الإدارة
+      container.style.display = 'none';
+      heroBanner.style.display = 'flex';
+      
+      const cfg = window.storeState.heroConfig || {};
+      const title = currentLang === 'ar' ? (cfg.titleAr || "BN MAX<br>MORE THAN <span>JUST KEYS</span>") : (cfg.titleEn || cfg.titleAr || "BN MAX<br>MORE THAN <span>JUST KEYS</span>");
+      const desc = currentLang === 'ar' ? (cfg.descAr || "Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.") : (cfg.descEn || cfg.descAr || "Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.");
+      const btnText = currentLang === 'ar' ? (cfg.btnTextAr || "Shop Now") : (cfg.btnTextEn || cfg.btnTextAr || "Shop Now");
+      
+      const titleEl = heroBanner.querySelector('.hero-title');
+      const descEl = heroBanner.querySelector('.hero-desc');
+      const btnEl = heroBanner.querySelector('.hero-btn span');
+      
+      if(titleEl) titleEl.innerHTML = title;
+      if(descEl) descEl.innerHTML = desc;
+      if(btnEl) btnEl.textContent = btnText;
+      if(cfg.bgUrl) heroBanner.style.backgroundImage = `linear-gradient(rgba(10,10,22,0.85), rgba(20,11,36,0.85)), url('${cfg.bgUrl}')`;
+      else heroBanner.style.backgroundImage = 'none';
+  }
 };
   
 const updateSliderPosition = () => {
@@ -486,7 +509,6 @@ window.openProductDetails = (id, pushState = true) => {
     const desc = currentLang === 'ar' ? (prod.descAr || prod.desc) : (prod.descEn || prod.desc);
     const badge = currentLang === 'ar' ? (prod.badgeAr || prod.badge) : (prod.badgeEn || prod.badge);
   
-    // 🦅 تغيير اسم التاب لاسم المنتج لظهوره في شير الواتساب
     document.title = `${title} | BN MAX`;
 
     const currency = document.getElementById('currencySelect').value;
@@ -642,16 +664,14 @@ window.openProductDetails = (id, pushState = true) => {
     window.navigate('details', id, pushState);
 };
 
-// 🦅 إضافة أنيميشن السلة
 window.updateCartBadge = () => {
     const badge = document.getElementById('cartCountBadge'); const badgeMobile = document.getElementById('cartCountBadgeMobile');
     if (badge) { badge.textContent = window.storeState.cart.length; badge.style.display = window.storeState.cart.length > 0 ? 'flex' : 'none'; }
     if (badgeMobile) { badgeMobile.textContent = window.storeState.cart.length; badgeMobile.style.display = window.storeState.cart.length > 0 ? 'flex' : 'none'; }
 
-    // تشغيل أنيميشن النبض (Bounce)
     document.querySelectorAll('#cartBtnNav, .mobile-cart-btn').forEach(btn => {
         btn.classList.remove('cart-bounce');
-        void btn.offsetWidth; // Trigger reflow
+        void btn.offsetWidth; 
         btn.classList.add('cart-bounce');
     });
 };
@@ -895,6 +915,10 @@ const initApp = () => {
         const data = snap.data(); window.storeState.whatsapp = data.whatsapp || "201200898990";
         if(data.rates) window.storeState.rates = data.rates; window.storeState.payments = data.payments || { instapay: "", vodafone: "", orange: "", crypto: "" };
         window.storeState.bannerAr = data.bannerAr || ""; window.storeState.bannerExpiry = data.bannerExpiry || ""; 
+        
+        // 🦅 جلب إعدادات الكافر الديناميكي (Hero Config)
+        window.storeState.heroConfig = data.heroConfig || {};
+
         window.storeState.promos = data.promos || [];
         if(data.promoCode && data.promoDiscount) window.storeState.promos.push({ code: data.promoCode, discount: data.promoDiscount });
         if(data.slides) window.storeState.slides = data.slides; if(data.categories) window.storeState.categories = data.categories;
@@ -1041,7 +1065,6 @@ initApp();
 
 document.getElementById('cartBtnNav')?.addEventListener('click', () => { const cartModal = document.getElementById('cartModal'); if (cartModal) { cartModal.style.display = 'flex'; window.renderCartModal(); } });
 
-// 🦅 كود الواتساب المحدث (تفريغ السلة وإغلاق النافذة بعد الطلب)
 document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => {
     if (!window.storeState.cart.length) return window.showToast('السلة فارغة!', 'error');
     
@@ -1084,7 +1107,6 @@ document.getElementById('whatsappCheckoutBtn')?.addEventListener('click', () => 
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank'); 
     window.showToast('💬 تم تحويلك للواتساب لإرسال تفاصيل الطلب!', 'success');
 
-    // 🦅 تفريغ السلة وقفل المودال بعد الإرسال
     window.storeState.cart = []; 
     window.updateCartBadge();
     document.getElementById('checkoutModal').style.display = 'none'; 
