@@ -117,7 +117,10 @@
   <!-- 🔄 1. الواجهة الرئيسية (Home) -->
   <div id="homeView" class="view-section active-view">
     <!-- السلايدر الرئيسي -->
-    <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none;"></section>
+    <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none;">
+       <div id="sliderTrack" class="slider-track"></div>
+       <div class="slider-dots" id="sliderDots"></div>
+    </section>
 
     <!-- Hero Banner الجديد المطابق للتصميم مع دعم الترجمة -->
     <section class="hero-banner-box">
@@ -179,8 +182,8 @@
   </div>
 
   <!-- 🔄 2. واجهة تفاصيل المنتج -->
-  <div id="productDetailsView" style="display:none;">
-    <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px;" data-i18n="btn_back">🔙 رجوع</button>
+  <div id="productDetailsView" class="view-section" style="display:none;">
+    <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px; background:transparent; border:1px solid var(--accent-neon); color:var(--accent-neon); padding:8px 15px; border-radius:8px; cursor:pointer;" data-i18n="btn_back">🔙 رجوع</button>
     <div class="product-details-container" style="flex-direction: column;">
       <div style="display: flex; flex-wrap: wrap; gap: 30px; width: 100%;">
         <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
@@ -193,7 +196,6 @@
         <div class="details-info-box" style="flex: 1.5; min-width: 300px; position: relative;">
           <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer;">🤍</button>
           
-          <!-- لوجو المنصة (سيتم إظهاره ديناميكياً للألعاب فقط) -->
           <div id="detailPlatform" style="display: none; align-items: center; gap: 8px; margin-bottom: 10px;">
             <img id="detailPlatformLogo" src="" alt="Platform" style="width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">
             <span id="detailPlatformName" style="color: var(--text-muted); font-size: 13px; font-weight: bold;"></span>
@@ -244,7 +246,6 @@
           
           <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
           
-          <!-- قسم متطلبات التشغيل (يظهر للألعاب فقط) -->
           <div id="detailRequirementsContainer" style="display:none; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border-inline-start: 3px solid var(--accent-neon);">
             <h4 style="color:var(--accent-neon); margin-bottom:10px; font-size:15px; display:flex; align-items:center; gap:8px;"><span style="font-size:18px;">⚙️</span> <span data-i18n="sys_req">متطلبات التشغيل</span></h4>
             <div id="detailRequirementsContent" style="font-size:13px; color:var(--text-main); line-height:1.8;"></div>
@@ -490,23 +491,6 @@
            </button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- لوحة الإدارة -->
-  <div class="modal" id="adminModal">
-    <div class="modal-content large-modal" style="max-width: 900px;">
-      <h3><span>⚙️ لوحة تحكم BN MAX</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:5px 12px;">✕</button></h3>
-      <div class="admin-tabs" id="adminTabs" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
-        <button class="tab-btn active" data-target="tab-dashboard">📊 الرئيسية</button>
-        <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
-        <button class="tab-btn" data-target="tab-products">🛒 المنتجات</button>
-        <button class="tab-btn" data-target="tab-settings">⚙️ الإعدادات</button>
-        <button class="tab-btn" data-target="tab-seo">🔍 السيو (SEO)</button>
-      </div>
-      <div id="adminDashboardView">
-        <div id="adminSectionsContainer"></div>
-      </div>
     </div>
   </div>
 </div>
