@@ -1,4 +1,4 @@
-/* ==========================================/* ==========================================
+/* ==========================================
    1. المتغيرات والأساسيات (VARIABLES & RESET)
    ========================================== */
 :root {
@@ -225,6 +225,11 @@ body:after {
   outline: none; 
 }
 
+#userAvatarHeader {
+  border: 1px solid var(--accent-neon);
+  box-shadow: 0 0 5px var(--accent-glow);
+}
+
 .share-store-btn { 
   background: rgba(0, 242, 255, 0.1); 
   color: var(--accent-neon); 
@@ -351,8 +356,100 @@ html[dir="rtl"] .search-input {
 /* ==========================================
    5. السلايدر والبانر (HERO & SLIDER)
    ========================================== */
+.promo-slider-container { 
+  position: relative; 
+  width: 100%; 
+  border-radius: 20px; 
+  overflow: hidden; 
+  border: 1px solid rgba(0, 242, 255, 0.25); 
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8); 
+  background: linear-gradient(135deg, #0a0a16 0%, #140b24 100%); 
+  direction: ltr; 
+  touch-action: pan-y; 
+}
 
-/* تصميم Hero Banner الجديد والثابت كواجهة */
+.slider-track { 
+  display: flex; 
+  width: 100%; 
+  height: 100%; 
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1); 
+  will-change: transform; 
+}
+
+.slider-slide { 
+  min-width: 100%; 
+  height: 100%; 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+  padding: 30px 40px; 
+  background-size: cover; 
+  background-position: center; 
+  direction: rtl; 
+  cursor: pointer;
+}
+
+.slider-slide:before { 
+  content: ''; 
+  position: absolute; 
+  inset: 0; 
+  background: linear-gradient(to right, rgba(8,8,12,0.95) 10%, rgba(8,8,12,0.4) 60%, transparent); 
+  z-index: 1; 
+}
+
+.slider-content { 
+  position: relative; 
+  z-index: 2; 
+  width: 100%; 
+  text-align: right; 
+  max-width: 600px; 
+}
+
+.slider-content h2 { 
+  font-size: 36px; 
+  font-weight: 900; 
+  color: #fff; 
+  margin-bottom: 15px; 
+  text-shadow: 0 0 20px var(--accent-glow); 
+  line-height: 1.1; 
+}
+
+.slider-content p { 
+  font-size: 14px; 
+  color: var(--text-main); 
+  margin-bottom: 15px; 
+  line-height: 1.6; 
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8); 
+}
+
+.slider-dots { 
+  position: absolute; 
+  bottom: 15px; 
+  left: 50%; 
+  transform: translateX(-50%); 
+  display: flex; 
+  gap: 8px; 
+  z-index: 10; 
+}
+
+.slider-dot { 
+  width: 10px; 
+  height: 10px; 
+  border-radius: 50%; 
+  background: rgba(255,255,255,0.2); 
+  cursor: pointer; 
+  transition: 0.3s; 
+  border: none; 
+}
+
+.slider-dot.active { 
+  background: var(--accent-neon); 
+  width: 30px; 
+  border-radius: 5px; 
+  box-shadow: 0 0 10px var(--accent-glow); 
+}
+
+/* تصميم Hero Banner الجديد والثابت */
 .hero-banner-box { 
   position: relative; 
   width: 100%; 
@@ -453,125 +550,14 @@ html[dir="rtl"] .search-input {
   font-size: 16px; 
 }
 
-/* السلايدر المتحرك للعروض الترويجية */
-.promo-slider-container { 
-  position: relative; 
-  width: 100%; 
-  border-radius: 20px; 
-  overflow: hidden; 
-  border: 1px solid rgba(0, 242, 255, 0.25); 
-  margin-bottom: 30px; 
-  box-shadow: 0 20px 50px rgba(0,0,0,0.8); 
-  background: linear-gradient(135deg, #0a0a16 0%, #140b24 100%); 
-  direction: ltr; 
-  touch-action: pan-y; 
-}
-
-/* تنسيق السلايدر ليكون أرفع وأعرض (Banner Style) */
-.promo-slider-container.banner-style {
-  height: 250px; 
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  margin-top: 10px;
-}
-
-.slider-track { 
-  display: flex; 
-  width: 100%; 
-  height: 100%; 
-  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1); 
-  will-change: transform; 
-}
-
-.slider-slide { 
-  min-width: 100%; 
-  height: 100%; 
-  position: relative; 
-  display: flex; 
-  align-items: center; 
-  padding: 50px 40px; 
-  background-size: cover; 
-  background-position: center; 
-  direction: rtl; 
-}
-
-.banner-style .slider-slide {
-  padding: 30px;
-}
-
-.slider-slide:before { 
-  content: ''; 
-  position: absolute; 
-  inset: 0; 
-  background: linear-gradient(to right, rgba(8,8,12,0.95) 10%, rgba(8,8,12,0.4) 60%, transparent); 
-  z-index: 1; 
-}
-
-.slider-content { 
-  position: relative; 
-  z-index: 2; 
-  width: 100%; 
-  text-align: right; 
-  max-width: 600px; 
-}
-
-.banner-style .slider-content h2 {
-  font-size: 32px;
-}
-
-.slider-content h2 { 
-  font-size: 42px; 
-  font-weight: 900; 
-  color: #fff; 
-  margin-bottom: 15px; 
-  text-shadow: 0 0 20px var(--accent-glow); 
-  line-height: 1.1; 
-}
-
-.slider-content p { 
-  font-size: 15px; 
-  color: var(--text-main); 
-  margin-bottom: 25px; 
-  line-height: 1.6; 
-  text-shadow: 0 2px 4px rgba(0,0,0,0.8); 
-}
-
-.slider-dots { 
-  position: absolute; 
-  bottom: 15px; 
-  left: 50%; 
-  transform: translateX(-50%); 
-  display: flex; 
-  gap: 8px; 
-  z-index: 10; 
-}
-
-.slider-dot { 
-  width: 10px; 
-  height: 10px; 
-  border-radius: 50%; 
-  background: rgba(255,255,255,0.2); 
-  cursor: pointer; 
-  transition: 0.3s; 
-  border: none; 
-}
-
-.slider-dot.active { 
-  background: var(--accent-neon); 
-  width: 30px; 
-  border-radius: 5px; 
-  box-shadow: 0 0 10px var(--accent-glow); 
-}
-
-
 /* ==========================================
-   6. الأقسام والعروض (CATEGORIES & FLASH SALE)
+   6. الأقسام وعروض فلاش (CATEGORIES & FLASH SALE)
    ========================================== */
 .categories-grid-bar { 
   display: grid; 
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
   gap: 15px; 
-  margin-bottom: 15px; /* تم تقليل المسافة لأن السلايدر أصبح تحتها */
+  margin-bottom: 30px; 
 }
 
 .category-box, .category-btn { 
@@ -629,13 +615,40 @@ html[dir="rtl"] .search-input {
   color: var(--accent-neon); 
 }
 
-/* أزرار فلاتر المنصات الذكية */
-#platformFiltersBar::-webkit-scrollbar {
-  height: 4px;
+/* تصميم فلاتر المنصات (Platform Filters) */
+.platform-filter-btn {
+  background: #12121c;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
 }
-#platformFiltersBar::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 10px;
+
+.platform-filter-btn img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  filter: grayscale(100%);
+  transition: 0.3s;
+}
+
+.platform-filter-btn:hover, .platform-filter-btn.active {
+  background: rgba(0, 242, 255, 0.1);
+  color: var(--accent-neon);
+  border-color: var(--accent-neon);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.platform-filter-btn:hover img, .platform-filter-btn.active img {
+  filter: grayscale(0%);
 }
 
 .flash-sale-banner { 
@@ -896,12 +909,13 @@ html[dir="rtl"] .search-input {
   box-shadow: 0 0 15px var(--purple-glow); 
 }
 
+/* تنسيق زرار "إضافة للسلة" وهو مغلق قبل اختيار الباقة */
 .buy-btn:disabled, .out-of-stock-badge { 
   background: #151520; 
   color: var(--text-muted); 
-  border-color: var(--border-color); 
+  border-color: var(--border-color) !important; 
   cursor: not-allowed; 
-  box-shadow: none; 
+  box-shadow: none !important; 
   opacity: 0.6;
 }
 
@@ -1047,6 +1061,19 @@ html[dir="rtl"] .search-input {
   color: var(--accent-neon);
   border-color: var(--accent-neon);
   box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* تأثير التنبيه لاختيار الباقة */
+@keyframes shakeAlert {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); border-color: var(--danger); color: var(--danger); }
+  75% { transform: translateX(5px); border-color: var(--danger); color: var(--danger); }
+}
+
+.shake-alert {
+  animation: shakeAlert 0.4s ease;
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
 }
 
 #detailPlatformLogo {
@@ -1371,6 +1398,7 @@ html[dir="rtl"] .search-input {
   font-size: 14px; 
 }
 
+/* تعديل حجم زرار سلة المشتريات عشان يكون أوضح وأسهل في الموبايل */
 .remove-cart-btn { 
   background: transparent; 
   color: var(--danger); 
@@ -1556,9 +1584,6 @@ html[dir="ltr"] .faq-question {
   body { padding-bottom: 70px; } 
   .whatsapp-float { bottom: 85px; } 
   .hero-banner-box { padding: 30px 15px !important; text-align: center; flex-direction: column; }
-  .promo-slider-container.banner-style { height: 180px; }
-  .banner-style .slider-slide { padding: 20px; }
-  .banner-style .slider-content h2 { font-size: 24px; margin-bottom: 10px; }
   .hero-title { font-size: 32px; }
   .hero-stats-row { flex-direction: column !important; align-items: center; gap: 15px !important; width: 100%; border-top: none !important; margin-top: 20px !important; }
   .hero-btn { width: 100%; justify-content: center; }
