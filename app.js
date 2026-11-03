@@ -56,6 +56,7 @@ let slideInterval = null;
 let isDataLoaded = false;
 let initialAuthDone = false; 
 let currentCategory = 'all';
+let currentPlatform = 'all'; // للفلترة المتقدمة
 let currentPage = 1;
 const itemsPerPage = 12;
 
@@ -130,6 +131,7 @@ const translations = {
       cat_all: "⚡ الكل", best_sellers: "🔥 المنتجات المميزة", best_sellers_sub: "منتجاتنا الأكثر مبيعاً",
       sort_default: "الترتيب الافتراضي", sort_cheap: "الأرخص أولاً", sort_expensive: "الأغلى أولاً",
       btn_back: "🔙 رجوع", availability: "التوفر:", faq_title: "💡 أسئلة شائعة", btn_add_to_cart: "🛒 إضافة للسلة",
+      btn_buy_now: "⚡ شراء سريع", platform_all: "كل المنصات", must_login: "يجب تسجيل الدخول أولاً!",
       you_may_like: "🔥 قد يعجبك أيضاً", reviews_title: "💬 تقييمات العملاء", add_review: "أضف تقييمك", rating: "التقييم",
       btn_submit_review: "إرسال التقييم", support: "الدعم الفني", cart_title: "🛒 سلة المشتريات", cart_suggestion: "🔥 ضيف ده لطلبك ووفر:",
       total: "الإجمالي:", btn_checkout: "إتمام الشراء الآن", auth_title: "تسجيل الدخول / إنشاء حساب", email: "البريد الإلكتروني",
@@ -160,6 +162,7 @@ const translations = {
       cat_all: "⚡ All", best_sellers: "🔥 Best Sellers", best_sellers_sub: "Our most popular products",
       sort_default: "Default Sorting", sort_cheap: "Lowest Price", sort_expensive: "Highest Price",
       btn_back: "🔙 Back", availability: "Availability:", faq_title: "💡 FAQ", btn_add_to_cart: "🛒 Add to Cart",
+      btn_buy_now: "⚡ Buy Now", platform_all: "All Platforms", must_login: "You must login first!",
       you_may_like: "🔥 You May Also Like", reviews_title: "💬 Reviews", add_review: "Add your review", rating: "Rating",
       btn_submit_review: "Submit Review", support: "Support", cart_title: "🛒 Shopping Cart", cart_suggestion: "🔥 Add this and save:",
       total: "Total:", btn_checkout: "Checkout Now", auth_title: "Login / Register", email: "Email",
@@ -198,8 +201,10 @@ const applyLanguage = () => {
     
     const searchInput = document.getElementById('searchInput');
     if(searchInput) searchInput.placeholder = translations[currentLang].search_placeholder;
+    window.renderPlatformFilters();
     window.renderProducts();
     if(window.renderCategoriesBar) window.renderCategoriesBar(); 
+    if(window.renderHeroBannerContent) window.renderHeroBannerContent();
 };
 
 document.getElementById('langSwitchBtn')?.addEventListener('click', async () => {
@@ -235,20 +240,38 @@ const initCountdown = (expiryString) => {
     }, 1000);
 };
 
-// 💡 إضافة التمرير السحب للسلايدر
+// 💡 1. الكافر الثابت كواجهة دائمة
+window.renderHeroBannerContent = () => {
+  const heroBanner = document.querySelector('.hero-banner-box');
+  if (!heroBanner) return;
+  const cfg = window.storeState.heroConfig || {};
+  const title = currentLang === 'ar' ? (cfg.titleAr || "BN MAX<br>MORE THAN <span>JUST KEYS</span>") : (cfg.titleEn || cfg.titleAr || "BN MAX<br>MORE THAN <span>JUST KEYS</span>");
+  const desc = currentLang === 'ar' ? (cfg.descAr || "Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.") : (cfg.descEn || cfg.descAr || "Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.");
+  const btnText = currentLang === 'ar' ? (cfg.btnTextAr || "Shop Now") : (cfg.btnTextEn || cfg.btnTextAr || "Shop Now");
+  
+  const titleEl = heroBanner.querySelector('.hero-title');
+  const descEl = heroBanner.querySelector('.hero-desc');
+  const btnEl = heroBanner.querySelector('.hero-btn span');
+  
+  if(titleEl) titleEl.innerHTML = title;
+  if(descEl) descEl.innerHTML = desc;
+  if(btnEl) btnEl.textContent = btnText;
+  if(cfg.bgUrl) heroBanner.style.backgroundImage = `linear-gradient(rgba(10,10,22,0.85), rgba(20,11,36,0.85)), url('${cfg.bgUrl}')`;
+  else heroBanner.style.backgroundImage = 'none';
+};
+
+// 💡 2. السلايدر التفاعلي كـ (Banner Style) للعروض فقط
 window.renderPromoSlider = () => {
   const container = document.getElementById('promoSlider');
   const track = document.getElementById('sliderTrack');
   const dotsContainer = document.getElementById('sliderDots');
-  const heroBanner = document.querySelector('.hero-banner-box');
   
-  if (!container || !track || !dotsContainer || !heroBanner) return;
+  if (!container || !track || !dotsContainer) return;
   
   const hasSlides = window.storeState.slides && window.storeState.slides.length > 0;
 
   if (hasSlides) {
       container.style.display = 'block';
-      heroBanner.style.display = 'none';
       track.replaceChildren(); 
       dotsContainer.replaceChildren();
 
@@ -256,11 +279,20 @@ window.renderPromoSlider = () => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
         slideDiv.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${slide.imgUrl}')`;
+        
+        // ربط السلايدر بتوجيه الرابط عند الضغط عليه
+        if (slide.link) {
+            slideDiv.style.cursor = 'pointer';
+            slideDiv.onclick = (e) => {
+                if(e.target.tagName !== 'BUTTON') window.location.href = slide.link;
+            };
+        }
+
         slideDiv.innerHTML = `<div class="slider-content"><h2>${window.sanitizeText(slide.title)}</h2><p>${window.sanitizeText(slide.desc)}</p></div>`;
         track.appendChild(slideDiv);
         const dot = document.createElement('button');
         dot.className = `slider-dot ${idx === 0 ? 'active' : ''}`;
-        dot.onclick = () => { currentSlideIndex = idx; updateSliderPosition(); };
+        dot.onclick = (e) => { e.stopPropagation(); currentSlideIndex = idx; updateSliderPosition(); };
         dotsContainer.appendChild(dot);
       });
 
@@ -277,33 +309,16 @@ window.renderPromoSlider = () => {
       track.ontouchstart = (e) => { startX = e.touches[0].clientX; };
       track.ontouchend = (e) => {
           let endX = e.changedTouches[0].clientX;
-          if (startX - endX > 50) { // سحب لليسار (التالي)
+          if (startX - endX > 50) { 
               currentSlideIndex = (currentSlideIndex + 1) % window.storeState.slides.length;
               updateSliderPosition();
-          } else if (endX - startX > 50) { // سحب لليمين (السابق)
+          } else if (endX - startX > 50) { 
               currentSlideIndex = (currentSlideIndex - 1 + window.storeState.slides.length) % window.storeState.slides.length;
               updateSliderPosition();
           }
       };
-
   } else {
       container.style.display = 'none';
-      heroBanner.style.display = 'flex';
-      
-      const cfg = window.storeState.heroConfig || {};
-      const title = currentLang === 'ar' ? (cfg.titleAr || "BN MAX<br>MORE THAN <span>JUST KEYS</span>") : (cfg.titleEn || cfg.titleAr || "BN MAX<br>MORE THAN <span>JUST KEYS</span>");
-      const desc = currentLang === 'ar' ? (cfg.descAr || "Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.") : (cfg.descEn || cfg.descAr || "Games, Software, Gift Cards, Subscriptions and More...<br>All in One Place — Fast, Secure, Reliable.");
-      const btnText = currentLang === 'ar' ? (cfg.btnTextAr || "Shop Now") : (cfg.btnTextEn || cfg.btnTextAr || "Shop Now");
-      
-      const titleEl = heroBanner.querySelector('.hero-title');
-      const descEl = heroBanner.querySelector('.hero-desc');
-      const btnEl = heroBanner.querySelector('.hero-btn span');
-      
-      if(titleEl) titleEl.innerHTML = title;
-      if(descEl) descEl.innerHTML = desc;
-      if(btnEl) btnEl.textContent = btnText;
-      if(cfg.bgUrl) heroBanner.style.backgroundImage = `linear-gradient(rgba(10,10,22,0.85), rgba(20,11,36,0.85)), url('${cfg.bgUrl}')`;
-      else heroBanner.style.backgroundImage = 'none';
   }
 };
   
@@ -315,6 +330,55 @@ const updateSliderPosition = () => {
     dots.forEach((dot, idx) => dot.classList.toggle('active', idx === currentSlideIndex));
 };
 
+// 💡 3. الفلاتر المتقدمة للمنصات (Platform Filters)
+window.renderPlatformFilters = () => {
+    let platformBar = document.getElementById('platformFiltersBar');
+    if (!platformBar) {
+        platformBar = document.createElement('div');
+        platformBar.id = 'platformFiltersBar';
+        platformBar.style.cssText = 'display:flex; gap:10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;';
+        
+        // وضع الفلاتر أسفل قائمة الأقسام الرئيسية
+        const catBar = document.getElementById('categoriesBar');
+        if(catBar && catBar.parentNode) {
+            catBar.parentNode.insertBefore(platformBar, catBar.nextSibling);
+        }
+    }
+    
+    if (currentCategory !== 'games') {
+        platformBar.style.display = 'none';
+        currentPlatform = 'all';
+        return;
+    }
+    
+    platformBar.style.display = 'flex';
+    platformBar.innerHTML = '';
+    
+    const platforms = [
+        { id: 'all', name: translations[currentLang].platform_all, icon: '🎮' },
+        { id: 'steam', name: 'Steam', icon: '☁️' },
+        { id: 'playstation', name: 'PlayStation', icon: '🎮' },
+        { id: 'xbox', name: 'Xbox', icon: '🟢' },
+        { id: 'epic', name: 'Epic', icon: '🌌' },
+        { id: 'ea', name: 'EA App', icon: '🔴' },
+        { id: 'ubisoft', name: 'Ubisoft', icon: '🌀' }
+    ];
+    
+    platforms.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${currentPlatform === p.id ? 'active' : ''}`;
+        btn.innerHTML = `${p.icon} ${p.name}`;
+        btn.style.cssText = `white-space: nowrap; flex-shrink: 0; ${currentPlatform === p.id ? 'background: rgba(0,242,255,0.1); color: var(--accent-neon); border-color: var(--accent-neon); box-shadow: 0 0 15px var(--accent-glow);' : ''}`;
+        btn.onclick = () => {
+            currentPlatform = p.id;
+            currentPage = 1;
+            window.renderPlatformFilters();
+            window.renderProducts();
+        };
+        platformBar.appendChild(btn);
+    });
+};
+
 window.renderCategoriesBar = () => {
     const bar = document.getElementById('categoriesBar');
     const selectCat = document.getElementById('newProdCat');
@@ -324,7 +388,7 @@ window.renderCategoriesBar = () => {
       allBtn.className = `category-box ${currentCategory === 'all' ? 'active' : ''}`;
       allBtn.dataset.cat = 'all';
       allBtn.innerHTML = `<div class="category-info"><div class="category-icon">⚡</div><div class="category-name">${translations[currentLang].cat_all}</div></div>`;
-      allBtn.onclick = () => { currentCategory = 'all'; currentPage = 1; window.renderCategoriesBar(); window.renderProducts(); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); };
+      allBtn.onclick = () => { currentCategory = 'all'; currentPlatform = 'all'; currentPage = 1; window.renderCategoriesBar(); window.renderPlatformFilters(); window.renderProducts(); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); };
       bar.appendChild(allBtn);
     }
     
@@ -355,7 +419,7 @@ window.renderCategoriesBar = () => {
         if (c.id === 'deals') catName = translations[currentLang].nav_deals;
   
         btn.innerHTML = `<div class="category-info"><div class="category-icon">${getCatIcon(c.id)}</div><div class="category-name">${catName}</div></div>`;
-        btn.onclick = () => { currentCategory = c.id; currentPage = 1; window.renderCategoriesBar(); window.renderProducts(); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); };
+        btn.onclick = () => { currentCategory = c.id; currentPlatform = 'all'; currentPage = 1; window.renderCategoriesBar(); window.renderPlatformFilters(); window.renderProducts(); document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active')); };
         bar.appendChild(btn);
       }
       if(selectCat) { const opt = document.createElement('option'); opt.value = c.id; opt.textContent = c.name; selectCat.appendChild(opt); }
@@ -385,6 +449,9 @@ window.renderProducts = () => {
     
     let filtered = window.storeState.products.filter(prod => {
       if (currentCategory !== 'all' && prod.category !== currentCategory) return false;
+      // الفلترة بالمنصات إذا كنا داخل قسم الألعاب
+      if (currentCategory === 'games' && currentPlatform !== 'all' && prod.platform !== currentPlatform) return false;
+      
       const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
       if (searchVal && !String(title).toLowerCase().includes(searchVal)) return false;
       return true;
@@ -434,7 +501,11 @@ window.renderProducts = () => {
   
       const btnText = inStock ? (hasVariants ? translations[currentLang].btn_select_variant : translations[currentLang].btn_add_to_cart) : translations[currentLang].out_of_stock;
       const btnAction = inStock ? (hasVariants ? `window.openProductDetails('${prod.id}')` : `window.addToCartDirect('${prod.id}', event)`) : '';
-  
+      
+      // 💡 4. إضافة زرار الشراء السريع
+      const addToCartBtnHTML = `<button type="button" class="buy-btn ${inStock ? '' : 'out-of-stock-badge'} ${hasVariants ? 'select-variant-btn' : ''}" onclick="${btnAction}" ${inStock ? '' : 'disabled'} style="flex: 1;">${btnText}</button>`;
+      const buyNowBtnHTML = (inStock && !hasVariants) ? `<button type="button" class="buy-btn" onclick="window.buyNowDirect('${prod.id}', event)" style="flex: 1; background: var(--accent-neon); color: #000; border-color: var(--accent-neon);">${translations[currentLang].btn_buy_now}</button>` : '';
+
       const card = document.createElement('div'); card.className = 'product-card';
       card.onclick = (e) => { if(e.target.classList.contains('wishlist-icon-btn') || e.target.classList.contains('buy-btn')) return; window.openProductDetails(prod.id); };
       
@@ -449,7 +520,10 @@ window.renderProducts = () => {
         </div>
         <div>
           <div class="product-price-box">${convertedOld ? `<span class="old-price">${convertedOld} ${currency}</span>` : ''}<span class="product-price">${convertedPrice} ${currency}</span></div>
-          <button type="button" class="buy-btn ${inStock ? '' : 'out-of-stock-badge'} ${hasVariants ? 'select-variant-btn' : ''}" onclick="${btnAction}" ${inStock ? '' : 'disabled'}>${btnText}</button>
+          <div style="display:flex; gap:8px;">
+            ${addToCartBtnHTML}
+            ${buyNowBtnHTML}
+          </div>
         </div>
       `;
       grid.appendChild(card);
@@ -535,9 +609,13 @@ window.openProductDetails = (id, pushState = true) => {
     const variantsContainer = document.getElementById('detailVariantsContainer');
     const variantsList = document.getElementById('detailVariants');
     const addBtn = document.getElementById('detailAddToCartBtn');
+    
+    // إزالة زر الشراء السريع القديم إن وجد لتحديثه
+    let oldBuyNowBtn = document.getElementById('detailBuyNowBtn');
+    if(oldBuyNowBtn) oldBuyNowBtn.remove();
+
     let currentDisplayPrice = prod.price;
     
-    // 💡 حل مشكلة الباقات وإجبار المستخدم على الاختيار
     if (prod.variants && prod.variants.length > 0) {
         variantsContainer.style.display = 'block';
         variantsList.innerHTML = '';
@@ -547,6 +625,7 @@ window.openProductDetails = (id, pushState = true) => {
             addBtn.disabled = true; 
             addBtn.textContent = '⚙️ الرجاء اختيار الباقة';
             addBtn.style.opacity = '0.6';
+            addBtn.style.width = '100%';
         }
 
         prod.variants.forEach((v) => {
@@ -575,11 +654,35 @@ window.openProductDetails = (id, pushState = true) => {
                    addBtn.disabled = false;
                    addBtn.textContent = translations[currentLang].btn_add_to_cart;
                    addBtn.style.opacity = '1';
+                   addBtn.style.width = '48%';
+                   
+                   // إظهار زر الشراء السريع بعد اختيار الباقة
+                   if (!document.getElementById('detailBuyNowBtn')) {
+                       const buyNowBtn = document.createElement('button');
+                       buyNowBtn.id = 'detailBuyNowBtn';
+                       buyNowBtn.className = 'buy-btn';
+                       buyNowBtn.style.cssText = 'width: 48%; padding: 15px; font-size: 16px; margin-top: 10px; background: var(--accent-neon); color: #000; border-color: var(--accent-neon); margin-right: 4%;';
+                       buyNowBtn.textContent = translations[currentLang].btn_buy_now;
+                       buyNowBtn.onclick = (e) => window.buyNowDirect(prod.id, e);
+                       addBtn.parentNode.insertBefore(buyNowBtn, addBtn.nextSibling);
+                   }
                 }
             };
             variantsList.appendChild(btn);
         });
-    } else { variantsContainer.style.display = 'none'; }
+    } else { 
+        variantsContainer.style.display = 'none'; 
+        if (addBtn) addBtn.style.width = inStock ? '48%' : '100%';
+        if (inStock) {
+            const buyNowBtn = document.createElement('button');
+            buyNowBtn.id = 'detailBuyNowBtn';
+            buyNowBtn.className = 'buy-btn';
+            buyNowBtn.style.cssText = 'width: 48%; padding: 15px; font-size: 16px; margin-top: 10px; background: var(--accent-neon); color: #000; border-color: var(--accent-neon); margin-right: 4%;';
+            buyNowBtn.textContent = translations[currentLang].btn_buy_now;
+            buyNowBtn.onclick = (e) => window.buyNowDirect(prod.id, e);
+            addBtn.parentNode.insertBefore(buyNowBtn, addBtn.nextSibling);
+        }
+    }
   
     const convertedPrice = currency === 'EGP' ? currentDisplayPrice.toFixed(0) : (currentDisplayPrice / rate).toFixed(2);
     const convertedOld = (!prod.variants || prod.variants.length === 0) && (prod.oldPrice && prod.oldPrice > currentDisplayPrice) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
@@ -722,6 +825,25 @@ window.addToCartDirect = (prodId, event) => {
         }
         window.storeState.cart.push(cartItem); window.updateCartBadge(); window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); 
     }
+};
+
+window.buyNowDirect = (prodId, event) => {
+    if(event) event.stopPropagation();
+    
+    if (!currentUserProfile) {
+        window.showToast(translations[currentLang].must_login, 'error');
+        document.getElementById('authModal').style.display = 'flex';
+        return;
+    }
+    
+    window.addToCartDirect(prodId, event);
+    document.getElementById('cartModal').style.display = 'none';
+    activeDiscount = 0; document.getElementById('promoCodeInput').value = ''; 
+    if(document.getElementById('promoMsg')) document.getElementById('promoMsg').textContent = '';
+    
+    updateCheckoutPriceDisplay(); 
+    updatePaymentInfoBox(); 
+    document.getElementById('checkoutModal').style.display = 'flex';
 };
 
 window.addToCartCross = (id) => {
@@ -986,6 +1108,12 @@ const loadSeoFromDB = (data) => {
 const initApp = () => {
     applyLanguage();
     
+    // 💡 5. ربط قائمة الترتيب برمجياً عشان تشتغل لما العميل يغير الفلتر
+    document.getElementById('sortSelect')?.addEventListener('change', () => {
+        currentPage = 1;
+        window.renderProducts();
+    });
+
     onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), snap => {
       const products = []; snap.forEach(doc => products.push({ id: doc.id, ...doc.data() })); window.storeState.products = products; isDataLoaded = true; 
       window.renderProducts(); if(window.checkIsAdmin()) window.renderAdminProducts();
@@ -1003,7 +1131,12 @@ const initApp = () => {
         if(data.promoCode && data.promoDiscount) window.storeState.promos.push({ code: data.promoCode, discount: data.promoDiscount });
         if(data.slides) window.storeState.slides = data.slides; if(data.categories) window.storeState.categories = data.categories;
         loadSeoFromDB(data);
-        initCountdown(window.storeState.bannerExpiry); updatePaymentInfoBox(); window.renderPromoSlider(); window.renderCategoriesBar();
+        initCountdown(window.storeState.bannerExpiry); updatePaymentInfoBox(); 
+        
+        if (window.renderHeroBannerContent) window.renderHeroBannerContent();
+        if (window.renderPromoSlider) window.renderPromoSlider(); 
+        
+        window.renderCategoriesBar();
         if(isDataLoaded) window.renderProducts(); 
         
         const whatsappBtn = document.getElementById('whatsappBtn'); if(whatsappBtn) whatsappBtn.href = `https://wa.me/${window.storeState.whatsapp}?text=استفسار:`;
@@ -1025,7 +1158,13 @@ const initApp = () => {
       const loginBtn = document.getElementById('loginBtnNav');
       
       if (user) {
-        loginBtn.innerHTML = `👤 <span>${translations[currentLang].nav_account}</span>`; loginBtn.style.color = 'var(--accent-neon)'; 
+        // 💡 6. عرض صورة بروفايل العميل (جوجل) في الهيدر لو موجودة
+        const avatarHtml = profile.avatar 
+            ? `<img src="${profile.avatar}" alt="User" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; display: inline-block;">` 
+            : `👤`;
+        loginBtn.innerHTML = `${avatarHtml} <span>${translations[currentLang].nav_account}</span>`; 
+        loginBtn.style.color = 'var(--accent-neon)'; 
+
         if(document.getElementById('accountUserName')) document.getElementById('accountUserName').textContent = profile.name;
         
         window.storeState.wishlist = profile.wishlist || []; window.updateDetailWishlistBtn(); window.renderProducts();
@@ -1070,7 +1209,7 @@ const initApp = () => {
       btn.addEventListener('click', (e) => {
         document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
         const cat = e.target.dataset.cat || 'all'; e.target.classList.add('active');
-        currentCategory = cat; currentPage = 1; window.renderCategoriesBar(); window.renderProducts(); window.navigate('home');
+        currentCategory = cat; currentPlatform = 'all'; currentPage = 1; window.renderCategoriesBar(); window.renderPlatformFilters(); window.renderProducts(); window.navigate('home');
       });
     });
   
@@ -1143,3 +1282,15 @@ const initApp = () => {
   
 initApp();
 document.getElementById('cartBtnNav')?.addEventListener('click', () => { const cartModal = document.getElementById('cartModal'); if (cartModal) { cartModal.style.display = 'flex'; window.renderCartModal(); } });
+```eof
+
+### 📋 تقرير التعديلات للملف `app.js`:
+
+1.  **فصل الكافر والسلايدر بشكل نهائي:** تم إنشاء دالة `renderHeroBannerContent` لتعمل بشكل دائم كواجهة رئيسية، بينما دالة `renderPromoSlider` ستعمل فقط إذا كان هناك صور في لوحة الإدارة وسيتم عرض السلايدر في أسفل الصفحة.
+2.  **زر الشراء السريع (Buy Now):** تم برمجته ليعمل في كروت المنتجات الخارجية وصفحة تفاصيل المنتج، وإذا كان المنتج به باقات، لن يعمل إلا بعد اختيار الباقة.
+3.  **فلاتر المنصات الذكية (Platform Filters):** تم إضافة نظام فلاتر جديد متطور يعرض أيقونات المنصات (Steam, PS, Xbox) بمجرد دخول العميل على قسم الألعاب، ويقوم بفلترة الألعاب فوراً.
+4.  **إصلاح فلتر الأسعار:** تم دمج الـ `addEventListener` للـ `sortSelect` عشان يعيد ترتيب الألعاب من الأرخص للأغلى أو العكس فوراً عند الاختيار.
+5.  **الصورة الشخصية (Avatar):** تم تعديل كود `initAuth` لعرض صورة العميل (من جوجل) بجانب كلمة "حسابي" في هيدر الموقع.
+
+عشان الملفات تشتغل بشكل متكامل ومنظم، ناقص بس ملف الـ `index.html` عشان نشيل منه السلايدر ونحطه تحت الأقسام، ونعدل الـ `CSP`.
+أبعتلك ملف `index.html` ولا جاهز تنسخه؟ 🚀
