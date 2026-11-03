@@ -18,12 +18,18 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   getRedirectResult(auth).then(async (result) => {
     if (result && result.user) {
       const user = result.user;
-      currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم جوجل' };
+      currentUserProfile = { 
+        uid: user.uid, 
+        email: user.email, 
+        name: user.displayName || 'مستخدم جوجل',
+        avatar: user.photoURL || null
+      };
       
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
         uid: user.uid, 
         name: user.displayName || 'مستخدم جوجل', 
         email: user.email, 
+        avatar: user.photoURL || null,
         createdAt: serverTimestamp() 
       }, { merge: true });
 
@@ -36,7 +42,12 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم' };
+      currentUserProfile = { 
+        uid: user.uid, 
+        email: user.email, 
+        name: user.displayName || 'مستخدم',
+        avatar: user.photoURL || null
+      };
       if (onUserChangeCallback) onUserChangeCallback(user, currentUserProfile);
     } else {
       currentUserProfile = null;
@@ -75,6 +86,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         uid: user.uid, 
         name: user.displayName || 'مستخدم جوجل', 
         email: user.email, 
+        avatar: user.photoURL || null,
         createdAt: serverTimestamp() 
       }, { merge: true });
 
@@ -170,7 +182,13 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     try {
       const cred = await createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempRegistrationData.pass); 
       await updateProfile(cred.user, { displayName: tempRegistrationData.name });
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), { uid: cred.user.uid, name: tempRegistrationData.name, email: tempRegistrationData.email, createdAt: serverTimestamp() });
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), { 
+        uid: cred.user.uid, 
+        name: tempRegistrationData.name, 
+        email: tempRegistrationData.email, 
+        avatar: null,
+        createdAt: serverTimestamp() 
+      });
       
       document.getElementById('authModal').style.display = 'none'; window.showToast('🎉 تم إنشاء الحساب وتفعيله بنجاح!', 'success');
       
