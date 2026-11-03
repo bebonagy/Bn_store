@@ -46,7 +46,7 @@ window.editingProductId = null;
 window.adminOrdersLimit = 20;
 window.currentProductId = null; 
 window.currentSelectedVariant = null; 
-let activeDiscount = 0;
+let activePromo = null; // 💡 تم تغيير نظام الكوبونات لتخزين الأوبجيكت بالكامل للتحكم الشامل
 let unsubscribeOrders = null;
 let unsubscribeReviews = null;
 let unsubscribeUsers = null;
@@ -240,7 +240,7 @@ window.renderPromoSlider = () => {
   const container = document.getElementById('promoSlider');
   const track = document.getElementById('sliderTrack');
   const dotsContainer = document.getElementById('sliderDots');
-  const heroBanner = document.getElementById('mainHeroBanner'); // الهيرو الثابت
+  const heroBanner = document.getElementById('mainHeroBanner');
   
   if (!container || !track || !dotsContainer) return;
   
@@ -257,7 +257,6 @@ window.renderPromoSlider = () => {
         slideDiv.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${slide.imgUrl}')`;
         slideDiv.innerHTML = `<div class="slider-content"><h2>${window.sanitizeText(slide.title)}</h2><p>${window.sanitizeText(slide.desc)}</p></div>`;
         
-        // تفعيل الرابط عند الضغط على السلايدر
         if (slide.link) {
             slideDiv.style.cursor = 'pointer';
             slideDiv.onclick = (e) => { 
@@ -292,12 +291,11 @@ window.renderPromoSlider = () => {
           let diffX = startX - endX;
           let diffY = startY - endY;
 
-          // التأكد إن السحب أفقي (أكبر من الرأسي) عشان السكرول ميبوظش السلايدر
           if (Math.abs(diffX) > Math.abs(diffY)) {
-              if (diffX > 50) { // سحب لليسار (التالي)
+              if (diffX > 50) { 
                   currentSlideIndex = (currentSlideIndex + 1) % window.storeState.slides.length;
                   updateSliderPosition();
-              } else if (diffX < -50) { // سحب لليمين (السابق)
+              } else if (diffX < -50) { 
                   currentSlideIndex = (currentSlideIndex - 1 + window.storeState.slides.length) % window.storeState.slides.length;
                   updateSliderPosition();
               }
@@ -307,7 +305,6 @@ window.renderPromoSlider = () => {
       container.style.display = 'none';
   }
   
-  // تحديث محتوى الهيرو الثابت
   if (heroBanner) {
       const cfg = window.storeState.heroConfig || {};
       const title = currentLang === 'ar' ? (cfg.titleAr || "BN MAX<br>MORE THAN <span>JUST KEYS</span>") : (cfg.titleEn || cfg.titleAr || "BN MAX<br>MORE THAN <span>JUST KEYS</span>");
@@ -458,7 +455,6 @@ window.renderProducts = () => {
       return true;
     });
   
-    // تفعيل خاصية الترتيب
     if (sortVal === 'price_asc') {
         filtered.sort((a, b) => {
             let pA = (a.variants && a.variants.length > 0) ? a.variants[0].price : a.price;
@@ -704,7 +700,6 @@ window.openProductDetails = (id, pushState = true) => {
         document.getElementById('qiRegionVal').textContent = currentLang === 'ar' ? (prod.quickInfo.regionAr || '-') : (prod.quickInfo.regionEn || '-');
     } else { quickInfoBox.style.display = 'none'; }
   
-    // إظهار مؤشر وقت التسليم (تعديل عين الصقر)
     const deliveryBadge = document.getElementById('detailDeliveryBadge');
     if (deliveryBadge) {
         if (prod.deliveryTime) {
@@ -937,17 +932,32 @@ window.renderUserWishlist = () => {
     });
 };
 
+// 💡 تعديل حسابات الأسعار لدعم الكوبونات المخصصة
 const updateCheckoutPriceDisplay = () => {
     if (!window.storeState.cart.length) return;
-    const currency = document.getElementById('currencySelect').value; const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
+    const currency = document.getElementById('currencySelect').value; 
+    const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
+    
     let totalPrice = 0, titles = [];
+    let totalDiscountVal = 0; 
+
     window.storeState.cart.forEach(p => { 
       const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
-      totalPrice += currency === 'EGP' ? p.price : (p.price / rate); titles.push(title);
+      const itemPrice = currency === 'EGP' ? p.price : (p.price / rate);
+      
+      // لو فيه كوبون شغال، شوفه مخصص للمنتج ده ولا شامل
+      if (activePromo) {
+          if (!activePromo.productId || activePromo.productId === p.id) {
+              totalDiscountVal += itemPrice * (activePromo.discount / 100);
+          }
+      }
+
+      totalPrice += itemPrice; 
+      titles.push(title);
     });
-    if (activeDiscount > 0) totalPrice = totalPrice - (totalPrice * (activeDiscount / 100));
-    const finalPrice = totalPrice.toFixed(currency === 'EGP' ? 0 : 2);
-    const discountText = activeDiscount > 0 ? ` (بعد خصم ${activeDiscount}%)` : '';
+    
+    const finalPrice = (totalPrice - totalDiscountVal).toFixed(currency === 'EGP' ? 0 : 2);
+    const discountText = activePromo ? ` (خصم: ${totalDiscountVal.toFixed(currency === 'EGP' ? 0 : 2)} ${currency})` : '';
     const selectedProductInput = document.getElementById('selectedProduct');
     if (selectedProductInput) selectedProductInput.value = `${titles.join(' + ')}\nالإجمالي: (${finalPrice} ${currency})${discountText}`;
 };
@@ -962,7 +972,7 @@ const updatePaymentInfoBox = () => {
     const addressDisplay = document.getElementById('paymentAddressDisplay'); if (addressDisplay) addressDisplay.textContent = targetVal;
 };
 
-// 💡 إجبار العميل على إدخال بياناته وتخطي حجب الواتساب
+// 💡 تعديل دالة الطلب لخصم النسبة من المنتج المحدد فقط
 const processCheckout = async (isWhatsApp) => {
     if (!currentUserProfile || !window.storeState.cart.length) return;
     
@@ -993,6 +1003,7 @@ const processCheckout = async (isWhatsApp) => {
         const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
         
         let totalRealPrice = 0;
+        let totalDiscountVal = 0;
         let productTitles = [];
         let productIds = [];
         let cartItemsDetails = [];
@@ -1008,6 +1019,13 @@ const processCheckout = async (isWhatsApp) => {
             }
             
             const itemPriceConverted = currency === 'EGP' ? realPrice : (realPrice / rate);
+            
+            if (activePromo) {
+                if (!activePromo.productId || activePromo.productId === p.id) {
+                    totalDiscountVal += itemPriceConverted * (activePromo.discount / 100);
+                }
+            }
+
             totalRealPrice += itemPriceConverted;
             
             const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
@@ -1016,8 +1034,7 @@ const processCheckout = async (isWhatsApp) => {
             cartItemsDetails.push({ id: p.id, variantId: p.variantId || null, price: realPrice, title });
         }
 
-        if (activeDiscount > 0) totalRealPrice = totalRealPrice - (totalRealPrice * (activeDiscount / 100));
-        totalRealPrice = Number(totalRealPrice.toFixed(currency === 'EGP' ? 0 : 2));
+        totalRealPrice = Number((totalRealPrice - totalDiscountVal).toFixed(currency === 'EGP' ? 0 : 2));
 
         const paymentMethod = document.getElementById('paymentMethod').value;
         const promoCode = document.getElementById('promoCodeInput').value.trim();
@@ -1058,14 +1075,15 @@ const processCheckout = async (isWhatsApp) => {
                 userEmail: currentUserProfile.email, 
                 items: cartItemsDetails,
                 productIds, productId: productIds[0], productName: productTitles.join(' + '), finalPrice: totalRealPrice, currency, 
-                discountApplied: activeDiscount, promoCodeUsed: activeDiscount > 0 ? promoCode : "", 
+                discountApplied: activePromo ? activePromo.discount : 0, 
+                promoCodeUsed: activePromo ? promoCode : "", 
                 paymentMethod, senderInfo, transactionId, customerData, receiptImage: receiptBase64 || '', status: 'pending', deliveredCode: '', createdAt: serverTimestamp() 
             });
         });
 
         window.storeState.cart = []; window.updateCartBadge();
         document.getElementById('checkoutModal').style.display = 'none'; document.getElementById('checkoutForm').reset();
-        activeDiscount = 0;
+        activePromo = null; // إعادة ضبط الكوبون
 
         if (isWhatsApp) {
             const whatsappNumber = window.storeState.whatsapp || '201200898990';
@@ -1073,7 +1091,7 @@ const processCheckout = async (isWhatsApp) => {
             const message = `السلام عليكم، لقد قمت بطلب جديد من متجر BN MAX 🚀:\n\n` +
                             `📦 *المنتجات:* ${productTitles.join(' + ')}\n` +
                             `💰 *الإجمالي:* ${finalPriceText}\n` +
-                            (promoCode ? `🎟️ *كوبون الخصم:* ${promoCode}\n` : '') +
+                            (activePromo ? `🎟️ *كوبون الخصم:* ${promoCode} (خصم ${activePromo.discount}%)\n` : '') +
                             `💳 *طريقة الدفع:* ${paymentMethod}\n` +
                             `🔢 *رقم العملية:* ${transactionId}\n` +
                             `📱 *رقم التحويل:* ${senderInfo}\n` +
@@ -1241,17 +1259,43 @@ const initApp = () => {
     document.getElementById('proceedToCheckoutBtn')?.addEventListener('click', () => {
       if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول أولاً!', 'error');
       if (!window.storeState.cart.length) return;
-      document.getElementById('cartModal').style.display = 'none'; activeDiscount = 0; document.getElementById('promoCodeInput').value = ''; 
+      
+      document.getElementById('cartModal').style.display = 'none'; 
+      activePromo = null; // 💡 إعادة ضبط الكوبون عند فتح الدفع
+      document.getElementById('promoCodeInput').value = ''; 
       if(document.getElementById('promoMsg')) document.getElementById('promoMsg').textContent = '';
-      updateCheckoutPriceDisplay(); updatePaymentInfoBox(); document.getElementById('checkoutModal').style.display = 'flex';
+      
+      updateCheckoutPriceDisplay(); 
+      updatePaymentInfoBox(); 
+      document.getElementById('checkoutModal').style.display = 'flex';
     });
   
+    // 💡 برمجة زر فحص الكوبونات لدعم الكوبون המخصص
     document.getElementById('applyPromoBtn')?.addEventListener('click', () => {
       const input = document.getElementById('promoCodeInput').value.trim().toLowerCase(), msgEl = document.getElementById('promoMsg');
       if (!input) return;
       const promo = window.storeState.promos?.find(p => p.code.toLowerCase() === input);
-      if (promo && (!promo.expiry || new Date(promo.expiry) > new Date())) { activeDiscount = promo.discount; msgEl.textContent = `تم تطبيق خصم ${activeDiscount}% بنجاح! ✅`; msgEl.style.color = 'var(--success)'; } 
-      else { activeDiscount = 0; msgEl.textContent = 'كود الخصم غير صحيح أو منتهي! ❌'; msgEl.style.color = 'var(--danger)'; }
+      
+      if (promo && (!promo.expiry || new Date(promo.expiry) > new Date())) { 
+          if (promo.productId) {
+              // لو الكوبون مخصص لمنتج، اتأكد إنه موجود في السلة
+              const isInCart = window.storeState.cart.some(item => item.id === promo.productId);
+              if (!isInCart) {
+                  activePromo = null;
+                  msgEl.textContent = 'كود الخصم غير مخصص للمنتجات الموجودة في السلة! ❌';
+                  msgEl.style.color = 'var(--danger)';
+                  updateCheckoutPriceDisplay();
+                  return;
+              }
+          }
+          activePromo = promo; 
+          msgEl.textContent = `تم تطبيق خصم ${promo.discount}% بنجاح! ✅`; 
+          msgEl.style.color = 'var(--success)'; 
+      } else { 
+          activePromo = null; 
+          msgEl.textContent = 'كود الخصم غير صحيح أو منتهي! ❌'; 
+          msgEl.style.color = 'var(--danger)'; 
+      }
       updateCheckoutPriceDisplay();
     });
   
