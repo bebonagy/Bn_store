@@ -15,21 +15,18 @@ const hashOTP = async (otp, email) => {
 };
 
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
+  
+  // التعامل مع العودة من صفحة تسجيل الدخول بجوجل (Redirect)
   getRedirectResult(auth).then(async (result) => {
     if (result && result.user) {
       const user = result.user;
-      currentUserProfile = { 
-        uid: user.uid, 
-        email: user.email, 
-        name: user.displayName || 'مستخدم جوجل',
-        avatar: user.photoURL || null
-      };
+      currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم جوجل', photoURL: user.photoURL || '' };
       
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
         uid: user.uid, 
         name: user.displayName || 'مستخدم جوجل', 
         email: user.email, 
-        avatar: user.photoURL || null,
+        photoURL: user.photoURL || '',
         createdAt: serverTimestamp() 
       }, { merge: true });
 
@@ -40,14 +37,10 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     console.error("Redirect Auth Error:", error);
   });
 
+  // مراقبة حالة تسجيل الدخول
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      currentUserProfile = { 
-        uid: user.uid, 
-        email: user.email, 
-        name: user.displayName || 'مستخدم',
-        avatar: user.photoURL || null
-      };
+      currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم', photoURL: user.photoURL || '' };
       if (onUserChangeCallback) onUserChangeCallback(user, currentUserProfile);
     } else {
       currentUserProfile = null;
@@ -77,6 +70,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     }
   });
 
+  // تسجيل الدخول بالنافذة المنبثقة لجوجل (Popup)
   document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -86,7 +80,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         uid: user.uid, 
         name: user.displayName || 'مستخدم جوجل', 
         email: user.email, 
-        avatar: user.photoURL || null,
+        photoURL: user.photoURL || '',
         createdAt: serverTimestamp() 
       }, { merge: true });
 
@@ -147,7 +141,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const otpHash = await hashOTP(otpCode, email);
         
-        // حفظ البيانات في الجلسة لمنع فقدانها عند تحديث الصفحة
+        // حفظ البيانات في الجلسة لمنع فقدانها عند تحديث الصفحة أو الخروج منها بالخطأ
         sessionStorage.setItem('bn_temp_reg', JSON.stringify({ name, email, pass, otpHash }));
         
         if (typeof emailjs !== 'undefined') {
@@ -168,7 +162,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     const inputOTP = document.getElementById('regOTP').value.trim();
     if (!inputOTP) return window.showToast('أدخل كود التفعيل!', 'error');
     
-    // استدعاء البيانات من الجلسة
+    // استدعاء البيانات من الجلسة (Session Storage)
     const storedData = sessionStorage.getItem('bn_temp_reg');
     if (!storedData) return window.showToast('انتهت الجلسة، يرجى التسجيل مجدداً.', 'error');
     
@@ -182,21 +176,27 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     try {
       const cred = await createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempRegistrationData.pass); 
       await updateProfile(cred.user, { displayName: tempRegistrationData.name });
+      
+      // حفظ بيانات العميل الجديد في قاعدة البيانات مع تهيئة صورة فارغة
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), { 
         uid: cred.user.uid, 
         name: tempRegistrationData.name, 
         email: tempRegistrationData.email, 
-        avatar: null,
+        photoURL: '', 
         createdAt: serverTimestamp() 
       });
       
-      document.getElementById('authModal').style.display = 'none'; window.showToast('🎉 تم إنشاء الحساب وتفعيله بنجاح!', 'success');
+      document.getElementById('authModal').style.display = 'none'; 
+      window.showToast('🎉 تم إنشاء الحساب وتفعيله بنجاح!', 'success');
       
       if (typeof emailjs !== 'undefined') {
         const welcomeMessage = `حسابك دلوقتي جاهز ومفعل بنجاح.<br>تقدر تتصفح أحدث العروض، وتضيف منتجاتك المفضلة، وتتابع طلباتك بكل سهولة وأمان.<br><br><div class="btn-container"><a href="https://bn-max.com" class="btn">تصفح العروض الآن 🚀</a></div>`;
         emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: tempRegistrationData.name, to_email: tempRegistrationData.email, custom_message: welcomeMessage }).catch(err => console.log("Welcome Email Error"));
       }
-      sessionStorage.removeItem('bn_temp_reg'); document.getElementById('regOTP').value = '';
+      
+      // مسح البيانات من الجلسة بعد نجاح العملية لمنع تكرار الاستخدام
+      sessionStorage.removeItem('bn_temp_reg'); 
+      document.getElementById('regOTP').value = '';
     } catch (e) { window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); } 
     finally { btn.textContent = origText; btn.disabled = false; }
   });
