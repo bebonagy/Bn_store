@@ -1,4 +1,3 @@
-
 // admin.js
 import { db, appId, ADMIN_UID } from './firebase-config.js';
 import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -41,7 +40,7 @@ window.injectAdminDashboard = () => {
       
       <div class="admin-section">
         <h4>🖼️ إدارة كافر الموقع الثابت (Hero Banner)</h4>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">يظهر هذا الكافر كواجهة دائمة وأساسية للموقع.</p>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">يظهر هذا الكافر في أعلى الموقع دائماً.</p>
         <div class="grid-2">
           <div class="form-group"><label>عنوان الكافر (عربي)</label><input type="text" id="heroTitleAr"></div>
           <div class="form-group"><label>عنوان الكافر (English)</label><input type="text" id="heroTitleEn"></div>
@@ -59,11 +58,10 @@ window.injectAdminDashboard = () => {
       <div class="admin-section"><h4>⚡ إعدادات العروض</h4><div class="form-group"><label>نص الإعلان</label><input type="text" id="admBannerAr"></div><div class="form-group"><label>موعد انتهاء العرض</label><input type="datetime-local" id="admBannerExpiry" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div></div>
       
       <div class="admin-section">
-        <h4>🖼️ إدارة سلايدر العروض (أقصى حد 6 صور)</h4>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">يظهر هذا السلايدر أسفل الأقسام ومخصص لعرض الصور الترويجية.</p>
+        <h4>🖼️ إدارة السلايدر المتحرك (أقصى حد 6 صور)</h4>
         <div class="form-group"><label>العنوان</label><input type="text" id="slideTitleInput"></div>
         <div class="form-group"><label>الوصف</label><input type="text" id="slideDescInput"></div>
-        <div class="form-group"><label>رابط التوجيه (اختياري)</label><input type="text" id="slideLinkInput" placeholder="مثال: https://bn-max.com/?product=123"></div>
+        <div class="form-group"><label>رابط التوجيه عند الضغط (اختياري)</label><input type="text" id="slideLinkInput" placeholder="مثال: https://bn-max.com/?product=123" style="direction: ltr; text-align: left;"></div>
         <div class="form-group"><label>صورة البانر</label><input type="file" id="slideImgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
         <button type="button" class="submit-btn" id="saveSlideBtn" style="width:100%; margin-bottom:15px;" onclick="window.addSlide()">➕ إضافة للسلايدر</button>
         <div id="adminSlidesList"></div>
@@ -85,15 +83,15 @@ window.injectAdminDashboard = () => {
           <div class="form-group"><label>السعر المشطوب (EGP)</label><input type="number" id="newProdOldPrice"></div>
           <div class="form-group"><label>القسم</label><select id="newProdCat"></select></div>
           <div class="form-group"><label>الكمية العامة</label><input type="number" id="newProdStock" placeholder="اتركها فارغة للمنتج الرقمي المفتوح"></div>
+          
           <div class="form-group">
             <label>الشارة (عربي)</label>
             <select id="newProdBadgeAr">
               <option value="">-- بدون شارة --</option>
               <option value="⚡ تسليم فوري">⚡ تسليم فوري</option>
-              <option value="🔥 الأكثر مبيعاً">🔥 الأكثر مبيعاً</option>
-              <option value="💎 عرض حصري">💎 عرض حصري</option>
-              <option value="⏳ كمية محدودة">⏳ كمية محدودة</option>
-              <option value="🎁 هدية مجانية">🎁 هدية مجانية</option>
+              <option value="🔥 عرض حصري">🔥 عرض حصري</option>
+              <option value="💎 الأكثر مبيعاً">💎 الأكثر مبيعاً</option>
+              <option value="🎁 خصم خاص">🎁 خصم خاص</option>
             </select>
           </div>
           <div class="form-group">
@@ -101,12 +99,12 @@ window.injectAdminDashboard = () => {
             <select id="newProdBadgeEn">
               <option value="">-- No Badge --</option>
               <option value="⚡ Instant Delivery">⚡ Instant Delivery</option>
-              <option value="🔥 Best Seller">🔥 Best Seller</option>
-              <option value="💎 Exclusive Offer">💎 Exclusive Offer</option>
-              <option value="⏳ Limited Stock">⏳ Limited Stock</option>
-              <option value="🎁 Free Gift">🎁 Free Gift</option>
+              <option value="🔥 Exclusive Offer">🔥 Exclusive Offer</option>
+              <option value="💎 Best Seller">💎 Best Seller</option>
+              <option value="🎁 Special Discount">🎁 Special Discount</option>
             </select>
           </div>
+
           <div class="form-group">
             <label>منصة اللعبة (اختياري)</label>
             <select id="newProdPlatform">
@@ -245,7 +243,7 @@ window.saveHeroConfig = async () => {
 
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { heroConfig }, { merge: true });
       window.storeState.heroConfig = heroConfig;
-      if (window.renderHeroBannerContent) window.renderHeroBannerContent();
+      window.renderPromoSlider();
       window.showToast('✅ تم حفظ إعدادات الكافر بنجاح!', 'success');
   } catch (e) {
       console.error(e);
@@ -460,7 +458,13 @@ window.editProduct = (id) => {
   document.getElementById('newProdPrice').value = p.price || ''; document.getElementById('newProdOldPrice').value = p.oldPrice || '';
   document.getElementById('newProdCat').value = p.category || 'games'; 
   document.getElementById('newProdStock').value = p.stockQuantity !== undefined ? p.stockQuantity : '';
-  document.getElementById('newProdBadgeAr').value = p.badgeAr || p.badge || ''; document.getElementById('newProdBadgeEn').value = p.badgeEn || p.badge || '';
+  
+  // تحديث الشارات المنسدلة
+  const badgeArSelect = document.getElementById('newProdBadgeAr');
+  if(badgeArSelect) badgeArSelect.value = p.badgeAr || p.badge || ''; 
+  const badgeEnSelect = document.getElementById('newProdBadgeEn');
+  if(badgeEnSelect) badgeEnSelect.value = p.badgeEn || p.badge || '';
+
   document.getElementById('newProdDescAr').value = p.descAr || p.desc || ''; document.getElementById('newProdDescEn').value = p.descEn || p.desc || '';
   document.getElementById('newProdDeliveryTime').value = p.deliveryTime || ''; document.getElementById('newProdFaq').value = p.faqText || '';
   document.getElementById('newProdCrossSell').value = p.crossSellIds ? p.crossSellIds.join(', ') : ''; document.getElementById('newProdVault').value = p.vaultCodes || '';
@@ -507,7 +511,7 @@ window.addSlide = async () => {
   const fileInput = document.getElementById('slideImgFileInput');
   const btn = document.getElementById('saveSlideBtn');
   
-  if (!title || !fileInput || !fileInput.files[0]) return window.showToast('أدخل البيانات واختار صورة!', 'error');
+  if (!title || !fileInput || !fileInput.files[0]) return window.showToast('أدخل العنوان واختار صورة!', 'error');
   const currentSlidesCount = window.storeState.slides ? window.storeState.slides.length : 0;
   if (currentSlidesCount >= 6) return window.showToast('أقصى حد للسلايدر 6 صور!', 'error');
   
@@ -535,7 +539,7 @@ window.addSlide = async () => {
     document.getElementById('slideImgFileInput').value = '';
     window.storeState.slides = slides;
     window.renderAdminSlides();
-    if (window.renderPromoSlider) window.renderPromoSlider();
+    window.renderPromoSlider();
   } catch(e) {
     console.error(e); window.showToast('فشل إضافة البانر', 'error');
   } finally { btn.textContent = origText; btn.disabled = false; }
@@ -548,7 +552,7 @@ window.deleteSlide = async (idx) => {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true }); 
     window.storeState.slides = slides;
     window.renderAdminSlides(); 
-    if (window.renderPromoSlider) window.renderPromoSlider();
+    window.renderPromoSlider();
     window.showToast('🗑️ تم حذف بانر السلايدر', 'success');
   } catch(e) { console.error(e); }
 };
@@ -557,9 +561,9 @@ window.renderAdminSlides = () => {
   const list = document.getElementById('adminSlidesList'); 
   if(list) {
       if (!window.storeState.slides || window.storeState.slides.length === 0) {
-          list.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center; padding:15px;">لا يوجد صور في السلايدر حالياً.</p>';
+          list.innerHTML = '<div style="background: rgba(255,204,0,0.1); border: 1px solid #ffcc00; padding: 15px; border-radius: 8px; color: #ffcc00; text-align: center; font-size: 13px; margin-top:15px;">⚠️ السلايدر فارغ حالياً! لن يظهر للعملاء. يرجى إضافة عروض لتفعيله.</div>';
       } else {
-          list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row" style="align-items: flex-start;"><div style="flex:1;"><strong>${s.title}</strong>${s.link ? `<br><small style="color:var(--accent-neon); word-break: break-all;">🔗 ${s.link}</small>` : ''}</div><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
+          list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row"><span style="flex:1;"><strong>${s.title}</strong><br><small style="color:var(--accent-neon);">${s.link ? '🔗 ' + s.link : 'بدون توجيه'}</small></span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
       }
   }
 };
