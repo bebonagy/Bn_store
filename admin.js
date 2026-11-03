@@ -1,3 +1,4 @@
+
 // admin.js
 import { db, appId, ADMIN_UID } from './firebase-config.js';
 import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -40,7 +41,7 @@ window.injectAdminDashboard = () => {
       
       <div class="admin-section">
         <h4>🖼️ إدارة كافر الموقع الثابت (Hero Banner)</h4>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">يظهر هذا الكافر في حال لم تقم بإضافة أي صور في السلايدر المتحرك.</p>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">يظهر هذا الكافر كواجهة دائمة وأساسية للموقع.</p>
         <div class="grid-2">
           <div class="form-group"><label>عنوان الكافر (عربي)</label><input type="text" id="heroTitleAr"></div>
           <div class="form-group"><label>عنوان الكافر (English)</label><input type="text" id="heroTitleEn"></div>
@@ -58,9 +59,11 @@ window.injectAdminDashboard = () => {
       <div class="admin-section"><h4>⚡ إعدادات العروض</h4><div class="form-group"><label>نص الإعلان</label><input type="text" id="admBannerAr"></div><div class="form-group"><label>موعد انتهاء العرض</label><input type="datetime-local" id="admBannerExpiry" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div></div>
       
       <div class="admin-section">
-        <h4>🖼️ إدارة السلايدر المتحرك (أقصى حد 6 صور)</h4>
+        <h4>🖼️ إدارة سلايدر العروض (أقصى حد 6 صور)</h4>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">يظهر هذا السلايدر أسفل الأقسام ومخصص لعرض الصور الترويجية.</p>
         <div class="form-group"><label>العنوان</label><input type="text" id="slideTitleInput"></div>
         <div class="form-group"><label>الوصف</label><input type="text" id="slideDescInput"></div>
+        <div class="form-group"><label>رابط التوجيه (اختياري)</label><input type="text" id="slideLinkInput" placeholder="مثال: https://bn-max.com/?product=123"></div>
         <div class="form-group"><label>صورة البانر</label><input type="file" id="slideImgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
         <button type="button" class="submit-btn" id="saveSlideBtn" style="width:100%; margin-bottom:15px;" onclick="window.addSlide()">➕ إضافة للسلايدر</button>
         <div id="adminSlidesList"></div>
@@ -82,8 +85,28 @@ window.injectAdminDashboard = () => {
           <div class="form-group"><label>السعر المشطوب (EGP)</label><input type="number" id="newProdOldPrice"></div>
           <div class="form-group"><label>القسم</label><select id="newProdCat"></select></div>
           <div class="form-group"><label>الكمية العامة</label><input type="number" id="newProdStock" placeholder="اتركها فارغة للمنتج الرقمي المفتوح"></div>
-          <div class="form-group"><label>الشارة (عربي)</label><input type="text" id="newProdBadgeAr" placeholder="تسليم فوري"></div>
-          <div class="form-group"><label>الشارة (إنجليزي)</label><input type="text" id="newProdBadgeEn" placeholder="Instant Delivery"></div>
+          <div class="form-group">
+            <label>الشارة (عربي)</label>
+            <select id="newProdBadgeAr">
+              <option value="">-- بدون شارة --</option>
+              <option value="⚡ تسليم فوري">⚡ تسليم فوري</option>
+              <option value="🔥 الأكثر مبيعاً">🔥 الأكثر مبيعاً</option>
+              <option value="💎 عرض حصري">💎 عرض حصري</option>
+              <option value="⏳ كمية محدودة">⏳ كمية محدودة</option>
+              <option value="🎁 هدية مجانية">🎁 هدية مجانية</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الشارة (إنجليزي)</label>
+            <select id="newProdBadgeEn">
+              <option value="">-- No Badge --</option>
+              <option value="⚡ Instant Delivery">⚡ Instant Delivery</option>
+              <option value="🔥 Best Seller">🔥 Best Seller</option>
+              <option value="💎 Exclusive Offer">💎 Exclusive Offer</option>
+              <option value="⏳ Limited Stock">⏳ Limited Stock</option>
+              <option value="🎁 Free Gift">🎁 Free Gift</option>
+            </select>
+          </div>
           <div class="form-group">
             <label>منصة اللعبة (اختياري)</label>
             <select id="newProdPlatform">
@@ -222,8 +245,8 @@ window.saveHeroConfig = async () => {
 
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { heroConfig }, { merge: true });
       window.storeState.heroConfig = heroConfig;
-      window.renderPromoSlider();
-      window.showToast('✅ تم حفظ إعدادات كافر الموقع بنجاح!', 'success');
+      if (window.renderHeroBannerContent) window.renderHeroBannerContent();
+      window.showToast('✅ تم حفظ إعدادات الكافر بنجاح!', 'success');
   } catch (e) {
       console.error(e);
       window.showToast('فشل حفظ إعدادات الكافر', 'error');
@@ -480,6 +503,7 @@ window.deleteProduct = async (id) => { if (!window.checkIsAdmin() || !confirm('�
 window.addSlide = async () => { 
   const title = document.getElementById('slideTitleInput').value.trim();
   const desc = document.getElementById('slideDescInput').value.trim();
+  const link = document.getElementById('slideLinkInput').value.trim();
   const fileInput = document.getElementById('slideImgFileInput');
   const btn = document.getElementById('saveSlideBtn');
   
@@ -500,17 +524,18 @@ window.addSlide = async () => {
     
     const imgBase64 = await window.compressImage(base64Src, 1200, 0.6); 
     const slides = window.storeState.slides ? [...window.storeState.slides] : []; 
-    slides.push({ title, desc, imgUrl: imgBase64 });
+    slides.push({ title, desc, link, imgUrl: imgBase64 });
     
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true });
     window.showToast('🖼️ تم إضافة البانر بنجاح!', 'success');
     
     document.getElementById('slideTitleInput').value = '';
     document.getElementById('slideDescInput').value = '';
+    document.getElementById('slideLinkInput').value = '';
     document.getElementById('slideImgFileInput').value = '';
     window.storeState.slides = slides;
     window.renderAdminSlides();
-    window.renderPromoSlider();
+    if (window.renderPromoSlider) window.renderPromoSlider();
   } catch(e) {
     console.error(e); window.showToast('فشل إضافة البانر', 'error');
   } finally { btn.textContent = origText; btn.disabled = false; }
@@ -523,7 +548,7 @@ window.deleteSlide = async (idx) => {
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true }); 
     window.storeState.slides = slides;
     window.renderAdminSlides(); 
-    window.renderPromoSlider();
+    if (window.renderPromoSlider) window.renderPromoSlider();
     window.showToast('🗑️ تم حذف بانر السلايدر', 'success');
   } catch(e) { console.error(e); }
 };
@@ -534,7 +559,7 @@ window.renderAdminSlides = () => {
       if (!window.storeState.slides || window.storeState.slides.length === 0) {
           list.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center; padding:15px;">لا يوجد صور في السلايدر حالياً.</p>';
       } else {
-          list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row"><span style="flex:1;">${s.title}</span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
+          list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row" style="align-items: flex-start;"><div style="flex:1;"><strong>${s.title}</strong>${s.link ? `<br><small style="color:var(--accent-neon); word-break: break-all;">🔗 ${s.link}</small>` : ''}</div><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
       }
   }
 };
