@@ -23,10 +23,16 @@ window.addVariantInput = (v = {nameAr: '', nameEn: '', price: '', stockQuantity:
   list.appendChild(div);
 };
 
-window.addPromoInput = (p = {code: '', discount: '', expiry: ''}) => {
+// 💡 تعديل عين الصقر: إضافة حقل (ID المنتج) للكوبونات
+window.addPromoInput = (p = {code: '', discount: '', expiry: '', productId: ''}) => {
   const list = document.getElementById('promosList'); if(!list) return;
   const div = document.createElement('div'); div.className = 'admin-item-row promo-row'; div.style.alignItems = 'flex-end';
-  div.innerHTML = `<div class="form-group" style="margin-bottom:0; flex:1;"><label>الكود</label><input type="text" class="promo-code" placeholder="مثال: MAX50" value="${p.code}"></div><div class="form-group" style="margin-bottom:0; flex:1;"><label>الخصم (%)</label><input type="number" class="promo-disc" placeholder="مثال: 10" value="${p.discount}"></div><div class="form-group" style="margin-bottom:0; flex:1.5;"><label>ينتهي في</label><input type="datetime-local" class="promo-exp" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;" value="${p.expiry}"></div><button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="margin-bottom:2px; padding: 13px 15px;">✕</button>`;
+  div.innerHTML = `
+    <div class="form-group" style="margin-bottom:0; flex:1;"><label>الكود</label><input type="text" class="promo-code" placeholder="مثال: MAX50" value="${p.code}"></div>
+    <div class="form-group" style="margin-bottom:0; flex:1;"><label>الخصم (%)</label><input type="number" class="promo-disc" placeholder="مثال: 10" value="${p.discount}"></div>
+    <div class="form-group" style="margin-bottom:0; flex:1.5;"><label>ينتهي في</label><input type="datetime-local" class="promo-exp" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;" value="${p.expiry}"></div>
+    <div class="form-group" style="margin-bottom:0; flex:1.5;"><label>ID المنتج (اختياري)</label><input type="text" class="promo-prod" placeholder="فارغ = يشمل الكل" value="${p.productId || ''}" style="background:rgba(0,242,255,0.05);"></div>
+    <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="margin-bottom:2px; padding: 13px 15px;">✕</button>`;
   list.appendChild(div);
 };
 
@@ -160,7 +166,7 @@ window.injectAdminDashboard = () => {
     <div id="tab-settings" class="tab-content">
       <div class="admin-section" style="border-color: var(--accent-neon); background: rgba(0,242,255,0.02);">
         <h4 style="color: var(--accent-neon);">🎁 إعدادات الكوبونات الديناميكية</h4>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">أنشئ كوبونات متعددة مع تاريخ انتهاء لكل كوبون.</p>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">أنشئ كوبونات متعددة للكل أو مخصصة لمنتج معين.</p>
         <div id="promosList" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 15px;"></div>
         <button type="button" class="submit-btn" style="background:transparent; border:1px dashed var(--accent-neon); color:var(--accent-neon); width:100%;" onclick="window.addPromoInput()">+ إضافة كوبون جديد</button>
       </div>
@@ -459,7 +465,6 @@ window.editProduct = (id) => {
   document.getElementById('newProdCat').value = p.category || 'games'; 
   document.getElementById('newProdStock').value = p.stockQuantity !== undefined ? p.stockQuantity : '';
   
-  // تحديث الشارات المنسدلة
   const badgeArSelect = document.getElementById('newProdBadgeAr');
   if(badgeArSelect) badgeArSelect.value = p.badgeAr || p.badge || ''; 
   const badgeEnSelect = document.getElementById('newProdBadgeEn');
@@ -575,8 +580,11 @@ window.saveGeneralSettings = async () => {
         const whatsapp = document.getElementById('admWhatsapp').value;
         const promos = [];
         document.querySelectorAll('#promosList .promo-row').forEach(row => {
-            const code = row.querySelector('.promo-code').value.trim(); const discount = Number(row.querySelector('.promo-disc').value); const expiry = row.querySelector('.promo-exp').value;
-            if(code && discount > 0) promos.push({ code, discount, expiry });
+            const code = row.querySelector('.promo-code').value.trim(); 
+            const discount = Number(row.querySelector('.promo-disc').value); 
+            const expiry = row.querySelector('.promo-exp').value;
+            const productId = row.querySelector('.promo-prod').value.trim(); // 💡 حفظ ID المنتج المخصص
+            if(code && discount > 0) promos.push({ code, discount, expiry, productId });
         });
         const bannerAr = document.getElementById('admBannerAr').value; const bannerExpiry = document.getElementById('admBannerExpiry').value;
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { rates, payments, promos, whatsapp, bannerAr, bannerExpiry }, { merge: true });
