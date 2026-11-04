@@ -70,7 +70,7 @@ body:after {
   flex-direction: column; 
   gap: 10px; 
   width: 92%; 
-  max-width: 400px; 
+  max-width: 420px; 
   pointer-events: none; 
 }
 
@@ -86,6 +86,8 @@ body:after {
   font-weight: bold; 
   text-align: center; 
   animation: slideDown .3s ease forwards; 
+  pointer-events: auto;
+  width: 100%;
 }
 
 .toast-msg.error { 
@@ -135,7 +137,6 @@ body:after {
   flex-wrap: wrap; 
 }
 
-/* اللوجو المطابق للصورة */
 .logo { 
   font-size: 28px; 
   font-weight: 900; 
@@ -449,7 +450,6 @@ html[dir="rtl"] .search-input {
   box-shadow: 0 0 10px var(--accent-glow); 
 }
 
-/* تصميم Hero Banner الجديد والثابت */
 .hero-banner-box { 
   position: relative; 
   width: 100%; 
@@ -615,7 +615,6 @@ html[dir="rtl"] .search-input {
   color: var(--accent-neon); 
 }
 
-/* تصميم فلاتر المنصات (Platform Filters) */
 .platform-filter-btn {
   background: #12121c;
   border: 1px solid var(--border-color);
@@ -692,7 +691,7 @@ html[dir="rtl"] .search-input {
 }
 
 /* ==========================================
-   8. المنتجات والكروت (PRODUCT GRID)
+   7. المنتجات والكروت (PRODUCT GRID)
    ========================================== */
 .section-title { 
   font-size: 20px; 
@@ -909,7 +908,6 @@ html[dir="rtl"] .search-input {
   box-shadow: 0 0 15px var(--purple-glow); 
 }
 
-/* تنسيق زرار "إضافة للسلة" وهو مغلق قبل اختيار الباقة */
 .buy-btn:disabled, .out-of-stock-badge { 
   background: #151520; 
   color: var(--text-muted); 
@@ -930,7 +928,6 @@ html[dir="rtl"] .search-input {
   font-size: 16px; 
 }
 
-/* التحميل الوهمي Skeletons */
 .skeleton { 
   background: linear-gradient(90deg, #12121c 25%, #1a1a2e 50%, #12121c 75%); 
   background-size: 400% 100%; 
@@ -944,7 +941,6 @@ html[dir="rtl"] .search-input {
   100% { background-position: 0 50%; } 
 }
 
-/* البانرات الترويجية السفلية */
 .promo-banners-grid { 
   display: grid; 
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
@@ -964,7 +960,7 @@ html[dir="rtl"] .search-input {
 }
 
 /* ==========================================
-   9. تفاصيل المنتج والتقييمات (PRODUCT DETAILS)
+   8. تفاصيل المنتج والتقييمات (PRODUCT DETAILS)
    ========================================== */
 .product-details-container { 
   display: flex; 
@@ -1063,7 +1059,6 @@ html[dir="rtl"] .search-input {
   box-shadow: 0 0 10px var(--accent-glow);
 }
 
-/* تأثير التنبيه لاختيار الباقة */
 @keyframes shakeAlert {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-5px); border-color: var(--danger); color: var(--danger); }
@@ -1107,7 +1102,7 @@ html[dir="rtl"] .search-input {
 }
 
 /* ==========================================
-   10. النوافذ المنبثقة (MODALS & FORMS)
+   9. النوافذ المنبثقة (MODALS & FORMS)
    ========================================== */
 .modal { 
   display: none; 
@@ -1222,7 +1217,7 @@ html[dir="rtl"] .search-input {
 }
 
 /* ==========================================
-   11. لوحة الإدارة والأزرار (ADMIN & UTILS)
+   10. لوحة الإدارة والأزرار (ADMIN & UTILS)
    ========================================== */
 .admin-tabs { 
   display: flex; 
@@ -1320,7 +1315,7 @@ html[dir="rtl"] .search-input {
 }
 
 /* ==========================================
-   12. إضافات أخرى (PAGINATION, WHATSAPP, CART)
+   11. إضافات أخرى (PAGINATION, WHATSAPP, CART)
    ========================================== */
 .pagination-container button { 
   background: #12121c; 
@@ -1398,7 +1393,6 @@ html[dir="rtl"] .search-input {
   font-size: 14px; 
 }
 
-/* تعديل حجم زرار سلة المشتريات عشان يكون أوضح وأسهل في الموبايل */
 .remove-cart-btn { 
   background: transparent; 
   color: var(--danger); 
@@ -1483,7 +1477,7 @@ html[dir="ltr"] .faq-question {
 }
 
 /* ==========================================
-   13. الإضافات الجديدة (Order Tracker)
+   12. الإضافات الجديدة (Order Tracker)
    ========================================== */
 .order-tracker {
   display: flex;
@@ -1556,7 +1550,7 @@ html[dir="ltr"] .faq-question {
 .tracker-step.cancelled .tracker-label { color: var(--danger); }
 
 /* ==========================================
-   14. موبايل وتنسيقات الاستجابة
+   13. موبايل وتنسيقات الاستجابة
    ========================================== */
 @media(max-width: 900px) {
   .desktop-header-wrapper { display: none; }
@@ -1602,7 +1596,7 @@ html[dir="ltr"] .faq-question {
 }
 
 /* ==========================================
-   15. Animations (Cart Bounce)
+   14. Animations (Cart Bounce)
    ========================================== */
 @keyframes cartBounce {
   0% { transform: scale(1); }
