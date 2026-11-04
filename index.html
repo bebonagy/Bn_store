@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://bn-max.com/">
 <meta property="og:type" content="website">
 
-<!-- 🛡️ سياسة أمان المحتوى (CSP) مدعومة بـ https و http لفتح أي مسار صور خارجي ومضاف إليها api.imgbb.com للرفع التلقائي -->
+<!-- 🛡️ سياسة أمان المحتوى (CSP) -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com https://api.imgbb.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
@@ -49,7 +49,7 @@
   <!-- 💻 هيدر الكمبيوتر (Desktop Header) -->
   <div class="desktop-header-wrapper">
     <div class="header-top">
-      <div class="logo" id="logoBtn">
+      <div class="logo" id="logoBtn" onclick="window.navigate('home')">
         BN <span class="max-glow">MAX</span>
         <span class="logo-sub">DIGITAL MARKETPLACE</span>
       </div>
@@ -74,15 +74,15 @@
           <option value="USD">USD</option>
         </select>
         <button type="button" id="langSwitchBtn" class="action-icon">🌐 EN ∨</button>
-        <div id="authHeaderButtons" style="display: flex; gap: 8px; align-items: center;">
+        <div id="authHeaderButtons" class="auth-header-group">
           <button type="button" class="action-icon" id="cartBtnNav">
             🛒 <span id="cartCountBadge" class="badge" style="display:none;">0</span>
           </button>
-          <button type="button" class="action-icon" id="loginBtnNav" style="display:flex; align-items:center; justify-content:center;">
-            <img id="userAvatarHeader" src="" alt="User" style="display:none; width:18px; height:18px; border-radius:50%; object-fit:cover; margin-inline-end:6px;">
+          <button type="button" class="action-icon login-btn-nav" id="loginBtnNav">
+            <img id="userAvatarHeader" src="" alt="User" class="avatar-img-nav" style="display:none;">
             <span id="loginIconHeader">👤</span> 
             <span id="loginBtnText" data-i18n="nav_account" style="margin-inline-start:4px;">Account</span>
-            <span id="notificationDot" style="display:none; position:absolute; top:-5px; right:-5px; font-size:10px;">🔴</span>
+            <span id="notificationDot" class="nav-badge-dot" style="display:none;">🔴</span>
           </button>
         </div>
         <button type="button" class="admin-trigger-btn" id="adminBtnNav" style="display:none;">⚙️ الإدارة</button>
@@ -97,11 +97,11 @@
     </div>
   </div>
 
-  <!-- 📱 هيدر الموبايل الجديد المطابق للتصميم (Mobile Header) -->
+  <!-- 📱 هيدر الموبايل -->
   <div class="mobile-header-wrapper" style="display: none;">
     <button type="button" class="mobile-menu-btn" onclick="document.querySelector('.desktop-header-wrapper').classList.toggle('show-mobile-menu')">≡</button>
     
-    <div class="logo mobile-logo" onclick="document.getElementById('logoBtn').click()">
+    <div class="logo mobile-logo" onclick="window.navigate('home')">
       BN <span class="max-glow">MAX</span>
     </div>
     
@@ -150,9 +150,9 @@
       <div class="countdown-timer" id="countdownTimer">⏳ 00:00:00</div>
     </div>
 
-    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="section-header section-header-top">
       <h2 class="section-title"><span data-i18n="best_sellers">🔥 Best Sellers</span> <span style="font-size:12px; color:var(--text-muted); font-weight:normal; margin-inline-start: 10px;" data-i18n="best_sellers_sub">Our most popular products</span></h2>
-      <select id="sortSelect" class="search-input sort-dropdown" style="width: auto; padding: 5px 10px;">
+      <select id="sortSelect" class="search-input sort-dropdown">
         <option value="default" data-i18n="sort_default">الترتيب الافتراضي</option>
         <option value="price_asc" data-i18n="sort_cheap">الأرخص أولاً</option>
         <option value="price_desc" data-i18n="sort_expensive">الأغلى أولاً</option>
@@ -160,8 +160,8 @@
     </div>
     
     <!-- فلاتر المنصات السريعة (تظهر فقط في قسم الألعاب) -->
-    <div id="platformFiltersContainer" style="display:none; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
-        <div id="platformFiltersList" style="display: inline-flex; gap: 10px;"></div>
+    <div id="platformFiltersContainer" class="platform-filters-wrapper" style="display:none;">
+        <div id="platformFiltersList" class="platform-filters-list"></div>
     </div>
 
     <!-- شبكة المنتجات -->
@@ -169,21 +169,21 @@
     <div class="pagination-container" id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; margin-bottom: 40px;"></div>
 
     <!-- البانرات الترويجية السفلية -->
-    <section class="promo-banners-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
-      <div class="promo-banner-card" style="background: linear-gradient(135deg, #0a0a16, #1a0f2e); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; position: relative; overflow: hidden;">
-        <h3 style="color: #fff; font-size: 22px; font-weight: 900; margin-bottom: 5px;" data-i18n="promo_1_sub">Limited Time Offer</h3>
-        <h2 style="color: var(--accent-neon); font-size: 28px; font-weight: 900; margin-bottom: 10px;" data-i18n="promo_1_title">Up to 50% OFF</h2>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;" data-i18n="promo_1_desc">On Selected Games & Keys</p>
+    <section class="promo-banners-grid">
+      <div class="promo-banner-card promo-banner-1">
+        <h3 class="promo-title-1" data-i18n="promo_1_sub">Limited Time Offer</h3>
+        <h2 class="promo-highlight-1" data-i18n="promo_1_title">Up to 50% OFF</h2>
+        <p class="promo-desc" data-i18n="promo_1_desc">On Selected Games & Keys</p>
         <button type="button" class="buy-btn" style="width: max-content; padding: 10px 25px;" onclick="document.getElementById('categoriesBar').scrollIntoView({behavior: 'smooth', block: 'start'})"><span data-i18n="btn_shop_now">Shop Now</span> ➔</button>
       </div>
-      <div class="promo-banner-card" style="background: linear-gradient(135deg, #0a0a16, #002233); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; position: relative; overflow: hidden;">
-        <h3 style="color: #fff; font-size: 20px; font-weight: 900; margin-bottom: 10px;" data-i18n="promo_2_title">Get the Best Deals</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;" data-i18n="promo_2_desc">Exclusive offers for our members</p>
-        <button type="button" class="buy-btn" style="width: max-content; padding: 10px 25px; background: var(--accent-purple); color: #fff; border-color: var(--accent-purple);" onclick="document.getElementById('loginBtnNav').click()"><span data-i18n="btn_join_now">Join Now</span> ➔</button>
+      <div class="promo-banner-card promo-banner-2">
+        <h3 class="promo-title-2" data-i18n="promo_2_title">Get the Best Deals</h3>
+        <p class="promo-desc" data-i18n="promo_2_desc">Exclusive offers for our members</p>
+        <button type="button" class="buy-btn buy-now-accent" style="width: max-content; padding: 10px 25px;" onclick="document.getElementById('loginBtnNav').click()"><span data-i18n="btn_join_now">Join Now</span> ➔</button>
       </div>
-      <div class="promo-banner-card" style="background: linear-gradient(135deg, #0a0a16, #12121a); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; position: relative; overflow: hidden;">
-        <h3 style="color: #fff; font-size: 20px; font-weight: 900; margin-bottom: 10px;" data-i18n="promo_3_title">Bulk Orders?</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;" data-i18n="promo_3_desc">For Businesses & Resellers</p>
+      <div class="promo-banner-card promo-banner-3">
+        <h3 class="promo-title-2" data-i18n="promo_3_title">Bulk Orders?</h3>
+        <p class="promo-desc" data-i18n="promo_3_desc">For Businesses & Resellers</p>
         <button type="button" class="buy-btn" style="width: max-content; padding: 10px 25px; border-color: #fff; color: #fff;" onclick="document.getElementById('whatsappBtn').click()"><span data-i18n="btn_contact">Contact Us</span> ➔</button>
       </div>
     </section>
@@ -191,30 +191,30 @@
 
   <!-- 🔄 2. واجهة تفاصيل المنتج -->
   <div id="productDetailsView" class="view-section" style="display:none;">
-    <button type="button" class="control-btn" id="backToHomeBtn" style="margin-bottom: 20px; background:transparent; border:1px solid var(--accent-neon); color:var(--accent-neon); padding:8px 15px; border-radius:8px; cursor:pointer;" data-i18n="btn_back">🔙 رجوع</button>
+    <button type="button" class="control-btn back-btn" id="backToHomeBtn" data-i18n="btn_back">🔙 رجوع</button>
     <div class="product-details-container" style="flex-direction: column;">
-      <div style="display: flex; flex-wrap: wrap; gap: 30px; width: 100%;">
-        <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
-          <div class="details-image-box zoomable-image" id="detailImageBox" style="width: 100%; height: 350px;" title="تكبير الصورة"></div>
-          <div class="gallery-slider-wrapper" style="position: relative; width: 100%;">
+      <div class="details-main-row">
+        <div class="details-left-col">
+          <div class="details-image-box zoomable-image detail-image-box" id="detailImageBox" title="تكبير الصورة"></div>
+          <div class="gallery-slider-wrapper gallery-wrapper">
             <div id="detailImageGallery" class="gallery-slider-track"></div>
           </div>
         </div>
         
-        <div class="details-info-box" style="flex: 1.5; min-width: 300px; position: relative;">
-          <button type="button" id="toggleWishlistBtn" style="position: absolute; top: 0; left: 0; background: transparent; border: 1px solid var(--border-color); color: #fff; font-size: 22px; padding: 8px 12px; border-radius: 8px; cursor: pointer;">🤍</button>
+        <div class="details-info-box details-right-col">
+          <button type="button" id="toggleWishlistBtn" class="wishlist-btn-large">🤍</button>
           
-          <div id="detailPlatform" style="display: none; align-items: center; gap: 8px; margin-bottom: 10px;">
-            <img id="detailPlatformLogo" src="" alt="Platform" style="width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">
-            <span id="detailPlatformName" style="color: var(--text-muted); font-size: 13px; font-weight: bold;"></span>
+          <div id="detailPlatform" class="platform-info-row" style="display: none;">
+            <img id="detailPlatformLogo" src="" alt="Platform" class="platform-logo-img">
+            <span id="detailPlatformName" class="platform-name-txt"></span>
           </div>
 
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-left: 60px; margin-bottom: 10px;">
+          <div class="title-share-row">
             <h2 id="detailTitle" class="details-title" style="margin-bottom: 0;"></h2>
-            <button type="button" id="shareProductBtn" style="background: rgba(0,242,255,.1); color: #00f2ff; border: 1px solid #00f2ff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 18px;" title="مشاركة المنتج">📤</button>
+            <button type="button" id="shareProductBtn" class="share-btn-large" title="مشاركة المنتج">📤</button>
           </div>
           
-          <span class="product-badge" id="detailBadge" style="position:relative; display:inline-block; margin-bottom:15px;"></span>
+          <span class="product-badge badge-inline" id="detailBadge"></span>
           
           <div class="product-price-box" style="margin-bottom:15px;">
             <span id="detailOldPrice" class="old-price" style="font-size:18px;"></span>
@@ -223,40 +223,40 @@
 
           <!-- نظام الباقات والنسخ -->
           <div id="detailVariantsContainer" style="display:none; margin-bottom: 20px;">
-            <label style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: block; font-weight: bold;" data-i18n="select_variant">اختر الباقة / النسخة:</label>
-            <div id="detailVariants" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+            <label class="variants-label" data-i18n="select_variant">اختر الباقة / النسخة:</label>
+            <div id="detailVariants" class="variants-flex"></div>
           </div>
 
           <!-- صندوق المعلومات السريعة -->
-          <div id="detailQuickInfo" style="display:none; background:rgba(0, 242, 255, 0.03); border:1px solid var(--border-color); border-radius:10px; padding:15px; margin-bottom:20px; display:flex; gap:15px; flex-wrap:wrap; justify-content: space-between;">
-             <div class="quick-info-item" style="display:flex; flex-direction:column; align-items:center; flex:1; min-width:80px; text-align:center;">
-                <span style="font-size:18px; margin-bottom:5px;">👤</span>
-                <span style="font-size:11px; color:var(--text-muted); margin-bottom:2px;" data-i18n="qi_account">نوع الحساب</span>
-                <strong id="qiAccountVal" style="font-size:13px; color:#fff;"></strong>
+          <div id="detailQuickInfo" class="quick-info-container" style="display:none;">
+             <div class="quick-info-item quick-info-box">
+                <span class="qi-icon">👤</span>
+                <span class="qi-label" data-i18n="qi_account">نوع الحساب</span>
+                <strong id="qiAccountVal" class="qi-val"></strong>
              </div>
-             <div class="quick-info-item" style="display:flex; flex-direction:column; align-items:center; flex:1; min-width:80px; text-align:center; border-inline-start:1px solid var(--border-color); border-inline-end:1px solid var(--border-color);">
-                <span style="font-size:18px; margin-bottom:5px;">🛡️</span>
-                <span style="font-size:11px; color:var(--text-muted); margin-bottom:2px;" data-i18n="qi_warranty">الضمان</span>
-                <strong id="qiWarrantyVal" style="font-size:13px; color:#fff;"></strong>
+             <div class="quick-info-item quick-info-box bordered">
+                <span class="qi-icon">🛡️</span>
+                <span class="qi-label" data-i18n="qi_warranty">الضمان</span>
+                <strong id="qiWarrantyVal" class="qi-val"></strong>
              </div>
-             <div class="quick-info-item" style="display:flex; flex-direction:column; align-items:center; flex:1; min-width:80px; text-align:center;">
-                <span style="font-size:18px; margin-bottom:5px;">🌍</span>
-                <span style="font-size:11px; color:var(--text-muted); margin-bottom:2px;" data-i18n="qi_region">التفعيل</span>
-                <strong id="qiRegionVal" style="font-size:13px; color:#fff;"></strong>
+             <div class="quick-info-item quick-info-box">
+                <span class="qi-icon">🌍</span>
+                <span class="qi-label" data-i18n="qi_region">التفعيل</span>
+                <strong id="qiRegionVal" class="qi-val"></strong>
              </div>
           </div>
 
           <div id="detailDeliveryBadge" class="delivery-badge" style="display:none; margin-bottom: 15px;"></div>
           
-          <div class="stock-status" style="margin-bottom: 20px; font-weight: bold; font-size: 16px;">
+          <div class="stock-status stock-status-txt">
             <span data-i18n="availability">التوفر:</span> <span id="detailStock" style="color: var(--accent-neon);"></span>
           </div>
           
           <div id="detailDescContainer" class="details-desc" style="margin-bottom: 20px;"></div>
           
-          <div id="detailRequirementsContainer" style="display:none; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border-inline-start: 3px solid var(--accent-neon);">
-            <h4 style="color:var(--accent-neon); margin-bottom:10px; font-size:15px; display:flex; align-items:center; gap:8px;"><span style="font-size:18px;">⚙️</span> <span data-i18n="sys_req">متطلبات التشغيل</span></h4>
-            <div id="detailRequirementsContent" style="font-size:13px; color:var(--text-main); line-height:1.8;"></div>
+          <div id="detailRequirementsContainer" class="req-container" style="display:none;">
+            <h4 class="req-title"><span style="font-size:18px;">⚙️</span> <span data-i18n="sys_req">متطلبات التشغيل</span></h4>
+            <div id="detailRequirementsContent" class="req-content"></div>
           </div>
 
           <div id="detailFaqContainer" class="faq-container" style="display:none; margin-bottom: 20px;">
@@ -265,21 +265,21 @@
           </div>
           
           <!-- أزرار الشراء والإضافة للسلة -->
-          <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button type="button" id="detailAddToCartBtn" class="buy-btn" style="flex: 1; padding:15px; font-size:16px;" data-i18n="btn_add_to_cart">🛒 إضافة إلى السلة</button>
-            <button type="button" id="detailBuyNowBtn" class="buy-btn" style="flex: 1; padding:15px; font-size:16px; background: var(--accent-purple); color: #fff; border-color: var(--accent-purple); display: none;">⚡ شراء سريع</button>
+          <div class="action-btns-row">
+            <button type="button" id="detailAddToCartBtn" class="buy-btn btn-flex-1" data-i18n="btn_add_to_cart">🛒 إضافة إلى السلة</button>
+            <button type="button" id="detailBuyNowBtn" class="buy-btn btn-flex-1 buy-now-accent" style="display: none;">⚡ شراء سريع</button>
           </div>
         </div>
       </div>
 
-      <div style="width: 100%; margin-top: 35px;">
+      <div class="related-section">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 18px;" data-i18n="you_may_like">🔥 قد يعجبك أيضاً</h3>
         <div id="relatedProductsGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; min-height: unset; margin-bottom: 0;"></div>
       </div>
 
-      <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 25px;">
+      <div class="reviews-section">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 20px;" data-i18n="reviews_title">💬 تقييمات العملاء</h3>
-        <div id="addReviewBox" style="background: #0b0b10; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px;">
+        <div id="addReviewBox" class="add-review-box">
           <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--text-muted);" data-i18n="add_review">أضف تقييمك</h4>
           <div class="form-group" style="margin-bottom: 15px;">
             <label style="margin-bottom: 8px;" data-i18n="rating">التقييم</label>
@@ -288,12 +288,12 @@
               <span class="star" data-value="2">⭐</span>
               <span class="star" data-value="3">⭐</span>
               <span class="star" data-value="4">⭐</span>
-              <span class="star" data-value="5" class="active">⭐</span>
+              <span class="star active" data-value="5">⭐</span>
             </div>
             <input type="hidden" id="reviewRating" value="5">
           </div>
           <div class="form-group" style="margin-bottom: 10px;">
-            <textarea id="reviewCommentText" rows="2" placeholder="اكتب تجربتك هنا..." style="width: 100%; background: #14141d; color: #fff; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);"></textarea>
+            <textarea id="reviewCommentText" rows="2" placeholder="اكتب تجربتك هنا..." class="review-textarea"></textarea>
           </div>
           <button type="button" class="submit-btn" id="submitReviewBtn" style="padding: 8px 20px; font-size: 13px; flex: 0;" data-i18n="btn_submit_review">إرسال التقييم</button>
         </div>
@@ -302,13 +302,13 @@
     </div>
   </div>
 
-  <!-- 🔄 3. واجهة الإدارة (Admin View - مفصولة كصفحة) -->
-  <div id="adminView" class="view-section" style="display:none; background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid var(--accent-neon); box-shadow: 0 0 40px rgba(0,242,255,0.1); margin-top: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+  <!-- 🔄 3. واجهة الإدارة (Admin View) -->
+  <div id="adminView" class="view-section admin-view-wrapper" style="display:none;">
+      <div class="admin-header-row">
           <h3 style="color: #fff; margin: 0; font-size: 22px;">⚙️ لوحة تحكم BN MAX</h3>
           <button type="button" class="cancel-btn" onclick="window.navigate('home')" style="padding: 6px 12px; font-size: 14px;">🔙 رجوع للمتجر</button>
       </div>
-      <div class="admin-tabs" id="adminTabs" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
+      <div class="admin-tabs" id="adminTabs">
         <button class="tab-btn active" data-target="tab-dashboard">📊 الرئيسية</button>
         <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
         <button class="tab-btn" data-target="tab-products">🛒 المنتجات</button>
@@ -322,12 +322,12 @@
 </main>
 
 <!-- الفوتر -->
-<footer class="main-footer" style="background: #08080c; border-top: 1px solid var(--border-color); padding: 40px 20px 20px 20px; margin-top: 50px; text-align: center;">
-  <div class="footer-links" style="display: flex; justify-content: center; gap: 25px; margin-bottom: 25px; flex-wrap: wrap;">
-    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;" data-i18n="ft_about">About Us</a>
-    <a href="#" id="footerContactBtn" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;" data-i18n="ft_contact">Contact</a>
-    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;" data-i18n="ft_terms">Terms & Conditions</a>
-    <a href="#" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s;" data-i18n="ft_privacy">Privacy Policy</a>
+<footer class="main-footer footer-container">
+  <div class="footer-links footer-links-row">
+    <a href="#" class="footer-link" data-i18n="ft_about">About Us</a>
+    <a href="#" id="footerContactBtn" class="footer-link" data-i18n="ft_contact">Contact</a>
+    <a href="#" class="footer-link" data-i18n="ft_terms">Terms & Conditions</a>
+    <a href="#" class="footer-link" data-i18n="ft_privacy">Privacy Policy</a>
   </div>
   <div class="copyright" style="font-size: 13px; color: var(--text-muted);">
     <span data-i18n="ft_copy">© 2026 BN MAX. All rights reserved.</span> <span style="color: var(--accent-neon); font-style: italic; margin-inline-start: 10px;" data-i18n="ft_slogan">Your Digital World... Our Mission 🚀</span>
@@ -368,11 +368,11 @@
     <div class="modal-content">
       <h3><span data-i18n="cart_title">🛒 سلة المشتريات</span><button type="button" class="cancel-btn close-modal-btn" style="flex:0;padding:4px 10px;">✕</button></h3>
       <div id="cartItemsList" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px;"></div>
-      <div id="cartCrossSellSection" style="display: none; background: rgba(0,242,255,0.05); border: 1px dashed var(--accent-neon); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+      <div id="cartCrossSellSection" class="cart-cross-sell-section" style="display: none;">
         <h4 style="font-size: 13px; color: var(--accent-neon); margin-bottom: 10px;" data-i18n="cart_suggestion">🔥 ضيف ده لطلبك ووفر:</h4>
         <div id="cartCrossSellList" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;"></div>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:18px; color:var(--accent-neon); margin-bottom:15px; border-top:1px solid var(--border-color); padding-top:15px;">
+      <div class="cart-total-row">
         <span data-i18n="total">الإجمالي:</span>
         <span id="cartTotalPriceDisplay">0.00</span>
       </div>
@@ -382,13 +382,13 @@
 
   <!-- تكبير الصور -->
   <div class="modal" id="lightboxModal" style="z-index: 2000; padding: 0;">
-    <div style="position:relative; width:100%; height:100%; display:flex; justify-content:center; align-items:center;">
-      <button type="button" id="closeLightboxBtn" style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #fff; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer; z-index:2001; transition:0.3s;">✕</button>
-      <img id="lightboxImg" loading="lazy" src="" alt="تكبير الصورة" style="max-width:90%; max-height:90%; object-fit:contain; border-radius:8px; box-shadow:0 0 30px rgba(0,242,255,0.3);">
+    <div class="lightbox-wrapper">
+      <button type="button" id="closeLightboxBtn" class="lightbox-close">✕</button>
+      <img id="lightboxImg" loading="lazy" src="" alt="تكبير الصورة" class="lightbox-img">
     </div>
   </div>
 
-  <!-- تسجيل الدخول واستعادة الباسورد المخصصة -->
+  <!-- تسجيل الدخول واستعادة الباسورد -->
   <div class="modal" id="authModal">
     <div class="modal-content">
       <h3 id="authModalTitle" data-i18n="auth_title">تسجيل الدخول / إنشاء حساب</h3>
@@ -397,12 +397,12 @@
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="loginEmail" placeholder="example@gmail.com"></div>
         <div class="form-group"><label data-i18n="password">كلمة المرور</label><input type="password" id="loginPass" placeholder="••••••••"></div>
         <button type="button" class="submit-btn" id="doLoginBtn" style="width:100%;" data-i18n="btn_login">تسجيل الدخول</button>
-        <button type="button" id="googleLoginBtn" style="width:100%; margin-top:10px; background:#db4437; color:#fff; padding:10px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px;">🌐 <span data-i18n="google_login">الدخول بواسطة Google</span></button>
+        <button type="button" id="googleLoginBtn" class="google-login-btn">🌐 <span data-i18n="google_login">الدخول بواسطة Google</span></button>
         <a href="#" id="resetPassBtn" style="color:var(--accent-neon); display:block; text-align:center; margin-top:10px; font-size:13px;" data-i18n="forgot_password">نسيت كلمة المرور؟</a>
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="no_account">ليس لديك حساب؟</span> <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);" data-i18n="create_account">إنشاء حساب جديد</a></p>
       </div>
       
-      <!-- نافذة استعادة الباسورد الفرعية -->
+      <!-- نافذة استعادة الباسورد -->
       <div id="authViewReset" style="display:none;">
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;" data-i18n="reset_pass_desc">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.</p>
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="resetEmailInput" placeholder="example@gmail.com"></div>
@@ -423,7 +423,7 @@
       <!-- نافذة إدخال الـ OTP -->
       <div id="authViewOTP" style="display:none;">
         <p style="font-size: 13px; color: var(--success); margin-bottom: 15px; text-align: center; line-height: 1.5;">تم إرسال كود التفعيل (OTP) إلى بريدك الإلكتروني بنجاح. برجاء تفقد صندوق الوارد أو البريد المزعج (Spam).</p>
-        <div class="form-group"><label>كود التفعيل</label><input type="text" id="regOTP" placeholder="أدخل الكود (6 أرقام)" style="text-align: center; font-size: 20px; letter-spacing: 5px; font-weight: bold;"></div>
+        <div class="form-group"><label>كود التفعيل</label><input type="text" id="regOTP" placeholder="أدخل الكود" class="otp-input"></div>
         <button type="button" class="submit-btn" id="doVerifyOTPBtn" style="width:100%;">تأكيد وإنشاء الحساب</button>
         <button type="button" id="backToRegFromOTP" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;">رجوع وتعديل البيانات</button>
       </div>
@@ -461,7 +461,7 @@
           <label data-i18n="promo_code">كود الخصم (اختياري)</label>
           <div style="display:flex;gap:8px;">
             <input type="text" id="promoCodeInput" placeholder="BN10">
-            <button type="button" class="control-btn" id="applyPromoBtn" data-i18n="btn_apply">تطبيق</button>
+            <button type="button" class="control-btn submit-btn" id="applyPromoBtn" style="padding: 4px 15px; flex: 0;" data-i18n="btn_apply">تطبيق</button>
           </div>
           <small id="promoMsg" style="font-size:12px;display:block;margin-top:4px;"></small>
         </div>
@@ -474,7 +474,7 @@
             <option value="crypto">عملات رقمية (USDT)</option>
           </select>
         </div>
-        <div class="payment-details-box" style="background: rgba(0,242,255,0.05); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+        <div class="payment-details-box">
           <div data-i18n="transfer_to" style="font-size: 13px; color: var(--text-muted); margin-bottom: 5px;">يرجى تحويل المبلغ إلى الحساب التالي:</div>
           <div class="payment-address-row" style="display: flex; justify-content: space-between; align-items: center;">
             <span class="payment-address" id="paymentAddressDisplay" style="font-weight: bold; color: var(--accent-neon); font-size: 14px;"></span>
@@ -489,7 +489,7 @@
         <div class="form-group"><label data-i18n="receive_data">بيانات الاستلام</label><input type="text" id="customerData" required placeholder="أدخل الآيدي أو الإيميل"></div>
         <div class="form-group">
           <label data-i18n="receipt_img">صورة إيصال التحويل (سكرين شوت)</label>
-          <input type="file" id="receiptFileInput" accept="image/*" required style="padding: 7px; background: #0b0b10; color: #fff; border: 1px solid var(--border-color); border-radius: 7px; width: 100%;">
+          <input type="file" id="receiptFileInput" accept="image/*" required class="file-input-styled">
           <img id="receiptPreview" loading="lazy" src="" alt="معاينة الإيصال" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:8px; border:1px solid var(--border-color);">
         </div>
         <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
@@ -498,7 +498,7 @@
             <span id="confirmSpinner" class="spinner" style="display:none;"></span>
           </button>
           <button type="button" class="cancel-btn close-modal-btn" style="flex: 1; margin-top: 0;" data-i18n="btn_cancel">إلغاء</button>
-           <button type="button" id="whatsappCheckoutBtn" class="submit-btn" style="flex: 1; background: #25d366; color: #000; border: none; display: flex; justify-content: center; align-items: center; gap: 8px;">
+           <button type="button" id="whatsappCheckoutBtn" class="submit-btn whatsapp-checkout-btn">
            <span>💬 تأكيد وإرسال عبر الواتساب</span>
            </button>
         </div>
