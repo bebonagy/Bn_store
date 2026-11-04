@@ -343,6 +343,7 @@ window.renderAdminOrders = () => {
   if(orders.length >= window.adminOrdersLimit) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
 };
 
+// التعديل هنا: إضافة حماية واكتشاف للمنتجات المحذوفة عند استرجاع المخزون
 window.refundOrderStock = async (order) => {
     if (!order) return;
     
@@ -350,20 +351,22 @@ window.refundOrderStock = async (order) => {
     if (order.items && Array.isArray(order.items)) {
         itemsToRefund = order.items;
     } else if (order.productIds) {
-        itemsToRefund = order.productIds.map(pid => ({ id: pid }));
+        itemsToRefund = order.productIds.map(pid => ({ id: pid, title: order.productName || 'منتج' }));
     }
 
     if (itemsToRefund.length === 0) return;
 
     const grouped = itemsToRefund.reduce((acc, item) => {
         const key = `${item.id}_${item.variantId || 'none'}`;
-        if (!acc[key]) acc[key] = { id: item.id, variantId: item.variantId, qty: 0 };
+        if (!acc[key]) acc[key] = { id: item.id, variantId: item.variantId, qty: 0, title: item.title || order.productName };
         acc[key].qty += 1;
         return acc;
     }, {});
 
+    let missingProducts = [];
+
     for (const key in grouped) {
-        const { id, variantId, qty } = grouped[key];
+        const { id, variantId, qty, title } = grouped[key];
         const prod = window.storeState.products.find(p => p.id === id);
         if (prod) {
             if (variantId && prod.variants) {
@@ -375,7 +378,17 @@ window.refundOrderStock = async (order) => {
             } else if (prod.stockQuantity !== undefined) {
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + qty, inStock: true });
             }
+        } else {
+            // تسجيل المنتجات اللي اتحذفت من المتجر ومش هينفع نرجعلها المخزون
+            missingProducts.push(title);
         }
+    }
+
+    // إظهار تنبيه للأدمن بالمنتجات المفقودة
+    if (missingProducts.length > 0) {
+        setTimeout(() => {
+            window.showToast(`تنبيه: (${missingProducts.join(', ')}) محذوف من المتجر ولن يتم استرجاع مخزونه.`, 'error');
+        }, 500); 
     }
 };
 
@@ -389,7 +402,6 @@ window.deleteAdminOrder = async (orderId) => {
   } catch(e) { console.error(e); window.showToast('فشل الحذف', 'error'); } 
 };
 
-// 🔒 إصلاح دالة تحديث الطلبات لتشمل سحب الأكواد وتحديث الطلب في Transaction واحد
 window.updateOrderStatus = async (orderId, status) => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
@@ -413,7 +425,6 @@ window.updateOrderStatus = async (orderId, status) => {
         }, {});
 
         await runTransaction(db, async (transaction) => {
-            // جلب البيانات بضربة واحدة لو الأكواد مش متسلمة يدوي
             if (!codeToDeliver && itemsList.length > 0) {
                 const sfDocs = {};
                 for (const pid of Object.keys(groupedItems)) {
@@ -421,7 +432,6 @@ window.updateOrderStatus = async (orderId, status) => {
                     sfDocs[pid] = { ref: prodRef, docSnap: await transaction.get(prodRef) };
                 }
                 
-                // سحب الأكواد من الخزنة
                 for (const pid of Object.keys(groupedItems)) {
                     const qty = groupedItems[pid];
                     const { ref, docSnap } = sfDocs[pid];
@@ -441,7 +451,6 @@ window.updateOrderStatus = async (orderId, status) => {
                 if (multiCodesArr.length > 0) codeToDeliver = multiCodesArr.join(' || ');
             }
             
-            // 🔒 تحديث الطلب يتم هنا داخل نفس الـ Transaction (ضمان الأمان وعدم الضياع)
             transaction.update(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
         });
 
@@ -450,7 +459,6 @@ window.updateOrderStatus = async (orderId, status) => {
   } catch(e) { console.error(e); window.showToast('خطأ في التحديث، حاول مرة أخرى', 'error'); }
 };
 
-// 🔒 إصلاح السطر القاتل لحفظ المنتجات doc(doc(...)) -> doc(...)
 window.saveProduct = async () => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const titleAr = document.getElementById('newProdTitleAr').value, titleEn = document.getElementById('newProdTitleEn').value;
@@ -523,7 +531,6 @@ window.saveProduct = async () => {
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); 
         window.showToast('✏️ تم التعديل!', 'success'); 
     } else { 
-        // 🔒 تم إصلاح خطأ الـ doc المزدوج هنا
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); 
         window.showToast('📦 تمت الإضافة!', 'success'); 
     }
