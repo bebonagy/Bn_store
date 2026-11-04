@@ -388,11 +388,20 @@ html[dir="rtl"] .search-input {
   position: relative; 
   display: flex; 
   align-items: center; 
-  padding: 30px 40px; 
+  justify-content: center;
+  padding: 0px !important; 
   background-size: cover; 
   background-position: center; 
   direction: rtl; 
   cursor: pointer;
+}
+
+.slider-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
 }
 
 .slider-slide:before { 
