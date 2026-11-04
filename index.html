@@ -12,8 +12,8 @@
 <meta property="og:url" content="https://bn-max.com/">
 <meta property="og:type" content="website">
 
-<!-- 🛡️ سياسة أمان المحتوى (CSP) مدعومة بـ https و http لفتح أي مسار صور خارجي -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com;">
+<!-- 🛡️ سياسة أمان المحتوى (CSP) مدعومة بـ https و http لفتح أي مسار صور خارجي ومضاف إليها api.imgbb.com للرفع التلقائي -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com https://api.imgbb.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
 <meta name="description" id="metaDesc" content="BN MAX - متجرك الأفضل للخدمات الرقمية وشحن الألعاب.">
@@ -139,7 +139,7 @@
     <div class="categories-grid-bar" id="categoriesBar"></div>
 
     <!-- السلايدر المتحرك (أصبح بانر أسفل الأقسام ومخصص للعروض) -->
-    <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none; margin-bottom: 30px; height: 300px;">
+    <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none;">
        <div id="sliderTrack" class="slider-track"></div>
        <div class="slider-dots" id="sliderDots"></div>
     </section>
