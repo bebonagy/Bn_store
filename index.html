@@ -12,8 +12,8 @@
 <meta property="og:url" content="https://bn-max.com/">
 <meta property="og:type" content="website">
 
-<!-- 🛡️ سياسة أمان المحتوى (CSP) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com https://api.imgbb.com;">
+<!-- 🛡️ سياسة أمان المحتوى (CSP) - تم التعديل للسماح بنوافذ فايربيز وجوجل -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com https://api.imgbb.com https://bn-store-4f0c0.firebaseapp.com; frame-src 'self' https://bn-store-4f0c0.firebaseapp.com https://*.firebaseapp.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
 <meta name="description" id="metaDesc" content="BN MAX - متجرك الأفضل للخدمات الرقمية وشحن الألعاب.">
@@ -421,10 +421,17 @@
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="have_account">لديك حساب بالفعل؟</span> <a href="#" id="showLoginBtn" style="color:var(--accent-neon);" data-i18n="btn_login">تسجيل الدخول</a></p>
       </div>
 
-      <!-- نافذة إدخال الـ OTP -->
+      <!-- نافذة إدخال الـ OTP (تم التعديل لإضافة حقل الباسورد في حالة الـ Refresh) -->
       <div id="authViewOTP" style="display:none;">
-        <p style="font-size: 13px; color: var(--success); margin-bottom: 15px; text-align: center; line-height: 1.5;">تم إرسال كود التفعيل (OTP) إلى بريدك الإلكتروني بنجاح. برجاء تفقد صندوق الوارد أو البريد المزعج (Spam).</p>
+        <p id="otpMessageDisplay" style="font-size: 13px; color: var(--success); margin-bottom: 15px; text-align: center; line-height: 1.5;">تم إرسال كود التفعيل (OTP) إلى بريدك الإلكتروني بنجاح. برجاء تفقد صندوق الوارد أو البريد المزعج (Spam).</p>
         <div class="form-group"><label>كود التفعيل</label><input type="text" id="regOTP" placeholder="أدخل الكود" class="otp-input"></div>
+        
+        <!-- حقل الباسورد الإضافي المخفي (يظهر عند فقدان الجلسة بسبب الـ Refresh) -->
+        <div class="form-group" id="recoveryPassGroup" style="display:none;">
+            <label style="color: var(--danger); font-weight: bold;">تأكيد كلمة المرور</label>
+            <input type="password" id="regPassRecovery" placeholder="أدخل كلمة المرور التي سجلت بها" style="border-color: var(--danger); box-shadow: 0 0 10px rgba(255,51,102,0.2);">
+        </div>
+
         <button type="button" class="submit-btn" id="doVerifyOTPBtn" style="width:100%;">تأكيد وإنشاء الحساب</button>
         <button type="button" id="backToRegFromOTP" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;">رجوع وتعديل البيانات</button>
       </div>
