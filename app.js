@@ -240,24 +240,18 @@ window.renderPromoSlider = () => {
       window.storeState.slides.forEach((slide, idx) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
-        slideDiv.style.background = 'transparent';
-        slideDiv.style.width = '100%';
-        slideDiv.style.height = '100%';
-        slideDiv.style.position = 'relative';
-
+        
         slideDiv.innerHTML = `
-            <img src="${slide.imgUrl}" alt="${window.sanitizeText(slide.title)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block;">
-            <h2 style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0);">${window.sanitizeText(slide.title)}</h2>
+            <img src="${slide.imgUrl}" alt="${window.sanitizeText(slide.title)}">
         `;
         
         if (slide.link) {
-            const imgEl = slideDiv.querySelector('img');
-            imgEl.style.cursor = 'pointer';
-            imgEl.onclick = (e) => { 
+            slideDiv.style.cursor = 'pointer';
+            slideDiv.onclick = (e) => { 
                 e.stopPropagation();
                 let url = slide.link.trim();
                 if(url && !url.startsWith('http') && !url.startsWith('/')) { url = 'https://' + url; }
-                window.location.href = url; 
+                window.open(url, '_blank');
             };
         }
 
@@ -1037,7 +1031,6 @@ const processCheckout = async (isWhatsApp) => {
         const promoCode = document.getElementById('promoCodeInput').value.trim();
         const newOrderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
 
-        // تنفيذ عملية الخصم وحفظ الطلب في قاعدة البيانات بشكل آمن
         await runTransaction(db, async (transaction) => {
             const updates = new Map();
             for (const p of cartItemsDetails) {
@@ -1095,7 +1088,6 @@ const processCheckout = async (isWhatsApp) => {
                             `📱 *رقم التحويل:* ${senderInfo}\n` +
                             `👤 *بيانات الاستلام:* ${customerData}\n\n` +
                             `يرجى مراجعة الطلب وتأكيده!`;
-            // فتح الواتساب في تاب جديدة لضمان اكتمال عملية جرد المخزون في الخلفية
             window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
             window.showToast('🎉 تم تسجيل وحفظ طلبك بنجاح!', 'success');
         } else {
