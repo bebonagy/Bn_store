@@ -236,7 +236,7 @@ const initCountdown = (expiryString) => {
     }, 1000);
 };
 
-// 💡 تعديل السلايدر ليعمل كصورة متجاوبة تملى العرض بوضوح ورابط يعمل بالضغط المباشر
+// 💡 دالة السلايدر المحدثة بـ <img> واضحة ومتجاوبة ورابط يعمل بالضغط المباشر
 window.renderPromoSlider = () => {
   const container = document.getElementById('promoSlider');
   const track = document.getElementById('sliderTrack');
@@ -1248,7 +1248,7 @@ const initApp = () => {
     document.querySelectorAll('.nav-link').forEach(btn => {
       btn.addEventListener('click', (e) => {
         document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
-        const cat = e.target.dataset.cat || 'all'; e.target.classList.2?.add('active'); // 안전 처리
+        const cat = e.target.dataset.cat || 'all'; e.target.classList.add('active');
         currentCategory = cat; currentPlatformFilter = 'all'; currentPage = 1; 
         window.renderCategoriesBar(); window.renderProducts(); window.navigate('home');
       });
@@ -1324,7 +1324,7 @@ const initApp = () => {
       try {
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'reviews')), { productId: window.currentProductId, uid: currentUserProfile.uid, userName: currentUserProfile.name, rating: Number(rating), comment, createdAt: serverTimestamp() });
         document.getElementById('reviewCommentText').value = ''; window.showToast('⭐ تم إضافة تقييمك بنجاح!', 'success');
-      } catch (e) { window.showToast('حدث خطأ أثناء إرسال التقييم', 'error'); } finally { submitBtn.textContent = origBtnText; submitBtn.disabled, false; }
+      } catch (e) { window.showToast('حدث خطأ أثناء إرسال التقييم', 'error'); } finally { submitBtn.textContent = origBtnText; submitBtn.disabled = false; }
     });
   
     document.getElementById('tabBtnOrders')?.addEventListener('click', () => { document.getElementById('tabBtnOrders').classList.add('active'); document.getElementById('tabBtnWishlist').classList.remove('active'); document.getElementById('userOrdersSection').style.display = 'block'; document.getElementById('userWishlistSection').style.display = 'none'; });
@@ -1335,7 +1335,7 @@ const initApp = () => {
     document.getElementById('searchInput')?.addEventListener('input', () => { currentPage = 1; window.renderProducts(); });
   
     document.getElementById('detailImageBox')?.addEventListener('click', (e) => {
-      const bgImg = e.target.style.backgroundImage.slice(4, -1).replace(/"/g, "", '');
+      const bgImg = e.target.style.backgroundImage.slice(4, -1).replace(/"/g, "");
       if (bgImg && bgImg !== 'none') { document.getElementById('lightboxImg').src = bgImg; document.getElementById('lightboxModal').style.display = 'flex'; }
     });
     document.getElementById('closeLightboxBtn')?.addEventListener('click', () => { document.getElementById('lightboxModal').style.display = 'none'; });
