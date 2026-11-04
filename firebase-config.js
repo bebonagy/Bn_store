@@ -19,3 +19,5 @@ export const googleProvider = new GoogleAuthProvider();
 
 export const appId = "bn-store-main-app";
 export const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
+
+export const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
