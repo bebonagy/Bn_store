@@ -6,10 +6,8 @@ import { setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs
 export let currentUserProfile = null;
 export const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
 
-// 🔒 متغير أمني في الذاكرة (RAM) فقط لحفظ الباسورد مؤقتاً أثناء التسجيل لمنع ثغرات XSS
 let tempSecurePassword = null;
 
-// 🔒 دالة تشفير كود التفعيل (SHA-256) لمنع قراءته أو اختراقه من المتصفح
 const hashOTP = async (otp, email) => {
   const msgUint8 = new TextEncoder().encode(otp + email + "BN_MAX_SECURE");
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -19,7 +17,6 @@ const hashOTP = async (otp, email) => {
 
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   
-  // التعامل مع العودة من صفحة تسجيل الدخول بجوجل (Redirect)
   getRedirectResult(auth).then(async (result) => {
     if (result && result.user) {
       const user = result.user;
@@ -40,7 +37,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     console.error("Redirect Auth Error:", error);
   });
 
-  // مراقبة حالة تسجيل الدخول
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم', photoURL: user.photoURL || '' };
@@ -58,6 +54,23 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
           document.getElementById('userAccountModal').style.display = 'flex'; 
       } else { 
           authModal.style.display = 'flex'; 
+          
+          // التعديل: فحص وجود جلسة تسجيل معلقة (OTP) لعدم طرد العميل عند الـ Refresh
+          if (sessionStorage.getItem('bn_temp_reg')) {
+              document.getElementById('authViewLogin').style.display = 'none';
+              document.getElementById('authViewRegister').style.display = 'none';
+              document.getElementById('authViewReset').style.display = 'none';
+              document.getElementById('authViewOTP').style.display = 'block';
+              
+              if (!tempSecurePassword) {
+                  document.getElementById('recoveryPassGroup').style.display = 'block';
+                  const msgDisplay = document.getElementById('otpMessageDisplay');
+                  if (msgDisplay) {
+                      msgDisplay.textContent = 'لأمانك، يرجى تأكيد كلمة المرور لإكمال إنشاء الحساب.';
+                      msgDisplay.style.color = 'var(--danger)';
+                  }
+              }
+          }
       }
   });
 
@@ -73,7 +86,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     }
   });
 
-  // تسجيل الدخول بالنافذة المنبثقة لجوجل (Popup)
   document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -132,10 +144,19 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'block'; document.getElementById('authViewRegister').style.display = 'none'; document.getElementById('authViewOTP').style.display = 'none'; document.getElementById('authModalTitle').textContent = translations[currentLang].btn_login; });
   
   document.getElementById('backToRegFromOTP')?.addEventListener('click', () => { 
-    sessionStorage.removeItem('bn_temp_reg'); // تفريغ الجلسة فوراً عند التراجع
-    tempSecurePassword = null; // تفريغ الباسورد من الذاكرة
+    sessionStorage.removeItem('bn_temp_reg'); 
+    tempSecurePassword = null; 
     document.getElementById('authViewOTP').style.display = 'none'; 
     document.getElementById('authViewRegister').style.display = 'block'; 
+    
+    // إعادة إخفاء حقل الاستعادة عند التراجع
+    document.getElementById('recoveryPassGroup').style.display = 'none';
+    document.getElementById('regPassRecovery').value = '';
+    const msgDisplay = document.getElementById('otpMessageDisplay');
+    if (msgDisplay) {
+        msgDisplay.textContent = 'تم إرسال كود التفعيل (OTP) إلى بريدك الإلكتروني بنجاح. برجاء تفقد صندوق الوارد أو البريد المزعج (Spam).';
+        msgDisplay.style.color = 'var(--success)';
+    }
   });
 
   document.getElementById('doRegisterBtn')?.addEventListener('click', async () => {
@@ -150,10 +171,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const otpHash = await hashOTP(otpCode, email);
         
-        // حفظ الباسورد في متغير الذاكرة المؤقت فقط (لا يتم حفظه في التخزين المحلي)
         tempSecurePassword = pass;
-        
-        // حفظ البيانات العادية فقط في الجلسة لمنع فقدانها
         sessionStorage.setItem('bn_temp_reg', JSON.stringify({ name, email, otpHash }));
         
         if (typeof emailjs !== 'undefined') {
@@ -174,21 +192,36 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     const inputOTP = document.getElementById('regOTP').value.trim();
     if (!inputOTP) return window.showToast('أدخل كود التفعيل!', 'error');
     
-    // استدعاء البيانات من الجلسة (Session Storage)
     const storedData = sessionStorage.getItem('bn_temp_reg');
     if (!storedData) return window.showToast('انتهت الجلسة، يرجى التسجيل مجدداً.', 'error');
     
-    // التأكد من أن الباسورد ما زال في الذاكرة (لم يتم تحديث الصفحة)
+    // التعديل: التعامل مع الباسورد المفقود بدلاً من طرد العميل
     if (!tempSecurePassword) {
-        sessionStorage.removeItem('bn_temp_reg');
-        document.getElementById('authViewOTP').style.display = 'none'; 
-        document.getElementById('authViewRegister').style.display = 'block';
-        return window.showToast('تم إعادة تحميل الصفحة. لأمانك يرجى إدخال بياناتك مرة أخرى.', 'error');
+        const recoveryInput = document.getElementById('regPassRecovery');
+        if (recoveryInput && recoveryInput.value) {
+            tempSecurePassword = recoveryInput.value;
+        } else {
+            document.getElementById('recoveryPassGroup').style.display = 'block';
+            const msgDisplay = document.getElementById('otpMessageDisplay');
+            if (msgDisplay) {
+                msgDisplay.textContent = 'لأمانك، يرجى تأكيد كلمة المرور لإكمال إنشاء الحساب.';
+                msgDisplay.style.color = 'var(--danger)';
+            }
+            return window.showToast('يرجى إدخال كلمة المرور للتأكيد.', 'error');
+        }
     }
     
     const tempRegistrationData = JSON.parse(storedData);
     const inputHash = await hashOTP(inputOTP, tempRegistrationData.email);
-    if (inputHash !== tempRegistrationData.otpHash) return window.showToast('❌ الكود غير صحيح!', 'error');
+    
+    if (inputHash !== tempRegistrationData.otpHash) {
+        // لو الكود غلط وهو في وضع الاستعادة، نمسح الباسورد اللي دخله عشان يدخله تاني صح
+        if (document.getElementById('recoveryPassGroup').style.display === 'block') {
+            tempSecurePassword = null;
+            document.getElementById('regPassRecovery').value = '';
+        }
+        return window.showToast('❌ الكود غير صحيح!', 'error');
+    }
 
     const btn = document.getElementById('doVerifyOTPBtn'); const origText = btn.textContent;
     btn.textContent = 'جاري الإنشاء ⏳...'; btn.disabled = true;
@@ -197,7 +230,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       const cred = await createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempSecurePassword); 
       await updateProfile(cred.user, { displayName: tempRegistrationData.name });
       
-      // حفظ بيانات العميل الجديد في قاعدة البيانات
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), { 
         uid: cred.user.uid, 
         name: tempRegistrationData.name, 
@@ -214,12 +246,18 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: tempRegistrationData.name, to_email: tempRegistrationData.email, custom_message: welcomeMessage }).catch(err => console.log("Welcome Email Error"));
       }
       
-      // مسح البيانات من الجلسة وتفريغ الباسورد من الذاكرة تماماً
       sessionStorage.removeItem('bn_temp_reg'); 
       tempSecurePassword = null;
       document.getElementById('regOTP').value = '';
+      document.getElementById('regPassRecovery').value = '';
+      document.getElementById('recoveryPassGroup').style.display = 'none';
+      
     } catch (e) { 
-      window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); 
+      window.showToast('خطأ! ربما البريد مستخدم مسبقاً أو كلمة المرور غير صحيحة.', 'error'); 
+      // تصفير الباسورد لو فيه خطأ عشان المحاولة الجاية
+      if (document.getElementById('recoveryPassGroup').style.display === 'block') {
+          tempSecurePassword = null;
+      }
     } finally { 
       btn.textContent = origText; btn.disabled = false; 
     }
