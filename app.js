@@ -249,7 +249,7 @@ window.renderPromoSlider = () => {
   if (hasSlides) {
       container.style.display = 'block';
       
-      // 💡 التعديل 1: إلغاء الارتفاع الثابت وضبط مقاس السلايدر ليتوافق مع جميع الشاشات
+      // 💡 ضبط الأبعاد لتملأ الشاشة تماماً بدون أي مساحات فارغة
       container.style.height = 'auto';
       container.style.aspectRatio = window.innerWidth <= 768 ? '16/9' : '21/9';
       
@@ -259,22 +259,24 @@ window.renderPromoSlider = () => {
       window.storeState.slides.forEach((slide, idx) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
-        slideDiv.style.background = 'transparent'; // إزالة أي خلفية تعيق الصورة
+        slideDiv.style.background = 'transparent';
+        slideDiv.style.width = '100%';
+        slideDiv.style.height = '100%';
+        slideDiv.style.position = 'relative';
 
-        // 💡 التعديل 2: وضع الصورة في عنصر <img> صريح لضمان عدم القص (object-fit: contain)
+        // 💡 استخدام object-fit: cover لملء عرض الشاشة بالكامل باحترافية
         slideDiv.innerHTML = `
-            <img src="${slide.imgUrl}" alt="${window.sanitizeText(slide.title)}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; display: block; background: #08080c;">
+            <img src="${slide.imgUrl}" alt="${window.sanitizeText(slide.title)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block;">
             <h2 style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0);">${window.sanitizeText(slide.title)}</h2>
         `;
         
-        // 💡 التعديل 3: ربط الضغطة بالصورة مباشرة لتخطي مشكلة السحب على التاتش
+        // 💡 ربط الرابط بالصورة بشكل مباشر لتجنب أي تعارض مع السحب
         if (slide.link) {
             const imgEl = slideDiv.querySelector('img');
             imgEl.style.cursor = 'pointer';
             imgEl.onclick = (e) => { 
-                e.stopPropagation(); // يمنع التداخل مع السحب
+                e.stopPropagation();
                 let url = slide.link.trim();
-                // تصليح أمان: لو نسيت تكتب https يضيفها هو
                 if(url && !url.startsWith('http') && !url.startsWith('/')) { url = 'https://' + url; }
                 window.location.href = url; 
             };
@@ -307,7 +309,6 @@ window.renderPromoSlider = () => {
           let diffX = startX - endX;
           let diffY = startY - endY;
 
-          // التأكد إن المستخدم فعلاً سحب صباعه بمسافة مش مجرد ضغطة
           if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
               if (diffX > 0) { 
                   currentSlideIndex = (currentSlideIndex + 1) % window.storeState.slides.length;
