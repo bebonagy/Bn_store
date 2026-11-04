@@ -6,6 +6,9 @@ import { setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs
 export let currentUserProfile = null;
 export const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
 
+// 🔒 متغير أمني في الذاكرة (RAM) فقط لحفظ الباسورد مؤقتاً أثناء التسجيل لمنع ثغرات XSS
+let tempSecurePassword = null;
+
 // 🔒 دالة تشفير كود التفعيل (SHA-256) لمنع قراءته أو اختراقه من المتصفح
 const hashOTP = async (otp, email) => {
   const msgUint8 = new TextEncoder().encode(otp + email + "BN_MAX_SECURE");
@@ -130,6 +133,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   
   document.getElementById('backToRegFromOTP')?.addEventListener('click', () => { 
     sessionStorage.removeItem('bn_temp_reg'); // تفريغ الجلسة فوراً عند التراجع
+    tempSecurePassword = null; // تفريغ الباسورد من الذاكرة
     document.getElementById('authViewOTP').style.display = 'none'; 
     document.getElementById('authViewRegister').style.display = 'block'; 
   });
@@ -146,8 +150,11 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const otpHash = await hashOTP(otpCode, email);
         
-        // حفظ البيانات في الجلسة لمنع فقدانها
-        sessionStorage.setItem('bn_temp_reg', JSON.stringify({ name, email, pass, otpHash }));
+        // حفظ الباسورد في متغير الذاكرة المؤقت فقط (لا يتم حفظه في التخزين المحلي)
+        tempSecurePassword = pass;
+        
+        // حفظ البيانات العادية فقط في الجلسة لمنع فقدانها
+        sessionStorage.setItem('bn_temp_reg', JSON.stringify({ name, email, otpHash }));
         
         if (typeof emailjs !== 'undefined') {
             const customMessage = `كود التفعيل الخاص بك هو:<div class="otp-box">${otpCode}</div>لا تشارك هذا الكود مع أحد.`;
@@ -171,6 +178,14 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     const storedData = sessionStorage.getItem('bn_temp_reg');
     if (!storedData) return window.showToast('انتهت الجلسة، يرجى التسجيل مجدداً.', 'error');
     
+    // التأكد من أن الباسورد ما زال في الذاكرة (لم يتم تحديث الصفحة)
+    if (!tempSecurePassword) {
+        sessionStorage.removeItem('bn_temp_reg');
+        document.getElementById('authViewOTP').style.display = 'none'; 
+        document.getElementById('authViewRegister').style.display = 'block';
+        return window.showToast('تم إعادة تحميل الصفحة. لأمانك يرجى إدخال بياناتك مرة أخرى.', 'error');
+    }
+    
     const tempRegistrationData = JSON.parse(storedData);
     const inputHash = await hashOTP(inputOTP, tempRegistrationData.email);
     if (inputHash !== tempRegistrationData.otpHash) return window.showToast('❌ الكود غير صحيح!', 'error');
@@ -179,7 +194,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     btn.textContent = 'جاري الإنشاء ⏳...'; btn.disabled = true;
 
     try {
-      const cred = await createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempRegistrationData.pass); 
+      const cred = await createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempSecurePassword); 
       await updateProfile(cred.user, { displayName: tempRegistrationData.name });
       
       // حفظ بيانات العميل الجديد في قاعدة البيانات
@@ -199,11 +214,15 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: tempRegistrationData.name, to_email: tempRegistrationData.email, custom_message: welcomeMessage }).catch(err => console.log("Welcome Email Error"));
       }
       
-      // مسح البيانات من الجلسة بعد نجاح العملية لمنع تكرار الاستخدام
+      // مسح البيانات من الجلسة وتفريغ الباسورد من الذاكرة تماماً
       sessionStorage.removeItem('bn_temp_reg'); 
+      tempSecurePassword = null;
       document.getElementById('regOTP').value = '';
-    } catch (e) { window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); } 
-    finally { btn.textContent = origText; btn.disabled = false; }
+    } catch (e) { 
+      window.showToast('خطأ! ربما البريد مستخدم مسبقاً.', 'error'); 
+    } finally { 
+      btn.textContent = origText; btn.disabled = false; 
+    }
   });
 
   document.getElementById('logoutBtn')?.addEventListener('click', async () => { 
