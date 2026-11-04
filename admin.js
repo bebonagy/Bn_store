@@ -1,6 +1,28 @@
 // admin.js
-import { db, appId, ADMIN_UID } from './firebase-config.js';
+import { db, appId, ADMIN_UID, IMGBB_API_KEY } from './firebase-config.js';
 import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// 🌐 دالة الرفع التلقائي لخدمة ImgBB (عين الصقر)
+window.uploadImageToImgBB = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            return data.data.url;
+        } else {
+            throw new Error(data.error?.message || 'فشل رفع الصورة');
+        }
+    } catch (e) {
+        console.error("ImgBB Upload Error:", e);
+        window.showToast('فشل الرفع لـ ImgBB، تحقق من الاتصال.', 'error');
+        return null;
+    }
+};
 
 window.initAdminTabs = () => {
   const tabBtns = document.querySelectorAll('#adminTabs .tab-btn');
@@ -23,7 +45,6 @@ window.addVariantInput = (v = {nameAr: '', nameEn: '', price: '', stockQuantity:
   list.appendChild(div);
 };
 
-// 💡 تعديل عين الصقر: إضافة حقل (ID المنتج) للكوبونات
 window.addPromoInput = (p = {code: '', discount: '', expiry: '', productId: ''}) => {
   const list = document.getElementById('promosList'); if(!list) return;
   const div = document.createElement('div'); div.className = 'admin-item-row promo-row'; div.style.alignItems = 'flex-end';
@@ -228,13 +249,8 @@ window.saveHeroConfig = async () => {
       let bgUrl = window.storeState.heroConfig?.bgUrl || '';
       
       if (bgInput && bgInput.files[0]) {
-          const base64 = await new Promise((res, rej) => {
-              const r = new FileReader();
-              r.onload = async e => res(await window.compressImage(e.target.result, 1200, 0.6));
-              r.onerror = rej;
-              r.readAsDataURL(bgInput.files[0]);
-          });
-          bgUrl = base64;
+          const uploadedUrl = await window.uploadImageToImgBB(bgInput.files[0]);
+          if (uploadedUrl) bgUrl = uploadedUrl;
       }
 
       const heroConfig = {
@@ -440,10 +456,26 @@ window.saveProduct = async () => {
   const origText = btn.textContent; btn.textContent = 'جاري الحفظ ⏳...'; btn.disabled = true;
 
   try {
-    let imgUrl = ''; if (coverInput && coverInput.files[0]) { imgUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.onerror=rej; r.readAsDataURL(coverInput.files[0]); }); } else if (window.editingProductId) { imgUrl = window.storeState.products.find(p => p.id === window.editingProductId)?.imgUrl || ''; }
-    let bannerUrl = ''; if (bannerInput && bannerInput.files[0]) { bannerUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.onerror=rej; r.readAsDataURL(bannerInput.files[0]); }); } else if (window.editingProductId) { bannerUrl = window.storeState.products.find(p => p.id === window.editingProductId)?.bannerUrl || ''; }
+    let imgUrl = window.editingProductId ? (window.storeState.products.find(p => p.id === window.editingProductId)?.imgUrl || '') : ''; 
+    if (coverInput && coverInput.files[0]) { 
+        const url = await window.uploadImageToImgBB(coverInput.files[0]);
+        if(url) imgUrl = url;
+    } 
+    
+    let bannerUrl = window.editingProductId ? (window.storeState.products.find(p => p.id === window.editingProductId)?.bannerUrl || '') : ''; 
+    if (bannerInput && bannerInput.files[0]) { 
+        const url = await window.uploadImageToImgBB(bannerInput.files[0]);
+        if(url) bannerUrl = url;
+    } 
+    
     let gallery = window.editingProductId ? (window.storeState.products.find(p => p.id === window.editingProductId)?.gallery || []) : [];
-    if (galleryInput && galleryInput.files.length > 0) { gallery = []; for (let i = 0; i < galleryInput.files.length; i++) { const base64 = await new Promise((res,rej) => { const r = new FileReader(); r.onload = async e => res(await window.compressImage(e.target.result)); r.onerror=rej; r.readAsDataURL(galleryInput.files[i]); }); gallery.push(base64); } }
+    if (galleryInput && galleryInput.files.length > 0) { 
+        gallery = []; 
+        for (let i = 0; i < galleryInput.files.length; i++) { 
+            const url = await window.uploadImageToImgBB(galleryInput.files[i]);
+            if (url) gallery.push(url);
+        } 
+    }
 
     const prodData = { 
       titleAr, titleEn, descAr, descEn, price, oldPrice, category, badgeAr, badgeEn, imgUrl, bannerUrl, gallery, 
@@ -524,16 +556,11 @@ window.addSlide = async () => {
   
   try {
     const file = fileInput.files[0];
-    const base64Src = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = e => res(e.target.result);
-        r.onerror = e => rej(e);
-        r.readAsDataURL(file);
-    });
+    const imgUrl = await window.uploadImageToImgBB(file);
+    if (!imgUrl) throw new Error("فشل رفع صورة السلايدر");
     
-    const imgBase64 = await window.compressImage(base64Src, 1200, 0.6); 
     const slides = window.storeState.slides ? [...window.storeState.slides] : []; 
-    slides.push({ title, desc, link, imgUrl: imgBase64 });
+    slides.push({ title, desc, link, imgUrl });
     
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true });
     window.showToast('🖼️ تم إضافة البانر بنجاح!', 'success');
@@ -583,7 +610,7 @@ window.saveGeneralSettings = async () => {
             const code = row.querySelector('.promo-code').value.trim(); 
             const discount = Number(row.querySelector('.promo-disc').value); 
             const expiry = row.querySelector('.promo-exp').value;
-            const productId = row.querySelector('.promo-prod').value.trim(); // 💡 حفظ ID المنتج المخصص
+            const productId = row.querySelector('.promo-prod').value.trim();
             if(code && discount > 0) promos.push({ code, discount, expiry, productId });
         });
         const bannerAr = document.getElementById('admBannerAr').value; const bannerExpiry = document.getElementById('admBannerExpiry').value;
