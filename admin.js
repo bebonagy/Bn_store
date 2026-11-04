@@ -243,7 +243,6 @@ window.loadAdminData = () => {
   window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminStats();
 };
 
-// 🔒 دالة الحماية تمت إضافتها
 window.saveHeroConfig = async () => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   try {
@@ -390,7 +389,7 @@ window.deleteAdminOrder = async (orderId) => {
   } catch(e) { console.error(e); window.showToast('فشل الحذف', 'error'); } 
 };
 
-// 🔒 دالة الحماية وجمع הTransactions لضمان الأمان
+// 🔒 إصلاح دالة تحديث الطلبات لتشمل سحب الأكواد وتحديث الطلب في Transaction واحد
 window.updateOrderStatus = async (orderId, status) => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
@@ -401,10 +400,12 @@ window.updateOrderStatus = async (orderId, status) => {
     
     if (status === 'cancelled') {
         await window.refundOrderStock(order);
-    } else if (status === 'completed' && !codeToDeliver && order && (order.items || order.productIds)) {
+        await updateDoc(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
+        window.showToast('تم التحديث والإلغاء!', 'success');
+    } else if (status === 'completed' && order) {
         
         let multiCodesArr = [];
-        let itemsList = order.items ? order.items : order.productIds.map(id => ({ id }));
+        let itemsList = order.items ? order.items : (order.productIds ? order.productIds.map(id => ({ id })) : []);
         
         const groupedItems = itemsList.reduce((acc, item) => {
             acc[item.id] = (acc[item.id] || 0) + 1;
@@ -412,41 +413,44 @@ window.updateOrderStatus = async (orderId, status) => {
         }, {});
 
         await runTransaction(db, async (transaction) => {
-            // جلب البيانات بضربة واحدة
-            const sfDocs = {};
-            for (const pid of Object.keys(groupedItems)) {
-                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
-                sfDocs[pid] = { ref: prodRef, docSnap: await transaction.get(prodRef) };
+            // جلب البيانات بضربة واحدة لو الأكواد مش متسلمة يدوي
+            if (!codeToDeliver && itemsList.length > 0) {
+                const sfDocs = {};
+                for (const pid of Object.keys(groupedItems)) {
+                    const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
+                    sfDocs[pid] = { ref: prodRef, docSnap: await transaction.get(prodRef) };
+                }
+                
+                // سحب الأكواد من الخزنة
+                for (const pid of Object.keys(groupedItems)) {
+                    const qty = groupedItems[pid];
+                    const { ref, docSnap } = sfDocs[pid];
+                    if (!docSnap.exists()) continue;
+                    
+                    const data = docSnap.data();
+                    if (data.vaultCodes) {
+                        let codes = data.vaultCodes.split('\n').map(c => c.trim()).filter(c => c);
+                        let extractedQty = Math.min(qty, codes.length);
+                        for(let i=0; i<extractedQty; i++){
+                            let extractedCode = codes.shift();
+                            multiCodesArr.push(`${data.titleAr || data.title}: ${extractedCode}`);
+                        }
+                        transaction.update(ref, { vaultCodes: codes.join('\n') });
+                    }
+                }
+                if (multiCodesArr.length > 0) codeToDeliver = multiCodesArr.join(' || ');
             }
             
-            // تنفيذ سحب الأكواد وتحديث الداتا مرة واحدة
-            for (const pid of Object.keys(groupedItems)) {
-                const qty = groupedItems[pid];
-                const { ref, docSnap } = sfDocs[pid];
-                if (!docSnap.exists()) continue;
-                
-                const data = docSnap.data();
-                if (data.vaultCodes) {
-                    let codes = data.vaultCodes.split('\n').map(c => c.trim()).filter(c => c);
-                    let extractedQty = Math.min(qty, codes.length);
-                    for(let i=0; i<extractedQty; i++){
-                        let extractedCode = codes.shift();
-                        multiCodesArr.push(`${data.titleAr || data.title}: ${extractedCode}`);
-                    }
-                    transaction.update(ref, { vaultCodes: codes.join('\n') });
-                }
-            }
+            // 🔒 تحديث الطلب يتم هنا داخل نفس الـ Transaction (ضمان الأمان وعدم الضياع)
+            transaction.update(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
         });
 
-        if (multiCodesArr.length > 0) codeToDeliver = multiCodesArr.join(' || ');
+        window.showToast('تم التحديث وتسليم الكود!', 'success');
     }
-    
-    await updateDoc(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
-    window.showToast('تم التحديث!', 'success');
-  } catch(e) { console.error(e); window.showToast('خطأ في التحديث', 'error'); }
+  } catch(e) { console.error(e); window.showToast('خطأ في التحديث، حاول مرة أخرى', 'error'); }
 };
 
-// 🔒 إصلاح إيرور doc(doc(...)) وإضافة الحماية
+// 🔒 إصلاح السطر القاتل لحفظ المنتجات doc(doc(...)) -> doc(...)
 window.saveProduct = async () => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const titleAr = document.getElementById('newProdTitleAr').value, titleEn = document.getElementById('newProdTitleEn').value;
@@ -519,6 +523,7 @@ window.saveProduct = async () => {
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); 
         window.showToast('✏️ تم التعديل!', 'success'); 
     } else { 
+        // 🔒 تم إصلاح خطأ الـ doc المزدوج هنا
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); 
         window.showToast('📦 تمت الإضافة!', 'success'); 
     }
