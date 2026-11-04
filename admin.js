@@ -243,7 +243,9 @@ window.loadAdminData = () => {
   window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminStats();
 };
 
+// 🔒 دالة الحماية تمت إضافتها
 window.saveHeroConfig = async () => {
+  if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   try {
       const bgInput = document.getElementById('heroBgFileInput');
       let bgUrl = window.storeState.heroConfig?.bgUrl || '';
@@ -273,7 +275,6 @@ window.saveHeroConfig = async () => {
   }
 };
 
-// 🔒 حماية نظام تحديث العملات عشان لو الـ API وقع الموقع ما يظهرش NaN
 window.autoUpdateCurrencies = async () => {
   const btn = document.getElementById('autoCurrencyBtn'); const origText = btn.innerHTML;
   btn.innerHTML = 'جاري التحديث ⏳...'; btn.disabled = true;
@@ -342,7 +343,6 @@ window.renderAdminOrders = () => {
   if(orders.length >= window.adminOrdersLimit) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
 };
 
-// 🔒 معالجة استرجاع المخزون بدقة (حتى مع الباقات المتعددة والكميات)
 window.refundOrderStock = async (order) => {
     if (!order) return;
     
@@ -355,7 +355,6 @@ window.refundOrderStock = async (order) => {
 
     if (itemsToRefund.length === 0) return;
 
-    // تجميع المنتجات عشان نقلل عدد العمليات (Transactions) للفايربيز
     const grouped = itemsToRefund.reduce((acc, item) => {
         const key = `${item.id}_${item.variantId || 'none'}`;
         if (!acc[key]) acc[key] = { id: item.id, variantId: item.variantId, qty: 0 };
@@ -370,7 +369,7 @@ window.refundOrderStock = async (order) => {
             if (variantId && prod.variants) {
                 const vIndex = prod.variants.findIndex(v => (v.id || v.nameEn) === variantId);
                 if (vIndex !== -1 && prod.variants[vIndex].stockQuantity !== undefined) {
-                    prod.variants[vIndex].stockQuantity += qty; // بنرجع الكمية المطلوبة بالظبط
+                    prod.variants[vIndex].stockQuantity += qty; 
                     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { variants: prod.variants });
                 }
             } else if (prod.stockQuantity !== undefined) {
@@ -390,8 +389,9 @@ window.deleteAdminOrder = async (orderId) => {
   } catch(e) { console.error(e); window.showToast('فشل الحذف', 'error'); } 
 };
 
-// 🔒 سحب الأكواد التلقائي باحترافية (لأكثر من قطعة من نفس المنتج)
+// 🔒 دالة الحماية تمت إضافتها
 window.updateOrderStatus = async (orderId, status) => {
+  if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
   try {
     const orderRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId);
@@ -405,13 +405,11 @@ window.updateOrderStatus = async (orderId, status) => {
         let multiCodesArr = [];
         let itemsList = order.items ? order.items : order.productIds.map(id => ({ id }));
         
-        // نجمع الكميات المطلوبة لكل منتج
         const groupedItems = itemsList.reduce((acc, item) => {
             acc[item.id] = (acc[item.id] || 0) + 1;
             return acc;
         }, {});
 
-        // بنسحب من الخزنة بعدد الـ qty مرة واحدة بدون ما نتخطى أو نعمل تعارض
         for (const [pid, qty] of Object.entries(groupedItems)) {
             const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
             await runTransaction(db, async (transaction) => {
@@ -437,8 +435,9 @@ window.updateOrderStatus = async (orderId, status) => {
   } catch(e) { console.error(e); window.showToast('خطأ في التحديث', 'error'); }
 };
 
+// 🔒 دالة الحماية تمت إضافتها
 window.saveProduct = async () => {
-  if (!window.checkIsAdmin()) return;
+  if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const titleAr = document.getElementById('newProdTitleAr').value, titleEn = document.getElementById('newProdTitleEn').value;
   const price = Number(document.getElementById('newProdPrice').value), oldPrice = Number(document.getElementById('newProdOldPrice')?.value) || 0;
   const stockInput = document.getElementById('newProdStock')?.value;
@@ -560,9 +559,21 @@ window.renderAdminProducts = () => {
   });
 };
 
-window.deleteProduct = async (id) => { if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return; try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); window.showToast('تم الحذف', 'success'); } catch (e) { console.error(e); window.showToast('فشل الحذف', 'error'); } };
+// 🔒 دالة الحماية تمت إضافتها
+window.deleteProduct = async (id) => { 
+  if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error'); 
+  try { 
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); 
+      window.showToast('تم الحذف', 'success'); 
+  } catch (e) { 
+      console.error(e); 
+      window.showToast('فشل الحذف', 'error'); 
+  } 
+};
 
+// 🔒 دالة الحماية تمت إضافتها
 window.addSlide = async () => { 
+  if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const title = document.getElementById('slideTitleInput').value.trim();
   const desc = document.getElementById('slideDescInput').value.trim();
   const link = document.getElementById('slideLinkInput').value.trim();
@@ -598,7 +609,9 @@ window.addSlide = async () => {
   } finally { btn.textContent = origText; btn.disabled = false; }
 };
 
+// 🔒 دالة الحماية تمت إضافتها
 window.deleteSlide = async (idx) => { 
+  if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   try {
     const slides = [...window.storeState.slides]; 
     slides.splice(idx, 1); 
@@ -621,7 +634,9 @@ window.renderAdminSlides = () => {
   }
 };
 
+// 🔒 دالة الحماية تمت إضافتها
 window.saveGeneralSettings = async () => {
+    if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
     try {
         const rates = { SAR: Number(document.getElementById('admRateSAR').value), AED: Number(document.getElementById('admRateAED').value), USD: Number(document.getElementById('admRateUSD').value) };
         const payments = { instapay: document.getElementById('admInstapay').value, vodafone: document.getElementById('admVodafone').value, crypto: document.getElementById('admCrypto').value };
@@ -640,7 +655,9 @@ window.saveGeneralSettings = async () => {
     } catch(e) { console.error(e); window.showToast('خطأ في الحفظ', 'error'); }
 };
 
+// 🔒 دالة الحماية تمت إضافتها
 window.saveSeoSettings = async () => {
+    if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
     try {
         const seo = { title: document.getElementById('seoTitle').value.trim(), desc: document.getElementById('seoDesc').value.trim(), keywords: document.getElementById('seoKeywords').value.trim() };
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { seo }, { merge: true });
