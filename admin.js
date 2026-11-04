@@ -276,6 +276,7 @@ window.saveHeroConfig = async () => {
 };
 
 window.autoUpdateCurrencies = async () => {
+  if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const btn = document.getElementById('autoCurrencyBtn'); const origText = btn.innerHTML;
   btn.innerHTML = 'جاري التحديث ⏳...'; btn.disabled = true;
   try {
@@ -380,7 +381,7 @@ window.refundOrderStock = async (order) => {
 };
 
 window.deleteAdminOrder = async (orderId) => { 
-  if (!window.checkIsAdmin() || !confirm('تأكيد الحذف النهائي؟ (سيتم إرجاع المنتجات للمخزون)')) return; 
+  if (!window.checkIsAdmin() || !confirm('تأكيد الحذف النهائي؟ (سيتم إرجاع المنتجات للمخزون)')) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error'); 
   try { 
     const order = window.storeState.orders.find(o => o.id === orderId);
     if (order && order.status !== 'cancelled') await window.refundOrderStock(order);
@@ -389,7 +390,7 @@ window.deleteAdminOrder = async (orderId) => {
   } catch(e) { console.error(e); window.showToast('فشل الحذف', 'error'); } 
 };
 
-// 🔒 دالة الحماية تمت إضافتها
+// 🔒 دالة الحماية وجمع הTransactions لضمان الأمان
 window.updateOrderStatus = async (orderId, status) => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
@@ -410,12 +411,21 @@ window.updateOrderStatus = async (orderId, status) => {
             return acc;
         }, {});
 
-        for (const [pid, qty] of Object.entries(groupedItems)) {
-            const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
-            await runTransaction(db, async (transaction) => {
-                const sfDoc = await transaction.get(prodRef);
-                if (!sfDoc.exists()) return;
-                const data = sfDoc.data();
+        await runTransaction(db, async (transaction) => {
+            // جلب البيانات بضربة واحدة
+            const sfDocs = {};
+            for (const pid of Object.keys(groupedItems)) {
+                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
+                sfDocs[pid] = { ref: prodRef, docSnap: await transaction.get(prodRef) };
+            }
+            
+            // تنفيذ سحب الأكواد وتحديث الداتا مرة واحدة
+            for (const pid of Object.keys(groupedItems)) {
+                const qty = groupedItems[pid];
+                const { ref, docSnap } = sfDocs[pid];
+                if (!docSnap.exists()) continue;
+                
+                const data = docSnap.data();
                 if (data.vaultCodes) {
                     let codes = data.vaultCodes.split('\n').map(c => c.trim()).filter(c => c);
                     let extractedQty = Math.min(qty, codes.length);
@@ -423,10 +433,11 @@ window.updateOrderStatus = async (orderId, status) => {
                         let extractedCode = codes.shift();
                         multiCodesArr.push(`${data.titleAr || data.title}: ${extractedCode}`);
                     }
-                    transaction.update(prodRef, { vaultCodes: codes.join('\n') });
+                    transaction.update(ref, { vaultCodes: codes.join('\n') });
                 }
-            });
-        }
+            }
+        });
+
         if (multiCodesArr.length > 0) codeToDeliver = multiCodesArr.join(' || ');
     }
     
@@ -435,7 +446,7 @@ window.updateOrderStatus = async (orderId, status) => {
   } catch(e) { console.error(e); window.showToast('خطأ في التحديث', 'error'); }
 };
 
-// 🔒 دالة الحماية تمت إضافتها
+// 🔒 إصلاح إيرور doc(doc(...)) وإضافة الحماية
 window.saveProduct = async () => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const titleAr = document.getElementById('newProdTitleAr').value, titleEn = document.getElementById('newProdTitleEn').value;
@@ -504,8 +515,13 @@ window.saveProduct = async () => {
       stockQuantity, platform, reqAr, reqEn, quickInfo, variants
     };
 
-    if (window.editingProductId) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); window.showToast('✏️ تم التعديل!', 'success'); } 
-    else { await setDoc(doc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString())), prodData); window.showToast('📦 تمت الإضافة!', 'success'); }
+    if (window.editingProductId) { 
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); 
+        window.showToast('✏️ تم التعديل!', 'success'); 
+    } else { 
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); 
+        window.showToast('📦 تمت الإضافة!', 'success'); 
+    }
     window.cancelEdit();
   } catch (e) { console.error(e); window.showToast('فشل العملية', 'error'); } finally { btn.textContent = origText; btn.disabled = false; }
 };
@@ -559,7 +575,6 @@ window.renderAdminProducts = () => {
   });
 };
 
-// 🔒 دالة الحماية تمت إضافتها
 window.deleteProduct = async (id) => { 
   if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error'); 
   try { 
@@ -571,7 +586,6 @@ window.deleteProduct = async (id) => {
   } 
 };
 
-// 🔒 دالة الحماية تمت إضافتها
 window.addSlide = async () => { 
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const title = document.getElementById('slideTitleInput').value.trim();
@@ -609,7 +623,6 @@ window.addSlide = async () => {
   } finally { btn.textContent = origText; btn.disabled = false; }
 };
 
-// 🔒 دالة الحماية تمت إضافتها
 window.deleteSlide = async (idx) => { 
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   try {
@@ -634,7 +647,6 @@ window.renderAdminSlides = () => {
   }
 };
 
-// 🔒 دالة الحماية تمت إضافتها
 window.saveGeneralSettings = async () => {
     if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
     try {
@@ -655,7 +667,6 @@ window.saveGeneralSettings = async () => {
     } catch(e) { console.error(e); window.showToast('خطأ في الحفظ', 'error'); }
 };
 
-// 🔒 دالة الحماية تمت إضافتها
 window.saveSeoSettings = async () => {
     if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
     try {
