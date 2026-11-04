@@ -17,6 +17,7 @@ const hashOTP = async (otp, email) => {
 
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   
+  // التعديل هنا: تحسين التقاط نتيجة تسجيل الدخول بعد التحويل (Redirect)
   getRedirectResult(auth).then(async (result) => {
     if (result && result.user) {
       const user = result.user;
@@ -32,9 +33,14 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
 
       if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
       if (onUserChangeCallback) onUserChangeCallback(user, currentUserProfile);
+      
+      // إغلاق نافذة التسجيل لو لسه مفتوحة
+      const authModal = document.getElementById('authModal');
+      if (authModal) authModal.style.display = 'none';
     }
   }).catch((error) => {
     console.error("Redirect Auth Error:", error);
+    if (window.showToast) window.showToast('حدث خطأ أثناء العودة من جوجل: ' + error.message, 'error');
   });
 
   onAuthStateChanged(auth, async (user) => {
