@@ -42,7 +42,7 @@ let currentPlatformFilter = 'all';
 let currentPage = 1;
 const itemsPerPage = 12;
 
-// متغيرات مخصصة لميزة الشراء السريع وفصل السلة
+// 🔒 متغيرات مخصصة لميزة الشراء السريع وفصل السلة
 window.isBuyNowCheckout = false;
 window.buyNowItem = null;
 
@@ -859,7 +859,7 @@ window.addToCartDirect = (prodId, event) => {
     }
 };
 
-// 🎯 شراء سريع منعزل وآمن في سلة وهمية
+// 🔒 إصلاح الشراء السريع ليعمل على سلة وهمية معزولة تماماً
 window.buyNowDirect = (prodId) => {
     const prod = window.storeState.products.find(p => p.id === prodId);
     
@@ -1045,7 +1045,7 @@ const updatePaymentInfoBox = () => {
     const addressDisplay = document.getElementById('paymentAddressDisplay'); if (addressDisplay) addressDisplay.textContent = targetVal;
 };
 
-// 🎯 تحديث السحب المجمع والمحمي
+// 🔒 إصلاح الدفع والتعارض بجمع الكميات قبل تحديث السيرفر
 const processCheckout = async (isWhatsApp) => {
     const targetCart = window.isBuyNowCheckout ? [window.buyNowItem] : window.storeState.cart;
     if (!currentUserProfile || !targetCart || !targetCart.length) return;
@@ -1120,7 +1120,7 @@ const processCheckout = async (isWhatsApp) => {
         const promoCode = document.getElementById('promoCodeInput').value.trim();
         const newOrderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
 
-        // 🎯 تجميع الـ Transactions عشان ميحصلش تعارض في قراءة الفايربيز
+        // تجميع السحب للفايربيز
         await runTransaction(db, async (transaction) => {
             let groupedProducts = {};
             for(const p of cartItemsDetails) {
@@ -1180,6 +1180,7 @@ const processCheckout = async (isWhatsApp) => {
             });
         });
 
+        // 🔒 عدم تصفير السلة لو كان العميل بيعمل شراء سريع
         if (window.isBuyNowCheckout) {
             window.buyNowItem = null;
             window.isBuyNowCheckout = false;
@@ -1366,10 +1367,9 @@ const initApp = () => {
   
     document.getElementById('proceedToCheckoutBtn')?.addEventListener('click', () => {
       if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول أولاً!', 'error');
-      if (!window.storeState.cart.length) return;
+      if (!window.storeState.cart.length && !window.isBuyNowCheckout) return;
       
-      window.isBuyNowCheckout = false; 
-      window.buyNowItem = null;
+      // لا يتم تفريغ السلة هنا، إنما نقوم بإخفاء النافذة فقط
       document.getElementById('cartModal').style.display = 'none'; 
       activePromo = null; 
       document.getElementById('promoCodeInput').value = ''; 
