@@ -127,7 +127,12 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
 
   document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; document.getElementById('authModalTitle').textContent = translations[currentLang].create_account; });
   document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'block'; document.getElementById('authViewRegister').style.display = 'none'; document.getElementById('authViewOTP').style.display = 'none'; document.getElementById('authModalTitle').textContent = translations[currentLang].btn_login; });
-  document.getElementById('backToRegFromOTP')?.addEventListener('click', () => { document.getElementById('authViewOTP').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; });
+  
+  document.getElementById('backToRegFromOTP')?.addEventListener('click', () => { 
+    sessionStorage.removeItem('bn_temp_reg'); // تفريغ الجلسة فوراً عند التراجع
+    document.getElementById('authViewOTP').style.display = 'none'; 
+    document.getElementById('authViewRegister').style.display = 'block'; 
+  });
 
   document.getElementById('doRegisterBtn')?.addEventListener('click', async () => {
     const name = document.getElementById('regName').value.trim(), email = document.getElementById('regEmail').value.trim(), pass = document.getElementById('regPass').value;
@@ -141,7 +146,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const otpHash = await hashOTP(otpCode, email);
         
-        // حفظ البيانات في الجلسة لمنع فقدانها عند تحديث الصفحة أو الخروج منها بالخطأ
+        // حفظ البيانات في الجلسة لمنع فقدانها
         sessionStorage.setItem('bn_temp_reg', JSON.stringify({ name, email, pass, otpHash }));
         
         if (typeof emailjs !== 'undefined') {
@@ -177,7 +182,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       const cred = await createUserWithEmailAndPassword(auth, tempRegistrationData.email, tempRegistrationData.pass); 
       await updateProfile(cred.user, { displayName: tempRegistrationData.name });
       
-      // حفظ بيانات العميل الجديد في قاعدة البيانات مع تهيئة صورة فارغة
+      // حفظ بيانات العميل الجديد في قاعدة البيانات
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), { 
         uid: cred.user.uid, 
         name: tempRegistrationData.name, 
