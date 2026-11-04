@@ -58,7 +58,7 @@ body:after {
 }
 
 /* ==========================================
-   2. الإشعارات (TOAST NOTIFICATIONS)
+   2. الإشعارات (TOAST NOTIFICATIONS) - معدلة لتظهر في المنتصف تماماً
    ========================================== */
 #toastContainer { 
   position: fixed; 
@@ -70,7 +70,7 @@ body:after {
   flex-direction: column; 
   gap: 10px; 
   width: 92%; 
-  max-width: 420px; 
+  max-width: 400px; 
   pointer-events: none; 
 }
 
@@ -1595,9 +1595,6 @@ html[dir="ltr"] .faq-question {
   .modal-content { padding: 20px; }
 }
 
-/* ==========================================
-   14. Animations (Cart Bounce)
-   ========================================== */
 @keyframes cartBounce {
   0% { transform: scale(1); }
   50% { transform: scale(1.3) translateY(-3px); color: var(--accent-neon); border-color: var(--accent-neon); }
