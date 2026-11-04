@@ -14,24 +14,6 @@ window.formatDate = (timestamp) => {
   return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-window.compressImage = (base64Src, maxWidth = 800, quality = 0.7) => {
-  return new Promise((resolve, reject) => {
-    if (!base64Src) return reject(new Error('لم يتم العثور على صورة المعاينة!'));
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width, height = img.height;
-      if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
-      canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
-    img.onerror = () => reject(new Error('حدث خطأ أثناء معالجة الصورة.'));
-    img.src = base64Src; 
-  });
-};
-
 window.storeState = {
   bannerAr: "", bannerExpiry: "", whatsapp: "201200898990",
   heroConfig: { titleAr: "", titleEn: "", descAr: "", descEn: "", btnTextAr: "Shop Now", btnTextEn: "Shop Now", bgUrl: "" },
@@ -236,7 +218,6 @@ const initCountdown = (expiryString) => {
     }, 1000);
 };
 
-// 💡 دالة السلايدر المحدثة بـ <img> واضحة ومتجاوبة ورابط يعمل بالضغط المباشر
 window.renderPromoSlider = () => {
   const container = document.getElementById('promoSlider');
   const track = document.getElementById('sliderTrack');
@@ -249,6 +230,7 @@ window.renderPromoSlider = () => {
 
   if (hasSlides) {
       container.style.display = 'block';
+      
       container.style.height = 'auto';
       container.style.aspectRatio = window.innerWidth <= 768 ? '16/9' : '21/9';
       
@@ -258,6 +240,7 @@ window.renderPromoSlider = () => {
       window.storeState.slides.forEach((slide, idx) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
+        slideDiv.style.background = 'transparent';
         slideDiv.style.width = '100%';
         slideDiv.style.height = '100%';
         slideDiv.style.position = 'relative';
@@ -1005,9 +988,12 @@ const processCheckout = async (isWhatsApp) => {
     btn.innerHTML = 'جاري الإرسال ⏳...'; btn.disabled = true;
 
     try {
-        let receiptBase64 = '';
+        let receiptUrl = '';
         if (receiptFileInput && receiptFileInput.files[0]) {
-            receiptBase64 = await window.compressImage(document.getElementById('receiptPreview').src);
+            if(window.uploadImageToImgBB) {
+                receiptUrl = await window.uploadImageToImgBB(receiptFileInput.files[0]);
+                if(!receiptUrl) throw new Error('فشل رفع صورة الإيصال. يرجى المحاولة مرة أخرى.');
+            }
         }
 
         const currency = document.getElementById('currencySelect').value; 
@@ -1051,6 +1037,7 @@ const processCheckout = async (isWhatsApp) => {
         const promoCode = document.getElementById('promoCodeInput').value.trim();
         const newOrderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
 
+        // تنفيذ عملية الخصم وحفظ الطلب في قاعدة البيانات بشكل آمن
         await runTransaction(db, async (transaction) => {
             const updates = new Map();
             for (const p of cartItemsDetails) {
@@ -1088,7 +1075,7 @@ const processCheckout = async (isWhatsApp) => {
                 productIds, productId: productIds[0], productName: productTitles.join(' + '), finalPrice: totalRealPrice, currency, 
                 discountApplied: activePromo ? activePromo.discount : 0, 
                 promoCodeUsed: activePromo ? promoCode : "", 
-                paymentMethod, senderInfo, transactionId, customerData, receiptImage: receiptBase64 || '', status: 'pending', deliveredCode: '', createdAt: serverTimestamp() 
+                paymentMethod, senderInfo, transactionId, customerData, receiptImage: receiptUrl, status: 'pending', deliveredCode: '', createdAt: serverTimestamp() 
             });
         });
 
@@ -1108,7 +1095,9 @@ const processCheckout = async (isWhatsApp) => {
                             `📱 *رقم التحويل:* ${senderInfo}\n` +
                             `👤 *بيانات الاستلام:* ${customerData}\n\n` +
                             `يرجى مراجعة الطلب وتأكيده!`;
-            window.location.href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+            // فتح الواتساب في تاب جديدة لضمان اكتمال عملية جرد المخزون في الخلفية
+            window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
+            window.showToast('🎉 تم تسجيل وحفظ طلبك بنجاح!', 'success');
         } else {
             window.showToast('🎉 تم إرسال طلبك بنجاح! راجع "حسابي" لمتابعة الحالة.', 'success');
         }
