@@ -2,7 +2,7 @@
 import { db, appId, ADMIN_UID, IMGBB_API_KEY } from './firebase-config.js';
 import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// 🌐 دالة الرفع التلقائي لخدمة ImgBB (عين الصقر)
+// 🌐 دالة الرفع التلقائي لخدمة ImgBB
 window.uploadImageToImgBB = async (file) => {
     const formData = new FormData();
     formData.append('image', file);
@@ -88,7 +88,7 @@ window.injectAdminDashboard = () => {
         <h4>🖼️ إدارة السلايدر المتحرك (أقصى حد 6 صور)</h4>
         <div class="form-group"><label>العنوان</label><input type="text" id="slideTitleInput"></div>
         <div class="form-group"><label>الوصف</label><input type="text" id="slideDescInput"></div>
-        <div class="form-group"><label>رابط التوجيه عند الضغط (اختياري)</label><input type="text" id="slideLinkInput" placeholder="مثال: https://bn-max.com/?product=123" style="direction: ltr; text-align: left;"></div>
+        <div class="form-group"><label>رابط التوجيه عند الضغط (اختياري)</label><input type="text" id="slideLinkInput" placeholder="مثال: ?product=123 أو رابط خارجي" style="direction: ltr; text-align: left;"></div>
         <div class="form-group"><label>صورة البانر</label><input type="file" id="slideImgFileInput" accept="image/*" style="background:#0b0b12; color:#fff; padding:8px; border-radius:5px; border:1px solid var(--border-color); width:100%;"></div>
         <button type="button" class="submit-btn" id="saveSlideBtn" style="width:100%; margin-bottom:15px;" onclick="window.addSlide()">➕ إضافة للسلايدر</button>
         <div id="adminSlidesList"></div>
@@ -273,19 +273,28 @@ window.saveHeroConfig = async () => {
   }
 };
 
+// 🔒 حماية نظام تحديث العملات عشان لو الـ API وقع الموقع ما يظهرش NaN
 window.autoUpdateCurrencies = async () => {
   const btn = document.getElementById('autoCurrencyBtn'); const origText = btn.innerHTML;
   btn.innerHTML = 'جاري التحديث ⏳...'; btn.disabled = true;
   try {
     const res = await fetch('https://open.er-api.com/v6/latest/EGP');
+    if(!res.ok) throw new Error('API Error');
     const data = await res.json();
-    if(data && data.rates) {
+    if(data && data.rates && data.rates.SAR) { 
       document.getElementById('admRateSAR').value = (1 / data.rates.SAR).toFixed(4);
       document.getElementById('admRateAED').value = (1 / data.rates.AED).toFixed(4);
       document.getElementById('admRateUSD').value = (1 / data.rates.USD).toFixed(4);
       window.showToast('تم تحديث الأسعار! اضغط حفظ الإعدادات.', 'success');
+    } else {
+       throw new Error('Invalid Data format from API');
     }
-  } catch(e) { window.showToast('فشل جلب الأسعار.', 'error'); } finally { btn.innerHTML = origText; btn.disabled = false; }
+  } catch(e) { 
+      console.error(e); 
+      window.showToast('فشل جلب الأسعار، يرجى تحديثها يدوياً مؤقتاً.', 'error'); 
+  } finally { 
+      btn.innerHTML = origText; btn.disabled = false; 
+  }
 };
 
 window.renderAdminUsers = () => {
@@ -333,39 +342,39 @@ window.renderAdminOrders = () => {
   if(orders.length >= window.adminOrdersLimit) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
 };
 
+// 🔒 معالجة استرجاع المخزون بدقة (حتى مع الباقات المتعددة والكميات)
 window.refundOrderStock = async (order) => {
     if (!order) return;
+    
+    let itemsToRefund = [];
     if (order.items && Array.isArray(order.items)) {
-        for (const item of order.items) {
-            const prod = window.storeState.products.find(p => p.id === item.id);
-            if (prod) {
-                if (item.variantId && prod.variants) {
-                    const vIndex = prod.variants.findIndex(v => (v.id || v.nameEn) === item.variantId);
-                    if (vIndex !== -1 && prod.variants[vIndex].stockQuantity !== undefined) {
-                        prod.variants[vIndex].stockQuantity += 1;
-                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { variants: prod.variants });
-                    }
-                } else if (prod.stockQuantity !== undefined) {
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + 1, inStock: true });
-                }
-            }
-        }
+        itemsToRefund = order.items;
     } else if (order.productIds) {
-        for (const pid of order.productIds) {
-            const prod = window.storeState.products.find(p => p.id === pid);
-            if (prod) {
-                let variantRefunded = false;
-                if (prod.variants && prod.variants.length > 0) {
-                    const matchedVariantIndex = prod.variants.findIndex(v => order.productName.includes(v.nameEn) || order.productName.includes(v.nameAr));
-                    if (matchedVariantIndex !== -1 && prod.variants[matchedVariantIndex].stockQuantity !== undefined) {
-                        prod.variants[matchedVariantIndex].stockQuantity += 1;
-                        variantRefunded = true;
-                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { variants: prod.variants });
-                    }
+        itemsToRefund = order.productIds.map(pid => ({ id: pid }));
+    }
+
+    if (itemsToRefund.length === 0) return;
+
+    // تجميع المنتجات عشان نقلل عدد العمليات (Transactions) للفايربيز
+    const grouped = itemsToRefund.reduce((acc, item) => {
+        const key = `${item.id}_${item.variantId || 'none'}`;
+        if (!acc[key]) acc[key] = { id: item.id, variantId: item.variantId, qty: 0 };
+        acc[key].qty += 1;
+        return acc;
+    }, {});
+
+    for (const key in grouped) {
+        const { id, variantId, qty } = grouped[key];
+        const prod = window.storeState.products.find(p => p.id === id);
+        if (prod) {
+            if (variantId && prod.variants) {
+                const vIndex = prod.variants.findIndex(v => (v.id || v.nameEn) === variantId);
+                if (vIndex !== -1 && prod.variants[vIndex].stockQuantity !== undefined) {
+                    prod.variants[vIndex].stockQuantity += qty; // بنرجع الكمية المطلوبة بالظبط
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { variants: prod.variants });
                 }
-                if (!variantRefunded && prod.stockQuantity !== undefined) {
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + 1, inStock: true });
-                }
+            } else if (prod.stockQuantity !== undefined) {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + qty, inStock: true });
             }
         }
     }
@@ -381,6 +390,7 @@ window.deleteAdminOrder = async (orderId) => {
   } catch(e) { console.error(e); window.showToast('فشل الحذف', 'error'); } 
 };
 
+// 🔒 سحب الأكواد التلقائي باحترافية (لأكثر من قطعة من نفس المنتج)
 window.updateOrderStatus = async (orderId, status) => {
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
   try {
@@ -390,9 +400,19 @@ window.updateOrderStatus = async (orderId, status) => {
     
     if (status === 'cancelled') {
         await window.refundOrderStock(order);
-    } else if (status === 'completed' && !codeToDeliver && order && order.productIds && order.productIds.length > 0) {
+    } else if (status === 'completed' && !codeToDeliver && order && (order.items || order.productIds)) {
+        
         let multiCodesArr = [];
-        for (const pid of order.productIds) {
+        let itemsList = order.items ? order.items : order.productIds.map(id => ({ id }));
+        
+        // نجمع الكميات المطلوبة لكل منتج
+        const groupedItems = itemsList.reduce((acc, item) => {
+            acc[item.id] = (acc[item.id] || 0) + 1;
+            return acc;
+        }, {});
+
+        // بنسحب من الخزنة بعدد الـ qty مرة واحدة بدون ما نتخطى أو نعمل تعارض
+        for (const [pid, qty] of Object.entries(groupedItems)) {
             const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
             await runTransaction(db, async (transaction) => {
                 const sfDoc = await transaction.get(prodRef);
@@ -400,11 +420,12 @@ window.updateOrderStatus = async (orderId, status) => {
                 const data = sfDoc.data();
                 if (data.vaultCodes) {
                     let codes = data.vaultCodes.split('\n').map(c => c.trim()).filter(c => c);
-                    if (codes.length > 0) {
+                    let extractedQty = Math.min(qty, codes.length);
+                    for(let i=0; i<extractedQty; i++){
                         let extractedCode = codes.shift();
                         multiCodesArr.push(`${data.titleAr || data.title}: ${extractedCode}`);
-                        transaction.update(prodRef, { vaultCodes: codes.join('\n') });
                     }
+                    transaction.update(prodRef, { vaultCodes: codes.join('\n') });
                 }
             });
         }
