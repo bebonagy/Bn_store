@@ -236,6 +236,7 @@ const initCountdown = (expiryString) => {
     }, 1000);
 };
 
+// 💡 التعديل الجذري للسلايدر: أبعاد متجاوبة تماماً، صورة تملى العرض بوضوح، ورابط يعمل بلمسة مباشرة
 window.renderPromoSlider = () => {
   const container = document.getElementById('promoSlider');
   const track = document.getElementById('sliderTrack');
@@ -248,8 +249,6 @@ window.renderPromoSlider = () => {
 
   if (hasSlides) {
       container.style.display = 'block';
-      
-      // 💡 ضبط الأبعاد لتملأ الشاشة تماماً بدون أي مساحات فارغة
       container.style.height = 'auto';
       container.style.aspectRatio = window.innerWidth <= 768 ? '16/9' : '21/9';
       
@@ -259,18 +258,15 @@ window.renderPromoSlider = () => {
       window.storeState.slides.forEach((slide, idx) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
-        slideDiv.style.background = 'transparent';
         slideDiv.style.width = '100%';
         slideDiv.style.height = '100%';
         slideDiv.style.position = 'relative';
 
-        // 💡 استخدام object-fit: cover لملء عرض الشاشة بالكامل باحترافية
         slideDiv.innerHTML = `
             <img src="${slide.imgUrl}" alt="${window.sanitizeText(slide.title)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block;">
             <h2 style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0);">${window.sanitizeText(slide.title)}</h2>
         `;
         
-        // 💡 ربط الرابط بالصورة بشكل مباشر لتجنب أي تعارض مع السحب
         if (slide.link) {
             const imgEl = slideDiv.querySelector('img');
             imgEl.style.cursor = 'pointer';
