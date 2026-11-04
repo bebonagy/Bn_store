@@ -46,7 +46,7 @@ window.editingProductId = null;
 window.adminOrdersLimit = 20;
 window.currentProductId = null; 
 window.currentSelectedVariant = null; 
-let activePromo = null; // 💡 تم تغيير نظام الكوبونات لتخزين الأوبجيكت بالكامل للتحكم الشامل
+let activePromo = null; 
 let unsubscribeOrders = null;
 let unsubscribeReviews = null;
 let unsubscribeUsers = null;
@@ -254,8 +254,11 @@ window.renderPromoSlider = () => {
       window.storeState.slides.forEach((slide, idx) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
-        slideDiv.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${slide.imgUrl}')`;
-        slideDiv.innerHTML = `<div class="slider-content"><h2>${window.sanitizeText(slide.title)}</h2><p>${window.sanitizeText(slide.desc)}</p></div>`;
+        
+        slideDiv.style.backgroundImage = `url('${slide.imgUrl}')`;
+        
+        // 💡 التعديل هنا: إضافة العنوان في H2 للـ SEO ولكنه مخفي بصرياً عن العميل
+        slideDiv.innerHTML = `<h2 style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;">${window.sanitizeText(slide.title)}</h2>`;
         
         if (slide.link) {
             slideDiv.style.cursor = 'pointer';
@@ -932,7 +935,6 @@ window.renderUserWishlist = () => {
     });
 };
 
-// 💡 تعديل حسابات الأسعار لدعم الكوبونات المخصصة
 const updateCheckoutPriceDisplay = () => {
     if (!window.storeState.cart.length) return;
     const currency = document.getElementById('currencySelect').value; 
@@ -945,7 +947,6 @@ const updateCheckoutPriceDisplay = () => {
       const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
       const itemPrice = currency === 'EGP' ? p.price : (p.price / rate);
       
-      // لو فيه كوبون شغال، شوفه مخصص للمنتج ده ولا شامل
       if (activePromo) {
           if (!activePromo.productId || activePromo.productId === p.id) {
               totalDiscountVal += itemPrice * (activePromo.discount / 100);
@@ -972,7 +973,6 @@ const updatePaymentInfoBox = () => {
     const addressDisplay = document.getElementById('paymentAddressDisplay'); if (addressDisplay) addressDisplay.textContent = targetVal;
 };
 
-// 💡 تعديل دالة الطلب لخصم النسبة من المنتج المحدد فقط
 const processCheckout = async (isWhatsApp) => {
     if (!currentUserProfile || !window.storeState.cart.length) return;
     
@@ -1083,7 +1083,7 @@ const processCheckout = async (isWhatsApp) => {
 
         window.storeState.cart = []; window.updateCartBadge();
         document.getElementById('checkoutModal').style.display = 'none'; document.getElementById('checkoutForm').reset();
-        activePromo = null; // إعادة ضبط الكوبون
+        activePromo = null; 
 
         if (isWhatsApp) {
             const whatsappNumber = window.storeState.whatsapp || '201200898990';
@@ -1261,7 +1261,7 @@ const initApp = () => {
       if (!window.storeState.cart.length) return;
       
       document.getElementById('cartModal').style.display = 'none'; 
-      activePromo = null; // 💡 إعادة ضبط الكوبون عند فتح الدفع
+      activePromo = null; 
       document.getElementById('promoCodeInput').value = ''; 
       if(document.getElementById('promoMsg')) document.getElementById('promoMsg').textContent = '';
       
@@ -1270,7 +1270,6 @@ const initApp = () => {
       document.getElementById('checkoutModal').style.display = 'flex';
     });
   
-    // 💡 برمجة زر فحص الكوبونات لدعم الكوبون המخصص
     document.getElementById('applyPromoBtn')?.addEventListener('click', () => {
       const input = document.getElementById('promoCodeInput').value.trim().toLowerCase(), msgEl = document.getElementById('promoMsg');
       if (!input) return;
@@ -1278,7 +1277,6 @@ const initApp = () => {
       
       if (promo && (!promo.expiry || new Date(promo.expiry) > new Date())) { 
           if (promo.productId) {
-              // لو الكوبون مخصص لمنتج، اتأكد إنه موجود في السلة
               const isInCart = window.storeState.cart.some(item => item.id === promo.productId);
               if (!isInCart) {
                   activePromo = null;
