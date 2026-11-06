@@ -1,11 +1,11 @@
 // firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = Object.freeze({
   apiKey: "AIzaSyBkt-5W1vLcGvWgJTv95KbpbrnMf7Rm0JU",
-  authDomain: "auth.bn-max.com", // <-- ده السطر اللي اتعدل
+  authDomain: "bn-store-4f0c0.firebaseapp.com", // 🔄 تم الرجوع للافتراضي بعد إلغاء تسجيل جوجل
   projectId: "bn-store-4f0c0",
   storageBucket: "bn-store-4f0c0.firebasestorage.app",
   messagingSenderId: "281646513182",
@@ -15,9 +15,8 @@ const firebaseConfig = Object.freeze({
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const googleProvider = new GoogleAuthProvider();
 
 export const appId = "bn-store-main-app";
 export const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 
-export const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
+// 🛡️ تم إزالة GoogleAuthProvider و IMGBB_API_KEY من هنا لزيادة الأمان وتقليل حجم الملف.
