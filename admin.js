@@ -2,7 +2,6 @@
 import { db, appId, ADMIN_UID } from './firebase-config.js';
 import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// 🛡️ نقلنا المفتاح هنا لحمايته، ومحدش يقدر يرفع صور غير الأدمن
 const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
 
 // 🌐 دالة الرفع التلقائي لخدمة ImgBB (مؤمنة)
@@ -205,7 +204,19 @@ window.injectAdminDashboard = () => {
         </div>
         <div class="grid-2"><div class="form-group"><label>SAR</label><input type="number" step="0.001" id="admRateSAR"></div><div class="form-group"><label>AED</label><input type="number" step="0.001" id="admRateAED"></div><div class="form-group"><label>USD</label><input type="number" step="0.0001" id="admRateUSD"></div></div>
       </div>
-      <div class="admin-section"><h4>📢 إعدادات الدفع والواتساب</h4><div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div><div class="grid-2"><div class="form-group"><label>إنستا باي</label><input type="text" id="admInstapay"></div><div class="form-group"><label>فودافون كاش</label><input type="text" id="admVodafone"></div><div class="form-group"><label>USDT</label><input type="text" id="admCrypto"></div></div><button type="button" id="saveConfigBtn" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ الإعدادات</button></div>
+      
+      <!-- 🛡️ التعديل الأهم: فصلنا حقول شبكات الكريبتو للأدمن -->
+      <div class="admin-section">
+        <h4>📢 إعدادات الدفع والواتساب</h4>
+        <div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div>
+        <div class="grid-2">
+            <div class="form-group"><label>إنستا باي</label><input type="text" id="admInstapay"></div>
+            <div class="form-group"><label>فودافون كاش</label><input type="text" id="admVodafone"></div>
+            <div class="form-group"><label>USDT (TRC20)</label><input type="text" id="admCryptoTRC20" placeholder="عنوان محفظة TRC20"></div>
+            <div class="form-group"><label>USDT (BEP20)</label><input type="text" id="admCryptoBEP20" placeholder="عنوان محفظة BEP20"></div>
+        </div>
+        <button type="button" id="saveConfigBtn" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ الإعدادات</button>
+      </div>
     </div>
     
     <div id="tab-seo" class="tab-content">
@@ -244,7 +255,13 @@ window.loadAdminData = () => {
       if (s.promos && s.promos.length > 0) s.promos.forEach(p => window.addPromoInput(p));
   }
 
-  if (s.payments) { setVal('admInstapay', s.payments.instapay); setVal('admVodafone', s.payments.vodafone); setVal('admCrypto', s.payments.crypto); }
+  // 🛡️ تعديل القراءة عشان نسحب العناوين المنفصلة
+  if (s.payments) { 
+      setVal('admInstapay', s.payments.instapay); 
+      setVal('admVodafone', s.payments.vodafone); 
+      setVal('admCryptoTRC20', s.payments.cryptoTRC20); 
+      setVal('admCryptoBEP20', s.payments.cryptoBEP20); 
+  }
   if (s.rates) { setVal('admRateSAR', s.rates.SAR); setVal('admRateAED', s.rates.AED); setVal('admRateUSD', s.rates.USD); }
 
   window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminStats();
@@ -337,7 +354,6 @@ window.renderAdminOrders = () => {
   if (!archivedOrders.length) archivedList.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center;">الأرشيف فارغ.</p>';
 
   const createOrderHTML = (o, isArchived) => {
-    // 🛡️ تنظيف مدخلات العميل لمنع أي أكواد ضارة (XSS)
     const safeProductName = window.sanitizeText(o.productName);
     const safeEmail = window.sanitizeText(o.userEmail);
     const safeSender = window.sanitizeText(o.senderInfo);
@@ -671,11 +687,19 @@ window.renderAdminSlides = () => {
   }
 };
 
+// 🛡️ التعديل هنا: حفظ قيم الكريبتو المنفصلة
 window.saveGeneralSettings = async () => {
     if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
     try {
         const rates = { SAR: Number(document.getElementById('admRateSAR').value), AED: Number(document.getElementById('admRateAED').value), USD: Number(document.getElementById('admRateUSD').value) };
-        const payments = { instapay: document.getElementById('admInstapay').value, vodafone: document.getElementById('admVodafone').value, crypto: document.getElementById('admCrypto').value };
+        
+        const payments = { 
+            instapay: document.getElementById('admInstapay').value, 
+            vodafone: document.getElementById('admVodafone').value, 
+            cryptoTRC20: document.getElementById('admCryptoTRC20').value, 
+            cryptoBEP20: document.getElementById('admCryptoBEP20').value 
+        };
+        
         const whatsapp = document.getElementById('admWhatsapp').value;
         const promos = [];
         document.querySelectorAll('#promosList .promo-row').forEach(row => {
@@ -686,6 +710,7 @@ window.saveGeneralSettings = async () => {
             if(code && discount > 0) promos.push({ code, discount, expiry, productId });
         });
         const bannerAr = document.getElementById('admBannerAr').value; const bannerExpiry = document.getElementById('admBannerExpiry').value;
+        
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { rates, payments, promos, whatsapp, bannerAr, bannerExpiry }, { merge: true });
         window.showToast('تم حفظ الإعدادات بنجاح!', 'success');
     } catch(e) { console.error(e); window.showToast('خطأ في الحفظ', 'error'); }
