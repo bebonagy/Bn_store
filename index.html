@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 
 <!-- 🛡️ سياسة أمان المحتوى (CSP) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com https://api.imgbb.com https://bn-store-4f0c0.firebaseapp.com; frame-src 'self' https://bn-store-4f0c0.firebaseapp.com https://*.firebaseapp.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com https://i.ibb.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com https://api.imgbb.com https://bn-store-4f0c0.firebaseapp.com; frame-src 'self' https://www.youtube.com https://bn-store-4f0c0.firebaseapp.com https://*.firebaseapp.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
 <meta name="description" id="metaDesc" content="BN MAX - متجرك الأفضل للخدمات الرقمية وشحن الألعاب.">
@@ -25,9 +25,7 @@
 <!-- 🌟 مكتبات إضافية -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script type="text/javascript">
-   emailjs.init("T5Irys8GSHX5X1a63");
-</script>
+<!-- 🛡️ تم نقل EmailJS Init لملف الجافاسكريبت لزيادة الحماية -->
 
 <!-- 🛡️ حماية ضد الـ Clickjacking -->
 <style id="antiClickjack">body{display:none !important;}</style>
@@ -54,7 +52,6 @@
         <span class="logo-sub">DIGITAL MARKETPLACE</span>
       </div>
 
-      <!-- روابط الهيدر بـ data-i18n للترجمة -->
       <nav class="top-nav-links">
         <button class="nav-link active" data-target="homeView" data-i18n="nav_home">Home</button>
         <button class="nav-link" data-cat="games" data-i18n="nav_games">Games</button>
@@ -118,8 +115,6 @@
   
   <!-- 🔄 1. الواجهة الرئيسية (Home) -->
   <div id="homeView" class="view-section active-view">
-    
-    <!-- Hero Banner الثابت دائماً في الأعلى -->
     <section class="hero-banner-box" id="mainHeroBanner">
       <div class="hero-content">
         <div class="trusted-badge" data-i18n="hero_badge">🛡️ YOUR TRUSTED DIGITAL STORE</div>
@@ -135,16 +130,13 @@
       </div>
     </section>
 
-    <!-- شريط الأقسام -->
     <div class="categories-grid-bar" id="categoriesBar"></div>
 
-    <!-- السلايدر المتحرك (أصبح بانر أسفل الأقسام ومخصص للعروض) -->
     <section class="hero-banner promo-slider-container" id="promoSlider" style="display:none;">
        <div id="sliderTrack" class="slider-track"></div>
        <div class="slider-dots" id="sliderDots"></div>
     </section>
 
-    <!-- بانر الفلاش سيل -->
     <div class="flash-sale-banner" id="flashSaleBanner" style="display:none;">
       <span id="flashBannerText">⚡ جاري تحميل العروض...</span>
       <div class="countdown-timer" id="countdownTimer">⏳ 00:00:00</div>
@@ -159,7 +151,6 @@
       </select>
     </div>
     
-    <!-- فلاتر المنصات السريعة (تظهر فقط في قسم الألعاب) -->
     <div id="platformFiltersContainer" class="platform-filters-wrapper" style="display:none;">
         <div id="platformFiltersList" class="platform-filters-list"></div>
     </div>
@@ -168,7 +159,6 @@
     <div class="product-grid" id="productGrid"></div>
     <div class="pagination-container" id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; margin-bottom: 40px;"></div>
 
-    <!-- البانرات الترويجية السفلية -->
     <section class="promo-banners-grid">
       <div class="promo-banner-card promo-banner-1">
         <h3 class="promo-title-1" data-i18n="promo_1_sub">Limited Time Offer</h3>
@@ -194,8 +184,15 @@
     <button type="button" class="control-btn back-btn" id="backToHomeBtn" data-i18n="btn_back">🔙 رجوع</button>
     <div class="product-details-container" style="flex-direction: column;">
       <div class="details-main-row">
+        
+        <!-- 🖼️ التحديث الجديد: قسم الصورة الرئيسية التفاعلية واليوتيوب -->
         <div class="details-left-col">
-          <div class="details-image-box zoomable-image" id="detailImageBox" title="تكبير الصورة"></div>
+          <div class="main-image-container interactive-main-box">
+            <button type="button" id="prevGalleryBtn" class="nav-arrow left-arrow" style="display:none;">❮</button>
+            <img id="detailMainImage" class="zoomable-image" src="" alt="Product Image" loading="lazy" style="display: block;">
+            <div id="trailerContainer" class="trailer-wrapper" style="display:none;"></div>
+            <button type="button" id="nextGalleryBtn" class="nav-arrow right-arrow" style="display:none;">❯</button>
+          </div>
           <div class="gallery-slider-wrapper gallery-wrapper">
             <div id="detailImageGallery" class="gallery-slider-track"></div>
           </div>
@@ -397,12 +394,10 @@
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="loginEmail" placeholder="example@gmail.com"></div>
         <div class="form-group"><label data-i18n="password">كلمة المرور</label><input type="password" id="loginPass" placeholder="••••••••"></div>
         <button type="button" class="submit-btn" id="doLoginBtn" style="width:100%;" data-i18n="btn_login">تسجيل الدخول</button>
-        <!-- 🛡️ تم إزالة زر تسجيل الدخول بواسطة جوجل من هنا -->
         <a href="#" id="resetPassBtn" style="color:var(--accent-neon); display:block; text-align:center; margin-top:10px; font-size:13px;" data-i18n="forgot_password">نسيت كلمة المرور؟</a>
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="no_account">ليس لديك حساب؟</span> <a href="#" id="showRegisterBtn" style="color:var(--accent-neon);" data-i18n="create_account">إنشاء حساب جديد</a></p>
       </div>
       
-      <!-- نافذة استعادة الباسورد -->
       <div id="authViewReset" style="display:none;">
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;" data-i18n="reset_pass_desc">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة بتصميم BN MAX.</p>
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="resetEmailInput" placeholder="example@gmail.com"></div>
@@ -410,7 +405,6 @@
         <button type="button" id="backToLoginFromReset" style="background:transparent; border:none; color:var(--accent-neon); width:100%; margin-top:12px; cursor:pointer; font-size:13px;" data-i18n="back_to_login">رجوع لتسجيل الدخول</button>
       </div>
 
-      <!-- واجهة التسجيل -->
       <div id="authViewRegister" style="display:none;">
         <div class="form-group"><label data-i18n="full_name">الاسم الكامل</label><input type="text" id="regName" placeholder="اسمك"></div>
         <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="regEmail" placeholder="example@gmail.com"></div>
@@ -420,12 +414,10 @@
         <p style="text-align:center;margin-top:15px;font-size:13px;color:var(--text-muted);"><span data-i18n="have_account">لديك حساب بالفعل؟</span> <a href="#" id="showLoginBtn" style="color:var(--accent-neon);" data-i18n="btn_login">تسجيل الدخول</a></p>
       </div>
 
-      <!-- نافذة إدخال الـ OTP -->
       <div id="authViewOTP" style="display:none;">
         <p id="otpMessageDisplay" style="font-size: 13px; color: var(--success); margin-bottom: 15px; text-align: center; line-height: 1.5;">تم إرسال كود التفعيل (OTP) إلى بريدك الإلكتروني بنجاح. برجاء تفقد صندوق الوارد أو البريد المزعج (Spam).</p>
         <div class="form-group"><label>كود التفعيل</label><input type="text" id="regOTP" placeholder="أدخل الكود" class="otp-input"></div>
         
-        <!-- حقل الباسورد الإضافي المخفي -->
         <div class="form-group" id="recoveryPassGroup" style="display:none;">
             <label style="color: var(--danger); font-weight: bold;">تأكيد كلمة المرور</label>
             <input type="password" id="regPassRecovery" placeholder="أدخل كلمة المرور التي سجلت بها" style="border-color: var(--danger); box-shadow: 0 0 10px rgba(255,51,102,0.2);">
@@ -483,7 +475,6 @@
           </select>
         </div>
         
-        <!-- 🛡️ الحقل الجديد الخاص بشبكات الكريبتو (مخفي افتراضياً) -->
         <select id="cryptoNetworkSelect" style="display:none; margin-bottom: 20px; background: rgba(0, 242, 255, 0.05); border-color: var(--accent-neon);">
             <option value="" disabled selected>-- اختر شبكة التحويل (Network) --</option>
             <option value="trc20">TRC20 (Tron)</option>
@@ -501,7 +492,12 @@
         
         <div class="form-group"><label>رقم العملية (Transaction ID)</label><input type="text" id="transactionIdInput" required placeholder="أدخل رقم العملية لتأكيد التحويل"></div>
 
-        <div class="form-group"><label data-i18n="receive_data">بيانات الاستلام</label><input type="text" id="customerData" required placeholder="أدخل الآيدي أو الإيميل"></div>
+        <!-- 🛡️ التحديث الجديد: قسم بيانات الاستلام واخد ID عشان الجافاسكريبت يتحكم فيه يخفيه أو يظهره -->
+        <div class="form-group" id="customerDataGroup">
+          <label data-i18n="receive_data">بيانات الاستلام</label>
+          <input type="text" id="customerData" placeholder="أدخل الآيدي أو الإيميل">
+        </div>
+        
         <div class="form-group">
           <label data-i18n="receipt_img">صورة إيصال التحويل (سكرين شوت)</label>
           <input type="file" id="receiptFileInput" accept="image/*" required class="file-input-styled">
