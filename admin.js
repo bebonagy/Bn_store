@@ -1,9 +1,16 @@
 // admin.js
-import { db, appId, ADMIN_UID, IMGBB_API_KEY } from './firebase-config.js';
+import { db, appId, ADMIN_UID } from './firebase-config.js';
 import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// 🌐 دالة الرفع التلقائي لخدمة ImgBB
+// 🛡️ نقلنا المفتاح هنا لحمايته، ومحدش يقدر يرفع صور غير الأدمن
+const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
+
+// 🌐 دالة الرفع التلقائي لخدمة ImgBB (مؤمنة)
 window.uploadImageToImgBB = async (file) => {
+    if (!window.checkIsAdmin()) {
+        window.showToast('غير مصرح برفع الصور!', 'error');
+        return null;
+    }
     const formData = new FormData();
     formData.append('image', file);
     try {
@@ -330,12 +337,20 @@ window.renderAdminOrders = () => {
   if (!archivedOrders.length) archivedList.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center;">الأرشيف فارغ.</p>';
 
   const createOrderHTML = (o, isArchived) => {
+    // 🛡️ تنظيف مدخلات العميل لمنع أي أكواد ضارة (XSS)
+    const safeProductName = window.sanitizeText(o.productName);
+    const safeEmail = window.sanitizeText(o.userEmail);
+    const safeSender = window.sanitizeText(o.senderInfo);
+    const safeTxId = window.sanitizeText(o.transactionId || 'غير مسجل');
+    const safeCustomerData = window.sanitizeText(o.customerData);
+    const safePaymentMethod = window.sanitizeText(o.paymentMethod || 'EGP');
+
     const discountBadge = o.discountApplied > 0 ? `<span style="color:var(--success); font-weight:bold;">[خصم ${o.discountApplied}%]</span>` : '';
-    const receiptView = o.receiptImage ? `<div style="margin-top:8px;"><a href="${o.receiptImage}" target="_blank" style="color:var(--accent-neon); text-decoration:underline;">📄 عرض الإيصال</a></div>` : '';
+    const receiptView = o.receiptImage ? `<div style="margin-top:8px;"><a href="${window.sanitizeText(o.receiptImage)}" target="_blank" style="color:var(--accent-neon); text-decoration:underline;">📄 عرض الإيصال</a></div>` : '';
     const deleteBtn = isArchived ? `<button onclick="window.deleteAdminOrder('${o.id}')" style="position:absolute; bottom:10px; left:10px; background:rgba(255,68,68,0.2); color:var(--danger); border:1px solid var(--danger); padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">حذف نهائي 🗑️</button>` : '';
 
-    let html = `<div class="admin-item-row" style="flex-direction:column; align-items:flex-start; position:relative; padding-bottom: ${isArchived ? '35px' : '10px'}"><span style="position:absolute; top:10px; left:10px; font-size:11px; color:var(--text-muted);">${window.formatDate(o.createdAt)}</span><div style="width:100%; margin-bottom:8px; line-height:1.6; padding-left: 100px;"><strong>الطلب:</strong> <span style="color:var(--accent-neon);">${o.productName}</span> | <strong>الإيميل:</strong> ${o.userEmail}<br><small><strong>السعر:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${discountBadge}</small><br><small><strong>محول من:</strong> ${o.senderInfo} | <strong style="color:var(--accent-neon);">رقم العملية:</strong> ${o.transactionId || 'غير مسجل'}<br><strong style="color:var(--accent-neon);">بيانات الاستلام:</strong> ${o.customerData} <button onclick="window.copyCustomerData('${o.customerData}')" style="background:var(--accent-neon); color:#000; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">نسخ</button></small><br>${receiptView}<small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>${isArchived && o.deliveredCode ? `<small style="display:block; color:var(--success);"><strong>الكود المُسلم:</strong> ${o.deliveredCode}</small>` : ''}</div>${deleteBtn}`;
-    if (!isArchived) html += `<div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px; border-top:1px dashed var(--border-color); padding-top:10px;"><input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل هنا..." value="${o.deliveredCode || ''}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b12; color:#fff; border:1px solid var(--border-color);"><button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button><button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button></div>`;
+    let html = `<div class="admin-item-row" style="flex-direction:column; align-items:flex-start; position:relative; padding-bottom: ${isArchived ? '35px' : '10px'}"><span style="position:absolute; top:10px; left:10px; font-size:11px; color:var(--text-muted);">${window.formatDate(o.createdAt)}</span><div style="width:100%; margin-bottom:8px; line-height:1.6; padding-left: 100px;"><strong>الطلب:</strong> <span style="color:var(--accent-neon);">${safeProductName}</span> | <strong>الإيميل:</strong> ${safeEmail}<br><small><strong>السعر:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${discountBadge}</small><br><small><strong>طريقة الدفع:</strong> ${safePaymentMethod} | <strong>محول من:</strong> ${safeSender} | <strong style="color:var(--accent-neon);">رقم العملية:</strong> ${safeTxId}<br><strong style="color:var(--accent-neon);">بيانات الاستلام:</strong> ${safeCustomerData} <button onclick="window.copyCustomerData('${safeCustomerData}')" style="background:var(--accent-neon); color:#000; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">نسخ</button></small><br>${receiptView}<small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>${isArchived && o.deliveredCode ? `<small style="display:block; color:var(--success);"><strong>الكود المُسلم:</strong> ${window.sanitizeText(o.deliveredCode)}</small>` : ''}</div>${deleteBtn}`;
+    if (!isArchived) html += `<div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px; border-top:1px dashed var(--border-color); padding-top:10px;"><input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل هنا..." value="${window.sanitizeText(o.deliveredCode || '')}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b12; color:#fff; border:1px solid var(--border-color);"><button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button><button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button></div>`;
     html += `</div>`; return html;
   };
   pendingOrders.forEach(o => pendingList.insertAdjacentHTML('beforeend', createOrderHTML(o, false)));
@@ -343,7 +358,6 @@ window.renderAdminOrders = () => {
   if(orders.length >= window.adminOrdersLimit) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
 };
 
-// التعديل هنا: إضافة حماية واكتشاف للمنتجات المحذوفة عند استرجاع المخزون
 window.refundOrderStock = async (order) => {
     if (!order) return;
     
@@ -379,12 +393,10 @@ window.refundOrderStock = async (order) => {
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + qty, inStock: true });
             }
         } else {
-            // تسجيل المنتجات اللي اتحذفت من المتجر ومش هينفع نرجعلها المخزون
             missingProducts.push(title);
         }
     }
 
-    // إظهار تنبيه للأدمن بالمنتجات المفقودة
     if (missingProducts.length > 0) {
         setTimeout(() => {
             window.showToast(`تنبيه: (${missingProducts.join(', ')}) محذوف من المتجر ولن يتم استرجاع مخزونه.`, 'error');
@@ -582,7 +594,7 @@ window.renderAdminProducts = () => {
     else statusText = p.inStock && (p.stockQuantity === undefined || p.stockQuantity > 0) ? `متاح ✅ (${p.stockQuantity !== undefined ? p.stockQuantity : 'غير محدود'})` : 'نفذت الكمية ⛔';
 
     const title = p.titleAr || p.title || '';
-    let html = `<div class="admin-item-row"><span style="flex:1; line-height:1.6;">${title} - ${p.price}EGP (ID: <strong>${p.id}</strong>) <br><small><strong>${statusText}</strong></small></span><div style="display:flex; gap:8px;"><button class="submit-btn" style="padding:6px 12px; font-size:12px; flex:0;" onclick="window.editProduct('${p.id}')">تعديل</button><button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button></div></div>`;
+    let html = `<div class="admin-item-row"><span style="flex:1; line-height:1.6;">${window.sanitizeText(title)} - ${p.price}EGP (ID: <strong>${p.id}</strong>) <br><small><strong>${statusText}</strong></small></span><div style="display:flex; gap:8px;"><button class="submit-btn" style="padding:6px 12px; font-size:12px; flex:0;" onclick="window.editProduct('${p.id}')">تعديل</button><button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button></div></div>`;
     list.insertAdjacentHTML('beforeend', html);
   });
 };
@@ -654,7 +666,7 @@ window.renderAdminSlides = () => {
       if (!window.storeState.slides || window.storeState.slides.length === 0) {
           list.innerHTML = '<div style="background: rgba(255,204,0,0.1); border: 1px solid #ffcc00; padding: 15px; border-radius: 8px; color: #ffcc00; text-align: center; font-size: 13px; margin-top:15px;">⚠️ السلايدر فارغ حالياً! لن يظهر للعملاء. يرجى إضافة عروض لتفعيله.</div>';
       } else {
-          list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row"><span style="flex:1;"><strong>${s.title}</strong><br><small style="color:var(--accent-neon);">${s.link ? '🔗 ' + s.link : 'بدون توجيه'}</small></span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
+          list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row"><span style="flex:1;"><strong>${window.sanitizeText(s.title)}</strong><br><small style="color:var(--accent-neon);">${s.link ? '🔗 ' + window.sanitizeText(s.link) : 'بدون توجيه'}</small></span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); 
       }
   }
 };
