@@ -8,8 +8,10 @@ export const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.u
 
 let tempSecurePassword = null;
 
+// تشفير الـ OTP محلياً بشكل معقد لتصعيب الوصول إليه (Dynamic Salt)
 const hashOTP = async (otp, email) => {
-  const msgUint8 = new TextEncoder().encode(otp + email + "BN_MAX_SECURE");
+  const salt = "BN_MAX_SECURE_V2_" + email.length;
+  const msgUint8 = new TextEncoder().encode(otp + email + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -35,6 +37,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       } else { 
           authModal.style.display = 'flex'; 
           
+          // فحص وجود جلسة تسجيل معلقة (OTP) لعدم طرد العميل عند الـ Refresh
           if (sessionStorage.getItem('bn_temp_reg')) {
               document.getElementById('authViewLogin').style.display = 'none';
               document.getElementById('authViewRegister').style.display = 'none';
@@ -49,6 +52,11 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
                       msgDisplay.style.color = 'var(--danger)';
                   }
               }
+          } else {
+              document.getElementById('authViewLogin').style.display = 'block';
+              document.getElementById('authViewRegister').style.display = 'none';
+              document.getElementById('authViewReset').style.display = 'none';
+              document.getElementById('authViewOTP').style.display = 'none';
           }
       }
   });
@@ -101,6 +109,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     document.getElementById('authViewOTP').style.display = 'none'; 
     document.getElementById('authViewRegister').style.display = 'block'; 
     
+    // إعادة إخفاء حقل الاستعادة عند التراجع
     document.getElementById('recoveryPassGroup').style.display = 'none';
     document.getElementById('regPassRecovery').value = '';
     const msgDisplay = document.getElementById('otpMessageDisplay');
@@ -182,8 +191,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), { 
         uid: cred.user.uid, 
         name: tempRegistrationData.name, 
-        email: tempRegistrationData.email, 
-        photoURL: '', 
+        email: tempRegistrationData.email,
         createdAt: serverTimestamp() 
       });
       
