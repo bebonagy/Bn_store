@@ -1,6 +1,6 @@
 // auth.js
-import { auth, db, appId, ADMIN_UID, googleProvider } from './firebase-config.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, signInWithPopup, signInWithRedirect, getRedirectResult, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { auth, db, appId, ADMIN_UID } from './firebase-config.js';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export let currentUserProfile = null;
@@ -17,30 +17,6 @@ const hashOTP = async (otp, email) => {
 
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   
-  getRedirectResult(auth).then(async (result) => {
-    if (result && result.user) {
-      const user = result.user;
-      currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم جوجل', photoURL: user.photoURL || '' };
-      
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
-        uid: user.uid, 
-        name: user.displayName || 'مستخدم جوجل', 
-        email: user.email, 
-        photoURL: user.photoURL || '',
-        createdAt: serverTimestamp() 
-      }, { merge: true });
-
-      if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
-      if (onUserChangeCallback) onUserChangeCallback(user, currentUserProfile);
-      
-      const authModal = document.getElementById('authModal');
-      if (authModal) authModal.style.display = 'none';
-    }
-  }).catch((error) => {
-    console.error("Redirect Auth Error:", error);
-    if (window.showToast) window.showToast('حدث خطأ أثناء العودة من جوجل: ' + error.message, 'error');
-  });
-
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUserProfile = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم', photoURL: user.photoURL || '' };
@@ -86,41 +62,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
         window.showToast('تم تسجيل الدخول بنجاح!', 'success'); 
     } catch (e) { 
         window.showToast('البيانات غير صحيحة!', 'error'); 
-    }
-  });
-
-  // التعديل الآمن المضاف خصيصاً لحل مشكلة الموبايل والكمبيوتر معاً
-  document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
-    try {
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-        return;
-      }
-
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
-        uid: user.uid, 
-        name: user.displayName || 'مستخدم جوجل', 
-        email: user.email, 
-        photoURL: user.photoURL || '',
-        createdAt: serverTimestamp() 
-      }, { merge: true });
-
-      if (authModal) authModal.style.display = 'none';
-      if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
-      
-    } catch (e) { 
-      console.warn("Auth error, trying redirect fallback:", e);
-      try {
-        await signInWithRedirect(auth, googleProvider);
-      } catch (redirectErr) {
-        console.error("Redirect Error:", redirectErr);
-        if (window.showToast) window.showToast('تعذر تسجيل الدخول بواسطة جوجل.', 'error');
-      }
     }
   });
 
