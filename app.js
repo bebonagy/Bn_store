@@ -42,7 +42,7 @@ let currentPlatformFilter = 'all';
 let currentPage = 1;
 const itemsPerPage = 12;
 
-// 🔒 متغيرات مخصصة لميزة الشراء السريع وفصل السلة
+// متغيرات مخصصة لميزة الشراء السريع وفصل السلة
 window.isBuyNowCheckout = false;
 window.buyNowItem = null;
 
@@ -134,7 +134,7 @@ const translations = {
       ft_about: "من نحن", ft_contact: "اتصل بنا", ft_terms: "الشروط والأحكام", ft_privacy: "سياسة الخصوصية",
       ft_copy: "© 2026 BN MAX. جميع الحقوق محفوظة.", ft_slogan: "عالمك الرقمي... مهمتنا 🚀",
       reset_pass_desc: "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة.",
-      btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول", google_login: "الدخول بواسطة Google",
+      btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول",
       nav_categories: "الأقسام", nav_search: "بحث", nav_wishlist: "المفضلة",
       qi_account: "نوع الحساب", qi_warranty: "الضمان", qi_region: "التفعيل", sys_req: "متطلبات التشغيل", select_variant: "اختر الباقة / النسخة:",
       btn_select_variant: "⚙️ اختيار الباقة", filter_all: "الكل"
@@ -164,7 +164,7 @@ const translations = {
       ft_about: "About Us", ft_contact: "Contact", ft_terms: "Terms & Conditions", ft_privacy: "Privacy Policy",
       ft_copy: "© 2026 BN MAX. All rights reserved.", ft_slogan: "Your Digital World... Our Mission 🚀",
       reset_pass_desc: "Enter your registered email and we will send you a password reset link.",
-      btn_send_reset: "Send Reset Link", back_to_login: "Back to Login", google_login: "Login with Google",
+      btn_send_reset: "Send Reset Link", back_to_login: "Back to Login",
       nav_categories: "Categories", nav_search: "Search", nav_wishlist: "Wishlist",
       qi_account: "Account Type", qi_warranty: "Warranty", qi_region: "Region", sys_req: "System Requirements", select_variant: "Select Variant:",
       btn_select_variant: "⚙️ Select Variant", filter_all: "All"
@@ -234,7 +234,6 @@ window.renderPromoSlider = () => {
 
   if (hasSlides) {
       container.style.display = 'block';
-      
       container.style.height = 'auto';
       container.style.aspectRatio = window.innerWidth <= 768 ? '16/9' : '21/9';
       
@@ -244,25 +243,17 @@ window.renderPromoSlider = () => {
       window.storeState.slides.forEach((slide, idx) => {
         const slideDiv = document.createElement('div');
         slideDiv.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
-        
-        slideDiv.innerHTML = `
-            <img src="${slide.imgUrl}" alt="${window.sanitizeText(slide.title)}">
-        `;
+        slideDiv.innerHTML = `<img src="${slide.imgUrl}" alt="${window.sanitizeText(slide.title)}">`;
         
         if (slide.link) {
             slideDiv.style.cursor = 'pointer';
             slideDiv.onclick = (e) => { 
                 e.stopPropagation();
                 let url = slide.link.trim();
-                
                 if (url.includes('?product=')) {
                     const prodId = url.split('?product=')[1].split('&')[0];
-                    if (prodId) {
-                        window.openProductDetails(prodId);
-                        return; 
-                    }
+                    if (prodId) { window.openProductDetails(prodId); return; }
                 }
-                
                 if(url && !url.startsWith('http') && !url.startsWith('/')) { url = 'https://' + url; }
                 window.open(url, '_blank');
             };
@@ -284,25 +275,13 @@ window.renderPromoSlider = () => {
       }
       
       let startX = 0, startY = 0;
-      track.ontouchstart = (e) => { 
-          startX = e.touches[0].clientX; 
-          startY = e.touches[0].clientY;
-      };
+      track.ontouchstart = (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; };
       track.ontouchend = (e) => {
-          let endX = e.changedTouches[0].clientX;
-          let endY = e.changedTouches[0].clientY;
-          
-          let diffX = startX - endX;
-          let diffY = startY - endY;
-
+          let endX = e.changedTouches[0].clientX, endY = e.changedTouches[0].clientY;
+          let diffX = startX - endX, diffY = startY - endY;
           if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
-              if (diffX > 0) { 
-                  currentSlideIndex = (currentSlideIndex + 1) % window.storeState.slides.length;
-                  updateSliderPosition();
-              } else { 
-                  currentSlideIndex = (currentSlideIndex - 1 + window.storeState.slides.length) % window.storeState.slides.length;
-                  updateSliderPosition();
-              }
+              if (diffX > 0) { currentSlideIndex = (currentSlideIndex + 1) % window.storeState.slides.length; updateSliderPosition(); } 
+              else { currentSlideIndex = (currentSlideIndex - 1 + window.storeState.slides.length) % window.storeState.slides.length; updateSliderPosition(); }
           }
       };
   } else {
@@ -859,7 +838,6 @@ window.addToCartDirect = (prodId, event) => {
     }
 };
 
-// 🔒 إصلاح الشراء السريع ليعمل على سلة وهمية معزولة تماماً
 window.buyNowDirect = (prodId) => {
     const prod = window.storeState.products.find(p => p.id === prodId);
     
@@ -1035,17 +1013,26 @@ const updateCheckoutPriceDisplay = () => {
     if (selectedProductInput) selectedProductInput.value = `${titles.join(' + ')}\nالإجمالي: (${finalPrice} ${currency})${discountText}`;
 };
 
+// 🛡️ التعديل هنا: إضافة دعم إظهار حقل اختيار شبكة الكريبتو
 const updatePaymentInfoBox = () => {
-    const methodSelect = document.getElementById('paymentMethod'); if (!methodSelect) return;
+    const methodSelect = document.getElementById('paymentMethod'); 
+    const cryptoNetworkSelect = document.getElementById('cryptoNetworkSelect'); // العنصر ده هيتم إضافته في الـ HTML
+    
+    if (!methodSelect) return;
     const method = methodSelect.value, payments = window.storeState.payments || {}; let targetVal = "";
+    
+    if (cryptoNetworkSelect) {
+        cryptoNetworkSelect.style.display = method === 'crypto' ? 'block' : 'none';
+    }
+
     if (method === 'vodafone') targetVal = payments.vodafone || "رقم فودافون كاش غير مضاف حالياً";
     else if (method === 'instapay') targetVal = payments.instapay || "حساب إنستا باي غير مضاف حالياً";
     else if (method === 'orange') targetVal = payments.orange || payments.vodafone || "رقم أورنج كاش غير مضاف حالياً";
     else if (method === 'crypto') targetVal = payments.crypto || "عنوان محفظة الكريبتو غير مضاف حالياً";
+    
     const addressDisplay = document.getElementById('paymentAddressDisplay'); if (addressDisplay) addressDisplay.textContent = targetVal;
 };
 
-// 🔒 إصلاح الدفع والتعارض بجمع الكميات قبل تحديث السيرفر
 const processCheckout = async (isWhatsApp) => {
     const targetCart = window.isBuyNowCheckout ? [window.buyNowItem] : window.storeState.cart;
     if (!currentUserProfile || !targetCart || !targetCart.length) return;
@@ -1116,11 +1103,21 @@ const processCheckout = async (isWhatsApp) => {
         }
 
         totalRealPrice = Number((totalRealPrice - totalDiscountVal).toFixed(currency === 'EGP' ? 0 : 2));
-        const paymentMethod = document.getElementById('paymentMethod').value;
+        
+        // 🛡️ التعديل هنا: إضافة اسم شبكة الكريبتو لتفاصيل الدفع لو العميل اختارها
+        let paymentMethodText = document.getElementById('paymentMethod').options[document.getElementById('paymentMethod').selectedIndex].text;
+        const methodValue = document.getElementById('paymentMethod').value;
+        if (methodValue === 'crypto') {
+            const cryptoSelect = document.getElementById('cryptoNetworkSelect');
+            if (cryptoSelect) {
+                const netVal = cryptoSelect.options[cryptoSelect.selectedIndex].text;
+                paymentMethodText = `عملات رقمية (${netVal})`;
+            }
+        }
+        
         const promoCode = document.getElementById('promoCodeInput').value.trim();
         const newOrderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
 
-        // تجميع السحب للفايربيز
         await runTransaction(db, async (transaction) => {
             let groupedProducts = {};
             for(const p of cartItemsDetails) {
@@ -1176,11 +1173,10 @@ const processCheckout = async (isWhatsApp) => {
                 productIds, productId: productIds[0], productName: productTitles.join(' + '), finalPrice: totalRealPrice, currency, 
                 discountApplied: activePromo ? activePromo.discount : 0, 
                 promoCodeUsed: activePromo ? promoCode : "", 
-                paymentMethod, senderInfo, transactionId, customerData, receiptImage: receiptUrl, status: 'pending', deliveredCode: '', createdAt: serverTimestamp() 
+                paymentMethod: paymentMethodText, senderInfo, transactionId, customerData, receiptImage: receiptUrl, status: 'pending', deliveredCode: '', createdAt: serverTimestamp() 
             });
         });
 
-        // 🔒 عدم تصفير السلة لو كان العميل بيعمل شراء سريع
         if (window.isBuyNowCheckout) {
             window.buyNowItem = null;
             window.isBuyNowCheckout = false;
@@ -1200,7 +1196,7 @@ const processCheckout = async (isWhatsApp) => {
                             `📦 *المنتجات:* ${productTitles.join(' + ')}\n` +
                             `💰 *الإجمالي:* ${finalPriceText}\n` +
                             (activePromo ? `🎟️ *كوبون الخصم:* ${promoCode} (خصم ${activePromo.discount}%)\n` : '') +
-                            `💳 *طريقة الدفع:* ${paymentMethod}\n` +
+                            `💳 *طريقة الدفع:* ${paymentMethodText}\n` +
                             `🔢 *رقم العملية:* ${transactionId}\n` +
                             `📱 *رقم التحويل:* ${senderInfo}\n` +
                             `👤 *بيانات الاستلام:* ${customerData}\n\n` +
@@ -1291,13 +1287,9 @@ const initApp = () => {
       const loginIcon = document.getElementById('loginIconHeader');
       
       if (user) {
-        if (profile.photoURL) {
-            if (avatarImg) { avatarImg.src = profile.photoURL; avatarImg.style.display = 'inline-block'; }
-            if (loginIcon) loginIcon.style.display = 'none';
-        } else {
-            if (avatarImg) avatarImg.style.display = 'none';
-            if (loginIcon) loginIcon.style.display = 'inline-block';
-        }
+        // 🛡️ تنظيف الكود الخاص بعرض صورة جوجل والاعتماد على أيقونة المستخدم دايماً لضمان السرعة
+        if (avatarImg) avatarImg.style.display = 'none';
+        if (loginIcon) loginIcon.style.display = 'inline-block';
 
         loginBtn.style.color = 'var(--accent-neon)'; 
         if(document.getElementById('accountUserName')) document.getElementById('accountUserName').textContent = profile.name;
@@ -1360,6 +1352,10 @@ const initApp = () => {
 
     document.getElementById('currencySelect')?.addEventListener('change', () => { window.renderProducts(); window.renderCartModal(); });
     document.getElementById('paymentMethod')?.addEventListener('change', updatePaymentInfoBox);
+    
+    // التجاوب مع تغيير شبكة الكريبتو (لتحديث معلومات المحفظة لو العميل اختار شبكة تانية مستقبلاً)
+    document.getElementById('cryptoNetworkSelect')?.addEventListener('change', updatePaymentInfoBox);
+    
     document.getElementById('backToHomeBtn')?.addEventListener('click', () => window.navigate('home'));
   
     const receiptFileInput = document.getElementById('receiptFileInput'), receiptPreview = document.getElementById('receiptPreview');
@@ -1369,7 +1365,6 @@ const initApp = () => {
       if (!currentUserProfile) return window.showToast('يجب تسجيل الدخول أولاً!', 'error');
       if (!window.storeState.cart.length && !window.isBuyNowCheckout) return;
       
-      // لا يتم تفريغ السلة هنا، إنما نقوم بإخفاء النافذة فقط
       document.getElementById('cartModal').style.display = 'none'; 
       activePromo = null; 
       document.getElementById('promoCodeInput').value = ''; 
