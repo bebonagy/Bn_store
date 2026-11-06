@@ -17,7 +17,6 @@ const hashOTP = async (otp, email) => {
 
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   
-  // التعديل هنا: تحسين التقاط نتيجة تسجيل الدخول بعد التحويل (Redirect)
   getRedirectResult(auth).then(async (result) => {
     if (result && result.user) {
       const user = result.user;
@@ -34,7 +33,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
       if (onUserChangeCallback) onUserChangeCallback(user, currentUserProfile);
       
-      // إغلاق نافذة التسجيل لو لسه مفتوحة
       const authModal = document.getElementById('authModal');
       if (authModal) authModal.style.display = 'none';
     }
@@ -61,7 +59,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       } else { 
           authModal.style.display = 'flex'; 
           
-          // التعديل: فحص وجود جلسة تسجيل معلقة (OTP) لعدم طرد العميل عند الـ Refresh
           if (sessionStorage.getItem('bn_temp_reg')) {
               document.getElementById('authViewLogin').style.display = 'none';
               document.getElementById('authViewRegister').style.display = 'none';
@@ -92,8 +89,16 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     }
   });
 
+  // التعديل الآمن المضاف خصيصاً لحل مشكلة الموبايل والكمبيوتر معاً
   document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
     try {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
+
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       
@@ -109,7 +114,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       if (window.showToast) window.showToast('🎉 تم تسجيل الدخول بواسطة Google بنجاح!', 'success');
       
     } catch (e) { 
-      console.warn("Popup blocked, switching to redirect:", e);
+      console.warn("Auth error, trying redirect fallback:", e);
       try {
         await signInWithRedirect(auth, googleProvider);
       } catch (redirectErr) {
@@ -155,7 +160,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     document.getElementById('authViewOTP').style.display = 'none'; 
     document.getElementById('authViewRegister').style.display = 'block'; 
     
-    // إعادة إخفاء حقل الاستعادة عند التراجع
     document.getElementById('recoveryPassGroup').style.display = 'none';
     document.getElementById('regPassRecovery').value = '';
     const msgDisplay = document.getElementById('otpMessageDisplay');
@@ -201,7 +205,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     const storedData = sessionStorage.getItem('bn_temp_reg');
     if (!storedData) return window.showToast('انتهت الجلسة، يرجى التسجيل مجدداً.', 'error');
     
-    // التعديل: التعامل مع الباسورد المفقود بدلاً من طرد العميل
     if (!tempSecurePassword) {
         const recoveryInput = document.getElementById('regPassRecovery');
         if (recoveryInput && recoveryInput.value) {
@@ -221,7 +224,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
     const inputHash = await hashOTP(inputOTP, tempRegistrationData.email);
     
     if (inputHash !== tempRegistrationData.otpHash) {
-        // لو الكود غلط وهو في وضع الاستعادة، نمسح الباسورد اللي دخله عشان يدخله تاني صح
         if (document.getElementById('recoveryPassGroup').style.display === 'block') {
             tempSecurePassword = null;
             document.getElementById('regPassRecovery').value = '';
@@ -260,7 +262,6 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       
     } catch (e) { 
       window.showToast('خطأ! ربما البريد مستخدم مسبقاً أو كلمة المرور غير صحيحة.', 'error'); 
-      // تصفير الباسورد لو فيه خطأ عشان المحاولة الجاية
       if (document.getElementById('recoveryPassGroup').style.display === 'block') {
           tempSecurePassword = null;
       }
