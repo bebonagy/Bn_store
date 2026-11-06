@@ -17,7 +17,8 @@ window.formatDate = (timestamp) => {
 window.storeState = {
   bannerAr: "", bannerExpiry: "", whatsapp: "201200898990",
   heroConfig: { titleAr: "", titleEn: "", descAr: "", descEn: "", btnTextAr: "Shop Now", btnTextEn: "Shop Now", bgUrl: "" },
-  rates: { SAR: 13.0, AED: 13.5, USD: 50.0 }, payments: { instapay: "", vodafone: "", orange: "", crypto: "" },
+  rates: { SAR: 13.0, AED: 13.5, USD: 50.0 }, 
+  payments: { instapay: "", vodafone: "", orange: "", cryptoTRC20: "", cryptoBEP20: "" },
   promos: [], products: [], orders: [], reviews: [], slides: [], users: [],
   categories: [ { id: 'games', name: 'Games' }, { id: 'keys', name: 'Digital Keys' }, { id: 'software', name: 'Software' }, { id: 'subs', name: 'Subscriptions' }, { id: 'gifts', name: 'Gift Cards' }, { id: 'deals', name: 'Deals' } ],
   wishlist: [], cart: []
@@ -42,7 +43,6 @@ let currentPlatformFilter = 'all';
 let currentPage = 1;
 const itemsPerPage = 12;
 
-// متغيرات مخصصة لميزة الشراء السريع وفصل السلة
 window.isBuyNowCheckout = false;
 window.buyNowItem = null;
 
@@ -1013,13 +1013,14 @@ const updateCheckoutPriceDisplay = () => {
     if (selectedProductInput) selectedProductInput.value = `${titles.join(' + ')}\nالإجمالي: (${finalPrice} ${currency})${discountText}`;
 };
 
-// 🛡️ التعديل هنا: إضافة دعم إظهار حقل اختيار شبكة الكريبتو
+// 🛡️ التعديل لربط شبكة الكريبتو بالعناوين المنفصلة
 const updatePaymentInfoBox = () => {
     const methodSelect = document.getElementById('paymentMethod'); 
-    const cryptoNetworkSelect = document.getElementById('cryptoNetworkSelect'); // العنصر ده هيتم إضافته في الـ HTML
+    const cryptoNetworkSelect = document.getElementById('cryptoNetworkSelect'); 
     
     if (!methodSelect) return;
-    const method = methodSelect.value, payments = window.storeState.payments || {}; let targetVal = "";
+    const method = methodSelect.value, payments = window.storeState.payments || {}; 
+    let targetVal = "";
     
     if (cryptoNetworkSelect) {
         cryptoNetworkSelect.style.display = method === 'crypto' ? 'block' : 'none';
@@ -1028,9 +1029,19 @@ const updatePaymentInfoBox = () => {
     if (method === 'vodafone') targetVal = payments.vodafone || "رقم فودافون كاش غير مضاف حالياً";
     else if (method === 'instapay') targetVal = payments.instapay || "حساب إنستا باي غير مضاف حالياً";
     else if (method === 'orange') targetVal = payments.orange || payments.vodafone || "رقم أورنج كاش غير مضاف حالياً";
-    else if (method === 'crypto') targetVal = payments.crypto || "عنوان محفظة الكريبتو غير مضاف حالياً";
+    else if (method === 'crypto') {
+        const network = cryptoNetworkSelect ? cryptoNetworkSelect.value : '';
+        if (network === 'trc20') {
+            targetVal = payments.cryptoTRC20 || "عنوان محفظة TRC20 غير مضاف حالياً";
+        } else if (network === 'bep20') {
+            targetVal = payments.cryptoBEP20 || "عنوان محفظة BEP20 غير مضاف حالياً";
+        } else {
+            targetVal = "يرجى اختيار شبكة التحويل (Network) أولاً لعرض العنوان";
+        }
+    }
     
-    const addressDisplay = document.getElementById('paymentAddressDisplay'); if (addressDisplay) addressDisplay.textContent = targetVal;
+    const addressDisplay = document.getElementById('paymentAddressDisplay'); 
+    if (addressDisplay) addressDisplay.textContent = targetVal;
 };
 
 const processCheckout = async (isWhatsApp) => {
@@ -1048,6 +1059,14 @@ const processCheckout = async (isWhatsApp) => {
     
     if (!senderInfo || !transactionId || !customerData) {
          return window.showToast('برجاء إكمال جميع البيانات (رقم التحويل، العملية، وبيانات الاستلام)', 'error');
+    }
+
+    const methodValue = document.getElementById('paymentMethod').value;
+    if (methodValue === 'crypto') {
+        const cryptoSelect = document.getElementById('cryptoNetworkSelect');
+        if (!cryptoSelect || !cryptoSelect.value) {
+            return window.showToast('يرجى اختيار شبكة التحويل (TRC20 / BEP20) أولاً!', 'error');
+        }
     }
 
     const btn = isWhatsApp ? document.getElementById('whatsappCheckoutBtn') : document.getElementById('confirmOrderBtn');
@@ -1104,9 +1123,7 @@ const processCheckout = async (isWhatsApp) => {
 
         totalRealPrice = Number((totalRealPrice - totalDiscountVal).toFixed(currency === 'EGP' ? 0 : 2));
         
-        // 🛡️ التعديل هنا: إضافة اسم شبكة الكريبتو لتفاصيل الدفع لو العميل اختارها
         let paymentMethodText = document.getElementById('paymentMethod').options[document.getElementById('paymentMethod').selectedIndex].text;
-        const methodValue = document.getElementById('paymentMethod').value;
         if (methodValue === 'crypto') {
             const cryptoSelect = document.getElementById('cryptoNetworkSelect');
             if (cryptoSelect) {
@@ -1254,7 +1271,10 @@ const initApp = () => {
     onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), snap => {
       if (snap.exists()) {
         const data = snap.data(); window.storeState.whatsapp = data.whatsapp || "201200898990";
-        if(data.rates) window.storeState.rates = data.rates; window.storeState.payments = data.payments || { instapay: "", vodafone: "", orange: "", crypto: "" };
+        if(data.rates) window.storeState.rates = data.rates; 
+        
+        // 🛡️ التحديث هنا عشان يسحب القيم الجديدة بأمان
+        window.storeState.payments = data.payments || { instapay: "", vodafone: "", orange: "", cryptoTRC20: "", cryptoBEP20: "" };
         window.storeState.bannerAr = data.bannerAr || ""; window.storeState.bannerExpiry = data.bannerExpiry || ""; 
         
         window.storeState.heroConfig = data.heroConfig || {};
@@ -1287,7 +1307,6 @@ const initApp = () => {
       const loginIcon = document.getElementById('loginIconHeader');
       
       if (user) {
-        // 🛡️ تنظيف الكود الخاص بعرض صورة جوجل والاعتماد على أيقونة المستخدم دايماً لضمان السرعة
         if (avatarImg) avatarImg.style.display = 'none';
         if (loginIcon) loginIcon.style.display = 'inline-block';
 
@@ -1352,8 +1371,6 @@ const initApp = () => {
 
     document.getElementById('currencySelect')?.addEventListener('change', () => { window.renderProducts(); window.renderCartModal(); });
     document.getElementById('paymentMethod')?.addEventListener('change', updatePaymentInfoBox);
-    
-    // التجاوب مع تغيير شبكة الكريبتو (لتحديث معلومات المحفظة لو العميل اختار شبكة تانية مستقبلاً)
     document.getElementById('cryptoNetworkSelect')?.addEventListener('change', updatePaymentInfoBox);
     
     document.getElementById('backToHomeBtn')?.addEventListener('click', () => window.navigate('home'));
@@ -1405,8 +1422,8 @@ const initApp = () => {
   
     document.getElementById('copyBtnText')?.addEventListener('click', () => {
       const addressText = document.getElementById('paymentAddressDisplay')?.textContent;
-      if (addressText && addressText.includes('غير مضاف')) return window.showToast('لا يوجد رقم للنسخ حالياً', 'error');
-      if (addressText) navigator.clipboard.writeText(addressText).then(() => window.showToast('📋 تم نسخ رقم الحساب بنجاح!', 'success'));
+      if (addressText && addressText.includes('غير مضاف')) return window.showToast('لا يوجد عنوان محفظة للنسخ حالياً', 'error');
+      if (addressText) navigator.clipboard.writeText(addressText).then(() => window.showToast('📋 تم نسخ الرقم بنجاح!', 'success'));
     });
   
     document.getElementById('submitReviewBtn')?.addEventListener('click', async () => {
