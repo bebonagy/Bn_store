@@ -4,7 +4,7 @@ import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTran
 
 const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
 
-// 🌐 دالة الرفع التلقائي لخدمة ImgBB (مؤمنة)
+// 🌐 دالة الرفع التلقائي لخدمة ImgBB (مؤمنة للأدمن فقط)
 window.uploadImageToImgBB = async (file) => {
     if (!window.checkIsAdmin()) {
         window.showToast('غير مصرح برفع الصور!', 'error');
@@ -205,7 +205,6 @@ window.injectAdminDashboard = () => {
         <div class="grid-2"><div class="form-group"><label>SAR</label><input type="number" step="0.001" id="admRateSAR"></div><div class="form-group"><label>AED</label><input type="number" step="0.001" id="admRateAED"></div><div class="form-group"><label>USD</label><input type="number" step="0.0001" id="admRateUSD"></div></div>
       </div>
       
-      <!-- 🛡️ التعديل الأهم: فصلنا حقول شبكات الكريبتو للأدمن -->
       <div class="admin-section">
         <h4>📢 إعدادات الدفع والواتساب</h4>
         <div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div>
@@ -255,7 +254,6 @@ window.loadAdminData = () => {
       if (s.promos && s.promos.length > 0) s.promos.forEach(p => window.addPromoInput(p));
   }
 
-  // 🛡️ تعديل القراءة عشان نسحب العناوين المنفصلة
   if (s.payments) { 
       setVal('admInstapay', s.payments.instapay); 
       setVal('admVodafone', s.payments.vodafone); 
@@ -332,12 +330,22 @@ window.renderAdminStats = () => {
   const orders = window.storeState.orders || [];
   const totalOrders = orders.length, pendingOrders = orders.filter(o => o.status === 'pending').length, completedOrders = orders.filter(o => o.status === 'completed').length;
   let totalRevenueEGP = 0;
+  
   orders.forEach(o => { 
     if (o.status === 'completed') {
-      let price = Number(o.finalPrice || 0), currency = o.currency || 'EGP', rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
-      totalRevenueEGP += (price / rate);
+      // إذا كان الطلب مسجل فيه finalPriceEGP نعتمد عليه، وإلا نستخدم الضرب الصحيح
+      if (o.finalPriceEGP) {
+        totalRevenueEGP += Number(o.finalPriceEGP);
+      } else {
+        let price = Number(o.finalPrice || 0);
+        let currency = o.currency || 'EGP';
+        let rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
+        // 🛡️ تم التصحيح: ضرب المبلغ بالعملة الأجنبية في سعر الصرف للحصول على القيمة بالجنيه
+        totalRevenueEGP += (price * rate);
+      }
     } 
   });
+
   statsGrid.innerHTML = `
     <div style="background: #0b0b12; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 18px; font-weight: bold; color: var(--accent-neon);">${totalOrders}</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">إجمالي الطلبات</div></div>
     <div style="background: #0b0b12; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;"><div style="font-size: 18px; font-weight: bold; color: #ffcc00;">${pendingOrders}</div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">طلبات معلقة ⏳</div></div>
@@ -365,7 +373,7 @@ window.renderAdminOrders = () => {
     const receiptView = o.receiptImage ? `<div style="margin-top:8px;"><a href="${window.sanitizeText(o.receiptImage)}" target="_blank" style="color:var(--accent-neon); text-decoration:underline;">📄 عرض الإيصال</a></div>` : '';
     const deleteBtn = isArchived ? `<button onclick="window.deleteAdminOrder('${o.id}')" style="position:absolute; bottom:10px; left:10px; background:rgba(255,68,68,0.2); color:var(--danger); border:1px solid var(--danger); padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">حذف نهائي 🗑️</button>` : '';
 
-    let html = `<div class="admin-item-row" style="flex-direction:column; align-items:flex-start; position:relative; padding-bottom: ${isArchived ? '35px' : '10px'}"><span style="position:absolute; top:10px; left:10px; font-size:11px; color:var(--text-muted);">${window.formatDate(o.createdAt)}</span><div style="width:100%; margin-bottom:8px; line-height:1.6; padding-left: 100px;"><strong>الطلب:</strong> <span style="color:var(--accent-neon);">${safeProductName}</span> | <strong>الإيميل:</strong> ${safeEmail}<br><small><strong>السعر:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${discountBadge}</small><br><small><strong>طريقة الدفع:</strong> ${safePaymentMethod} | <strong>محول من:</strong> ${safeSender} | <strong style="color:var(--accent-neon);">رقم العملية:</strong> ${safeTxId}<br><strong style="color:var(--accent-neon);">بيانات الاستلام:</strong> ${safeCustomerData} <button onclick="window.copyCustomerData('${safeCustomerData}')" style="background:var(--accent-neon); color:#000; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">نسخ</button></small><br>${receiptView}<small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>${isArchived && o.deliveredCode ? `<small style="display:block; color:var(--success);"><strong>الكود المُسلم:</strong> ${window.sanitizeText(o.deliveredCode)}</small>` : ''}</div>${deleteBtn}`;
+    let html = `<div class="admin-item-row" style="flex-direction:column; align-items:flex-start; position:relative; padding-bottom: ${isArchived ? '35px' : '10px'}"><span style="position:absolute; top:10px; left:10px; font-size:11px; color:var(--text-muted);">${window.formatDate(o.createdAt)}</span><div style="width:100%; margin-bottom:8px; line-height:1.6; padding-left: 100px;"><strong>الطلب:</strong> <span style="color:var(--accent-neon);">${safeProductName}</span> | <strong>الإيميل:</strong> ${safeEmail}<br><small><strong>السعر:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${o.finalPriceEGP ? `(≈ ${o.finalPriceEGP} EGP)` : ''} ${discountBadge}</small><br><small><strong>طريقة الدفع:</strong> ${safePaymentMethod} | <strong>محول من:</strong> ${safeSender} | <strong style="color:var(--accent-neon);">رقم العملية:</strong> ${safeTxId}<br><strong style="color:var(--accent-neon);">بيانات الاستلام:</strong> ${safeCustomerData} <button onclick="window.copyCustomerData('${safeCustomerData}')" style="background:var(--accent-neon); color:#000; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">نسخ</button></small><br>${receiptView}<small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>${isArchived && o.deliveredCode ? `<small style="display:block; color:var(--success);"><strong>الكود المُسلم:</strong> ${window.sanitizeText(o.deliveredCode)}</small>` : ''}</div>${deleteBtn}`;
     if (!isArchived) html += `<div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px; border-top:1px dashed var(--border-color); padding-top:10px;"><input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل هنا..." value="${window.sanitizeText(o.deliveredCode || '')}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b12; color:#fff; border:1px solid var(--border-color);"><button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button><button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button></div>`;
     html += `</div>`; return html;
   };
@@ -687,7 +695,6 @@ window.renderAdminSlides = () => {
   }
 };
 
-// 🛡️ التعديل هنا: حفظ قيم الكريبتو المنفصلة
 window.saveGeneralSettings = async () => {
     if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
     try {
