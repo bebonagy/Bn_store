@@ -1013,7 +1013,6 @@ const updateCheckoutPriceDisplay = () => {
     if (selectedProductInput) selectedProductInput.value = `${titles.join(' + ')}\nالإجمالي: (${finalPrice} ${currency})${discountText}`;
 };
 
-// 🛡️ التعديل لربط شبكة الكريبتو بالعناوين المنفصلة
 const updatePaymentInfoBox = () => {
     const methodSelect = document.getElementById('paymentMethod'); 
     const cryptoNetworkSelect = document.getElementById('cryptoNetworkSelect'); 
@@ -1085,43 +1084,43 @@ const processCheckout = async (isWhatsApp) => {
         const currency = document.getElementById('currencySelect').value; 
         const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
         
-        let totalRealPrice = 0;
-        let totalDiscountVal = 0;
+        let totalRealPriceEGP = 0;
+        let totalDiscountValEGP = 0;
         let productTitles = [];
         let productIds = [];
         let cartItemsDetails = [];
 
+        // 🛡️ الحساب الأمني دائماً يعتمد على السعر الأصلي بالجنيه المصري من قاعدة البيانات
         for (const p of targetCart) {
             const qty = p.quantity || 1;
             const dbProd = window.storeState.products.find(x => x.id === p.id);
             if (!dbProd) throw new Error(`المنتج ${p.title} غير متاح حالياً`);
             
-            let realPrice = dbProd.price;
+            let realPriceEGP = dbProd.price;
             if (p.variantId && dbProd.variants) {
                 const dbVar = dbProd.variants.find(v => (v.id || v.nameEn) === p.variantId);
-                if (dbVar) realPrice = dbVar.price;
+                if (dbVar) realPriceEGP = dbVar.price;
             }
-            
-            const itemPriceConverted = currency === 'EGP' ? realPrice : (realPrice / rate);
             
             if (activePromo) {
                 if (!activePromo.productId || activePromo.productId === p.id) {
-                    totalDiscountVal += (itemPriceConverted * qty) * (activePromo.discount / 100);
+                    totalDiscountValEGP += (realPriceEGP * qty) * (activePromo.discount / 100);
                 }
             }
 
-            totalRealPrice += (itemPriceConverted * qty);
+            totalRealPriceEGP += (realPriceEGP * qty);
             
             const title = currentLang === 'ar' ? (p.titleAr || p.title) : (p.titleEn || p.title);
             productTitles.push(`${title} (x${qty})`);
             
             for(let i=0; i<qty; i++) {
                 productIds.push(p.id);
-                cartItemsDetails.push({ id: p.id, variantId: p.variantId || null, price: realPrice, title });
+                cartItemsDetails.push({ id: p.id, variantId: p.variantId || null, price: realPriceEGP, title });
             }
         }
 
-        totalRealPrice = Number((totalRealPrice - totalDiscountVal).toFixed(currency === 'EGP' ? 0 : 2));
+        const finalPriceEGP = Number((totalRealPriceEGP - totalDiscountValEGP).toFixed(0));
+        const finalPriceSelectedCurrency = currency === 'EGP' ? finalPriceEGP : Number((finalPriceEGP / rate).toFixed(2));
         
         let paymentMethodText = document.getElementById('paymentMethod').options[document.getElementById('paymentMethod').selectedIndex].text;
         if (methodValue === 'crypto') {
@@ -1187,7 +1186,10 @@ const processCheckout = async (isWhatsApp) => {
                 uid: currentUserProfile.uid, 
                 userEmail: currentUserProfile.email, 
                 items: cartItemsDetails,
-                productIds, productId: productIds[0], productName: productTitles.join(' + '), finalPrice: totalRealPrice, currency, 
+                productIds, productId: productIds[0], productName: productTitles.join(' + '), 
+                finalPrice: finalPriceSelectedCurrency, 
+                finalPriceEGP: finalPriceEGP,
+                currency, 
                 discountApplied: activePromo ? activePromo.discount : 0, 
                 promoCodeUsed: activePromo ? promoCode : "", 
                 paymentMethod: paymentMethodText, senderInfo, transactionId, customerData, receiptImage: receiptUrl, status: 'pending', deliveredCode: '', createdAt: serverTimestamp() 
@@ -1208,7 +1210,7 @@ const processCheckout = async (isWhatsApp) => {
 
         if (isWhatsApp) {
             const whatsappNumber = window.storeState.whatsapp || '201200898990';
-            const finalPriceText = `${totalRealPrice} ${currency}`;
+            const finalPriceText = `${finalPriceSelectedCurrency} ${currency} (≈ ${finalPriceEGP} EGP)`;
             const message = `السلام عليكم، لقد قمت بطلب جديد من متجر BN MAX 🚀:\n\n` +
                             `📦 *المنتجات:* ${productTitles.join(' + ')}\n` +
                             `💰 *الإجمالي:* ${finalPriceText}\n` +
@@ -1273,7 +1275,6 @@ const initApp = () => {
         const data = snap.data(); window.storeState.whatsapp = data.whatsapp || "201200898990";
         if(data.rates) window.storeState.rates = data.rates; 
         
-        // 🛡️ التحديث هنا عشان يسحب القيم الجديدة بأمان
         window.storeState.payments = data.payments || { instapay: "", vodafone: "", orange: "", cryptoTRC20: "", cryptoBEP20: "" };
         window.storeState.bannerAr = data.bannerAr || ""; window.storeState.bannerExpiry = data.bannerExpiry || ""; 
         
