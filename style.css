@@ -89,7 +89,6 @@ body:after {
   text-align: center; 
   width: 100%;
   animation: slideDown .3s ease forwards; 
-  pointer-events: auto;
 }
 
 .toast-msg.error { 
@@ -182,6 +181,7 @@ body:after {
   padding: 5px 0; 
   position: relative; 
   text-decoration: none;
+  display: inline-block;
 }
 
 .nav-link:hover, .nav-link.active { 
@@ -940,7 +940,7 @@ html[dir="rtl"] .search-input {
 }
 
 /* ==========================================
-   8. تفاصيل المنتج التفاعلية (PRODUCT DETAILS)
+   8. تفاصيل المنتج التفاعلية والباندل (PRODUCT DETAILS & BUNDLE)
    ========================================== */
 .product-details-container { 
   display: flex; 
@@ -1094,13 +1094,85 @@ html[dir="rtl"] .right-arrow { right: auto; left: 15px; transform: translateY(-5
   box-shadow: 0 0 10px var(--accent-glow);
 }
 
-/* تنسيق بوكس عرض الباندل الجديد */
+/* 🎁 تنسيق بوكس عرض الباندل المزدوج (Bundle Offer Box) */
 .bundle-offer-box {
-  background: linear-gradient(135deg, rgba(181, 0, 255, 0.08) 0%, rgba(0, 242, 255, 0.05) 100%);
-  border: 1px dashed var(--accent-purple);
-  padding: 15px;
+  background: linear-gradient(135deg, rgba(181, 0, 255, 0.08) 0%, rgba(0, 242, 255, 0.08) 100%);
+  border: 1px dashed var(--accent-neon);
   border-radius: 12px;
+  padding: 16px;
   margin-bottom: 20px;
+  box-shadow: 0 5px 20px rgba(0, 242, 255, 0.1);
+}
+
+.bundle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bundle-badge-tag {
+  background: var(--accent-purple);
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 20px;
+  box-shadow: 0 0 10px var(--purple-glow);
+}
+
+.bundle-items-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  background: rgba(6, 6, 9, 0.6);
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.bundle-prod-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bundle-prod-mini img {
+  width: 45px;
+  height: 45px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.bundle-prod-mini-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bundle-plus-sign {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--accent-neon);
+  flex-shrink: 0;
+}
+
+.bundle-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 @keyframes shakeAlert {
@@ -1298,6 +1370,17 @@ html[dir="rtl"] .right-arrow { right: auto; left: 15px; transform: translateY(-5
   display: flex; 
   align-items: center; 
   gap: 8px; 
+}
+
+.admin-search-bar {
+  width: 100%;
+  background: #07070c;
+  color: #fff;
+  border: 1px solid var(--accent-neon);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 15px;
 }
 
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
@@ -1543,6 +1626,25 @@ html[dir="ltr"] .faq-question { text-align: left; }
 .tracker-step.completed .tracker-label { color: var(--success); }
 .tracker-step.cancelled .tracker-label { color: var(--danger); }
 
+.copy-code-btn {
+  background: var(--success);
+  color: #000;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.copy-code-btn:hover {
+  background: #fff;
+  box-shadow: 0 0 12px rgba(0, 255, 102, 0.5);
+}
+
 /* ==========================================
    12. موبايل وتنسيقات الاستجابة
    ========================================== */
@@ -1550,7 +1652,7 @@ html[dir="ltr"] .faq-question { text-align: left; }
   .desktop-header-wrapper { display: none; }
   .desktop-header-wrapper.show-mobile-menu { display: flex !important; position: fixed; top: 60px; left: 0; right: 0; background: rgba(6, 6, 9, 0.95); border-bottom: 1px solid var(--accent-neon); z-index: 999; padding-bottom: 20px; }
   .desktop-header-wrapper.show-mobile-menu .header-top { flex-direction: column; gap: 15px; }
-  .desktop-header-wrapper.show-mobile-menu .top-nav-links { display: flex !important; flex-direction: column; width: 100%; }
+  .desktop-header-wrapper.show-mobile-menu .top-nav-links { display: flex !important; flex-direction: column; width: 100%; text-align: center; }
   .desktop-header-wrapper.show-mobile-menu .logo { display: none; }
   .mobile-header-wrapper { display: flex !important; justify-content: space-between; align-items: center; padding: 15px 20px; }
   .mobile-menu-btn { background: transparent; color: #fff; border: none; font-size: 28px; cursor: pointer; }
@@ -1583,6 +1685,8 @@ html[dir="ltr"] .faq-question { text-align: left; }
   .product-price { font-size: 18px; }
   .container { padding: 15px 10px; }
   .modal-content { padding: 20px; }
+  .bundle-items-row { flex-direction: column; align-items: stretch; }
+  .bundle-plus-sign { text-align: center; }
 }
 
 @keyframes cartBounce { 0% { transform: scale(1); } 50% { transform: scale(1.3) translateY(-3px); color: var(--accent-neon); border-color: var(--accent-neon); } 100% { transform: scale(1); } }
