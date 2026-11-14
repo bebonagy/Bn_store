@@ -5,7 +5,7 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase
 
 const firebaseConfig = Object.freeze({
   apiKey: "AIzaSyBkt-5W1vLcGvWgJTv95KbpbrnMf7Rm0JU",
-  authDomain: "bn-store-4f0c0.firebaseapp.com", // 🔄 تم الرجوع للافتراضي بعد إلغاء تسجيل جوجل
+  authDomain: "bn-store-4f0c0.firebaseapp.com",
   projectId: "bn-store-4f0c0",
   storageBucket: "bn-store-4f0c0.firebasestorage.app",
   messagingSenderId: "281646513182",
@@ -18,5 +18,3 @@ export const db = getFirestore(app);
 
 export const appId = "bn-store-main-app";
 export const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
-
-// 🛡️ تم إزالة GoogleAuthProvider و IMGBB_API_KEY من هنا لزيادة الأمان وتقليل حجم الملف.
