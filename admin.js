@@ -1,15 +1,14 @@
 // admin.js
 import { db, appId, ADMIN_UID } from './firebase-config.js';
-import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
 window.tempGalleryUrls = [];
 
-window.uploadImageToImgBB = async (file, isCustomer = false) => {
-    if (!isCustomer && (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID)) { 
-        window.showToast('غير مصرح برفع الصور!', 'error'); 
-        return null; 
-    }
+// 🛡️ السماح للعملاء المسجلين برفع صور الإيصالات، وللأدمن برفع صور المنتجات
+window.uploadImageToImgBB = async (file, isReceipt = false) => {
+    if (!isReceipt && !window.checkIsAdmin()) { window.showToast('غير مصرح برفع الصور!', 'error'); return null; }
+    if (isReceipt && !window.auth?.currentUser) { window.showToast('يجب تسجيل الدخول لرفع الإيصال!', 'error'); return null; }
     const formData = new FormData(); formData.append('image', file);
     try {
         const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
@@ -48,9 +47,11 @@ window.initAdminTabs = () => {
 
 window.copyCustomerData = (text) => navigator.clipboard.writeText(text).then(() => window.showToast('تم النسخ 📋', 'success'));
 
-window.addVariantInput = (v = {nameAr: '', nameEn: '', price: '', oldPrice: '', stockQuantity: '', vaultCodes: ''}) => {
+window.addVariantInput = (v = {id: '', nameAr: '', nameEn: '', price: '', oldPrice: '', stockQuantity: '', vaultCodes: ''}) => {
   const list = document.getElementById('variantsList'); if(!list) return;
+  const variantUniqueId = v.id || `v_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
   const div = document.createElement('div'); div.className = 'admin-item-row variant-row'; div.style.flexDirection = 'column'; div.style.alignItems = 'stretch';
+  div.dataset.variantId = variantUniqueId;
   div.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px dashed var(--border-color); padding-bottom:8px;">
         <strong style="color:var(--accent-neon); font-size:13px;">📦 تفاصيل الباقة</strong>
@@ -61,7 +62,7 @@ window.addVariantInput = (v = {nameAr: '', nameEn: '', price: '', oldPrice: '', 
         <div class="form-group" style="margin-bottom:10px;"><label>الاسم (En)</label><input type="text" class="var-en" placeholder="1 Month" value="${v.nameEn}"></div>
         <div class="form-group" style="margin-bottom:10px;"><label>السعر (EGP)</label><input type="number" class="var-price" value="${v.price}"></div>
         <div class="form-group" style="margin-bottom:10px;"><label>السعر القديم (اختياري)</label><input type="number" class="var-old" placeholder="لعمل خصم" value="${v.oldPrice || ''}"></div>
-        <div class="form-group" style="margin-bottom:10px;"><label>الكمية (اختياري)</label><input type="number" class="var-stock" placeholder="غير محدود" value="${v.stockQuantity !== undefined ? v.stockQuantity : ''}"></div>
+        <div class="form-group" style="margin-bottom:10px;"><label>الكمية (اختياري)</label><input type="number" class="var-stock" placeholder="غير محدود" value="${v.stockQuantity !== undefined && v.stockQuantity !== null ? v.stockQuantity : ''}"></div>
     </div>
     <div class="form-group" style="margin-bottom:0;"><label>🏦 خزنة الأكواد الخاصة بالباقة (كود في كل سطر)</label><textarea class="var-vault" style="font-family: monospace; direction: ltr; background: rgba(0,0,0,0.5);" rows="2" placeholder="أكواد هذه الباقة فقط...">${v.vaultCodes || ''}</textarea></div>
   `;
@@ -82,6 +83,7 @@ window.addPromoInput = (p = {code: '', discount: '', expiry: '', productId: ''})
 
 window.handleSelectChange = (selectEl, customInputId) => {
     const customInput = document.getElementById(customInputId);
+    if (!customInput) return;
     if (selectEl.value === 'other') { customInput.style.display = 'block'; customInput.value = ''; } 
     else { customInput.style.display = 'none'; customInput.value = selectEl.value; }
 };
@@ -99,7 +101,11 @@ window.injectAdminDashboard = () => {
     </div>
     
     <div id="tab-orders" class="tab-content">
-      <div class="admin-section"><h4>⏳ طلبات جديدة</h4><div id="adminOrdersPending" style="max-height:350px; overflow-y:auto;"></div></div>
+      <div class="admin-section">
+        <h4>⏳ طلبات جديدة</h4>
+        <input type="search" id="adminOrderSearch" class="admin-search-bar" placeholder="بحث برقم العملية، الإيميل، أو اسم المنتج..." oninput="window.renderAdminOrders()">
+        <div id="adminOrdersPending" style="max-height:350px; overflow-y:auto;"></div>
+      </div>
       <div class="admin-section" style="margin-top: 20px; opacity: 0.9;"><h4>🗄️ أرشيف الطلبات</h4><div id="adminOrdersArchived" style="max-height:350px; overflow-y:auto;"></div></div>
     </div>
     
@@ -132,12 +138,11 @@ window.injectAdminDashboard = () => {
             <button type="button" class="submit-btn" style="background:transparent; border:1px dashed var(--accent-neon); color:var(--accent-neon); width:100%;" onclick="window.addVariantInput()">+ إضافة باقة / نسخة جديدة</button>
         </div>
 
-        <!-- 🎁 قسم إعداد عروض الباندل (Bundle) للأدمن -->
         <div class="admin-sub-section" style="border-color: var(--accent-purple);">
-            <h5 style="color: var(--accent-purple);">🎁 إعداد عرض الباندل المزدوج (Bundle Deal)</h5>
+            <h5 style="color: var(--accent-purple);">🎁 عروض الباندل المزدوج (Bundle Deals)</h5>
             <div class="grid-2">
-                <div class="form-group"><label>ID المنتج الثاني المرتبط بالعرض</label><input type="text" id="newProdBundleId" placeholder="مثال: 174000123"></div>
-                <div class="form-group"><label>نسبة الخصم المشترك (%)</label><input type="number" id="newProdBundleDiscount" placeholder="مثال: 15"></div>
+              <div class="form-group"><label>ID المنتج الإضافي للباندل</label><input type="text" id="newProdBundleId" placeholder="اكتب ID المنتج الثاني..."></div>
+              <div class="form-group"><label>نسبة خصم الباندل (%)</label><input type="number" id="newProdBundleDiscount" placeholder="مثال: 15"></div>
             </div>
         </div>
 
@@ -147,20 +152,32 @@ window.injectAdminDashboard = () => {
             <div class="grid-2">
                 <div class="form-group">
                     <label>وقت التسليم</label>
-                    <select onchange="window.handleSelectChange(this, 'newProdDeliveryTime')"><option value="">-- بدون --</option><option value="⚡ تسليم فوري">⚡ تسليم فوري</option><option value="⏱️ من 5 إلى 15 دقيقة">⏱️ من 5 إلى 15 دقيقة</option><option value="⏳ خلال ساعة">⏳ خلال ساعة</option><option value="📅 خلال 24 ساعة">📅 خلال 24 ساعة</option><option value="other">كتابة يدوية...</option></select>
+                    <select id="newProdDeliverySelect" onchange="window.handleSelectChange(this, 'newProdDeliveryTime')"><option value="">-- بدون --</option><option value="⚡ تسليم فوري">⚡ تسليم فوري</option><option value="⏱️ من 5 إلى 15 دقيقة">⏱️ من 5 إلى 15 دقيقة</option><option value="⏳ خلال ساعة">⏳ خلال ساعة</option><option value="📅 خلال 24 ساعة">📅 خلال 24 ساعة</option><option value="other">كتابة يدوية...</option></select>
                     <input type="text" id="newProdDeliveryTime" style="display:none; margin-top:5px;" placeholder="اكتب وقت التسليم...">
                 </div>
                 <div class="form-group"><label>رابط تسليم خارجي (للبرامج)</label><input type="text" id="newProdExternalLink" placeholder="https://..."></div>
             </div>
-            <div class="form-group" style="margin-bottom:0;"><label>🏦 خزنة الأكواد السرية المعزولة (كود في كل سطر)</label><textarea id="newProdVault" style="font-family: monospace; direction: ltr;" rows="3" placeholder="أكواد التفعيل هنا..."></textarea></div>
+            <div class="form-group" style="margin-bottom:0;"><label>🏦 الخزنة العامة للأكواد (للمنتج بدون باقات - كود في كل سطر)</label><textarea id="newProdVault" style="font-family: monospace; direction: ltr;" rows="3" placeholder="كود في كل سطر..."></textarea></div>
         </div>
 
         <div class="admin-sub-section">
             <h5>⚡ المعلومات السريعة (تظهر بجوار السعر)</h5>
             <div class="grid-2">
-                <div class="form-group"><label>نوع الحساب</label><select onchange="window.handleSelectChange(this, 'qiAccountCustom')"><option value="">-- اختار --</option><option value="حساب خاص | Private Account">حساب خاص | Private</option><option value="حساب مشترك | Shared Account">حساب مشترك | Shared</option><option value="مفتاح تفعيل | CD Key">مفتاح تفعيل | CD Key</option><option value="شحن مباشر | Direct Top-up">شحن مباشر | Direct Top-up</option><option value="other">أخرى...</option></select><input type="text" id="qiAccountCustom" style="display:none; margin-top:5px;" placeholder="عربي | إنجليزي"></div>
-                <div class="form-group"><label>الضمان</label><select onchange="window.handleSelectChange(this, 'qiWarrantyCustom')"><option value="">-- اختار --</option><option value="مدى الحياة | Lifetime">مدى الحياة | Lifetime</option><option value="سنة كاملة | 1 Year">سنة كاملة | 1 Year</option><option value="30 يوم | 30 Days">30 يوم | 30 Days</option><option value="بدون ضمان | No Warranty">بدون ضمان | No</option><option value="other">أخرى...</option></select><input type="text" id="qiWarrantyCustom" style="display:none; margin-top:5px;" placeholder="عربي | إنجليزي"></div>
-                <div class="form-group"><label>التفعيل/المنطقة</label><select onchange="window.handleSelectChange(this, 'qiRegionCustom')"><option value="">-- اختار --</option><option value="عالمي | Global">عالمي | Global</option><option value="تركي | Turkey">تركي | Turkey</option><option value="أرجنتيني | Argentina">أرجنتيني | Argentina</option><option value="مصري | Egypt">مصري | Egypt</option><option value="other">أخرى...</option></select><input type="text" id="qiRegionCustom" style="display:none; margin-top:5px;" placeholder="عربي | إنجليزي"></div>
+                <div class="form-group">
+                  <label>نوع الحساب</label>
+                  <select id="qiAccountSelect" onchange="window.handleSelectChange(this, 'qiAccountCustom')"><option value="">-- اختار --</option><option value="حساب خاص | Private Account">حساب خاص | Private</option><option value="حساب مشترك | Shared Account">حساب مشترك | Shared</option><option value="مفتاح تفعيل | CD Key">مفتاح تفعيل | CD Key</option><option value="شحن مباشر | Direct Top-up">شحن مباشر | Direct Top-up</option><option value="other">أخرى...</option></select>
+                  <input type="text" id="qiAccountCustom" style="display:none; margin-top:5px;" placeholder="عربي | إنجليزي">
+                </div>
+                <div class="form-group">
+                  <label>الضمان</label>
+                  <select id="qiWarrantySelect" onchange="window.handleSelectChange(this, 'qiWarrantyCustom')"><option value="">-- اختار --</option><option value="مدى الحياة | Lifetime">مدى الحياة | Lifetime</option><option value="سنة كاملة | 1 Year">سنة كاملة | 1 Year</option><option value="30 يوم | 30 Days">30 يوم | 30 Days</option><option value="بدون ضمان | No Warranty">بدون ضمان | No</option><option value="other">أخرى...</option></select>
+                  <input type="text" id="qiWarrantyCustom" style="display:none; margin-top:5px;" placeholder="عربي | إنجليزي">
+                </div>
+                <div class="form-group">
+                  <label>التفعيل/المنطقة</label>
+                  <select id="qiRegionSelect" onchange="window.handleSelectChange(this, 'qiRegionCustom')"><option value="">-- اختار --</option><option value="عالمي | Global">عالمي | Global</option><option value="تركي | Turkey">تركي | Turkey</option><option value="أرجنتيني | Argentina">أرجنتيني | Argentina</option><option value="مصري | Egypt">مصري | Egypt</option><option value="other">أخرى...</option></select>
+                  <input type="text" id="qiRegionCustom" style="display:none; margin-top:5px;" placeholder="عربي | إنجليزي">
+                </div>
             </div>
         </div>
 
@@ -190,7 +207,11 @@ window.injectAdminDashboard = () => {
         <button type="button" class="submit-btn" id="saveProductBtn" style="width:100%; font-size:16px; padding:18px;" onclick="window.saveProduct()">➕ حفظ المنتج ونشره</button>
         <button type="button" class="cancel-btn" id="cancelEditBtn" style="width:100%; margin-top:5px; display:none;" onclick="window.cancelEdit()">إلغاء التعديل والتراجع</button>
       </div>
-      <div class="admin-section" style="margin-top:25px;"><h4>📦 المنتجات الحالية</h4><div id="adminProductsList" style="max-height:400px; overflow-y:auto;"></div></div>
+      <div class="admin-section" style="margin-top:25px;">
+        <h4>📦 المنتجات الحالية</h4>
+        <input type="search" id="adminProductSearch" class="admin-search-bar" placeholder="بحث بالاسم أو ID المنتج..." oninput="window.renderAdminProducts()">
+        <div id="adminProductsList" style="max-height:400px; overflow-y:auto;"></div>
+      </div>
     </div>
     
     <div id="tab-users" class="tab-content"><div class="admin-section"><h4>👥 قائمة المستخدمين</h4><div id="adminUsersList" style="max-height:400px; overflow-y:auto;"></div></div></div>
@@ -198,7 +219,18 @@ window.injectAdminDashboard = () => {
     <div id="tab-settings" class="tab-content">
       <div class="admin-section" style="border-color: var(--accent-neon); background: rgba(0,242,255,0.02);"><h4 style="color: var(--accent-neon);">🎁 إعدادات الكوبونات الديناميكية</h4><div id="promosList" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 15px;"></div><button type="button" class="submit-btn" style="background:transparent; border:1px dashed var(--accent-neon); color:var(--accent-neon); width:100%;" onclick="window.addPromoInput()">+ إضافة كوبون جديد</button></div>
       <div class="admin-section"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h4 style="margin:0;">💱 أسعار الصرف</h4><button type="button" id="autoCurrencyBtn" onclick="window.autoUpdateCurrencies()" class="submit-btn" style="padding:6px 12px; font-size:12px;">تحديث 🔄</button></div><div class="grid-2"><div class="form-group"><label>SAR</label><input type="number" step="0.001" id="admRateSAR"></div><div class="form-group"><label>AED</label><input type="number" step="0.001" id="admRateAED"></div><div class="form-group"><label>USD</label><input type="number" step="0.0001" id="admRateUSD"></div></div></div>
-      <div class="admin-section"><h4>📢 الدفع والواتساب</h4><div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div><div class="grid-2"><div class="form-group"><label>إنستا باي</label><input type="text" id="admInstapay"></div><div class="form-group"><label>فودافون كاش</label><input type="text" id="admVodafone"></div><div class="form-group"><label>أورنج كاش</label><input type="text" id="admOrange"></div><div class="form-group"><label>USDT (TRC20)</label><input type="text" id="admCryptoTRC20"></div><div class="form-group"><label>USDT (BEP20)</label><input type="text" id="admCryptoBEP20"></div></div><button type="button" id="saveConfigBtn" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ الإعدادات</button></div>
+      <div class="admin-section">
+        <h4>📢 الدفع والواتساب</h4>
+        <div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div>
+        <div class="grid-2">
+            <div class="form-group"><label>إنستا باي</label><input type="text" id="admInstapay"></div>
+            <div class="form-group"><label>فودافون كاش</label><input type="text" id="admVodafone"></div>
+            <div class="form-group"><label>أورنج كاش (Orange Cash)</label><input type="text" id="admOrange"></div>
+            <div class="form-group"><label>USDT (TRC20)</label><input type="text" id="admCryptoTRC20"></div>
+            <div class="form-group"><label>USDT (BEP20)</label><input type="text" id="admCryptoBEP20"></div>
+        </div>
+        <button type="button" id="saveConfigBtn" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ الإعدادات</button>
+      </div>
     </div>
     
     <div id="tab-seo" class="tab-content"><div class="admin-section"><h4>🔍 مدير السيو (SEO)</h4><div class="form-group"><label>عنوان الموقع</label><input type="text" id="seoTitle"></div><div class="form-group"><label>الوصف</label><textarea id="seoDesc" rows="3"></textarea></div><div class="form-group"><label>كلمات مفتاحية</label><textarea id="seoKeywords" rows="2"></textarea></div><button type="button" class="submit-btn" style="width:100%;" onclick="window.saveSeoSettings()">💾 حفظ</button></div></div>
@@ -208,14 +240,25 @@ window.injectAdminDashboard = () => {
   window.loadAdminData();
 };
 
-window.loadAdminData = () => {
+window.loadAdminData = async () => {
   const s = window.storeState; const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   setVal('admBannerAr', s.bannerAr); setVal('admBannerExpiry', s.bannerExpiry); setVal('admWhatsapp', s.whatsapp);
   if (s.heroConfig) { setVal('heroTitleAr', s.heroConfig.titleAr); setVal('heroTitleEn', s.heroConfig.titleEn); setVal('heroDescAr', s.heroConfig.descAr); setVal('heroDescEn', s.heroConfig.descEn); setVal('heroBtnAr', s.heroConfig.btnTextAr); setVal('heroBtnEn', s.heroConfig.btnTextEn); }
   const promosList = document.getElementById('promosList'); if (promosList) { promosList.replaceChildren(); if (s.promos) s.promos.forEach(p => window.addPromoInput(p)); }
   if (s.payments) { setVal('admInstapay', s.payments.instapay); setVal('admVodafone', s.payments.vodafone); setVal('admOrange', s.payments.orange); setVal('admCryptoTRC20', s.payments.cryptoTRC20); setVal('admCryptoBEP20', s.payments.cryptoBEP20); }
   if (s.rates) { setVal('admRateSAR', s.rates.SAR); setVal('admRateAED', s.rates.AED); setVal('admRateUSD', s.rates.USD); }
-  if (s.seo) { setVal('seoTitle', s.seo.title); setVal('seoDesc', s.seo.desc); setVal('seoKeywords', s.seo.keywords); }
+  
+  // جلب إعدادات SEO من الكنفج
+  try {
+      const cfgSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'));
+      if (cfgSnap.exists() && cfgSnap.data().seo) {
+          const seo = cfgSnap.data().seo;
+          setVal('seoTitle', seo.title);
+          setVal('seoDesc', seo.desc);
+          setVal('seoKeywords', seo.keywords);
+      }
+  } catch(e) {}
+
   window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminStats();
 };
 
@@ -268,9 +311,23 @@ window.renderAdminStats = () => {
 
 window.renderAdminOrders = () => {
   const pendingList = document.getElementById('adminOrdersPending'), archivedList = document.getElementById('adminOrdersArchived');
+  const searchInput = document.getElementById('adminOrderSearch');
   if (!pendingList || !archivedList) return; pendingList.replaceChildren(); archivedList.replaceChildren();
-  const orders = window.storeState.orders || [], pendingOrders = orders.filter(o => o.status === 'pending'), archivedOrders = orders.filter(o => o.status !== 'pending');
-  if (!pendingOrders.length) pendingList.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center;">لا توجد طلبات جديدة.</p>';
+  
+  const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  const orders = window.storeState.orders || [];
+  
+  const filteredOrders = orders.filter(o => {
+      if (!searchVal) return true;
+      const matchName = String(o.productName || '').toLowerCase().includes(searchVal);
+      const matchEmail = String(o.userEmail || '').toLowerCase().includes(searchVal);
+      const matchTx = String(o.transactionId || '').toLowerCase().includes(searchVal);
+      const matchSender = String(o.senderInfo || '').toLowerCase().includes(searchVal);
+      return matchName || matchEmail || matchTx || matchSender;
+  });
+
+  const pendingOrders = filteredOrders.filter(o => o.status === 'pending'), archivedOrders = filteredOrders.filter(o => o.status !== 'pending');
+  if (!pendingOrders.length) pendingList.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center;">لا توجد طلبات مطابقة.</p>';
   if (!archivedOrders.length) archivedList.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center;">الأرشيف فارغ.</p>';
 
   const createOrderHTML = (o, isArchived) => {
@@ -287,7 +344,7 @@ window.renderAdminOrders = () => {
   };
   pendingOrders.forEach(o => pendingList.insertAdjacentHTML('beforeend', createOrderHTML(o, false)));
   archivedOrders.forEach(o => archivedList.insertAdjacentHTML('beforeend', createOrderHTML(o, true)));
-  if(orders.length >= window.adminOrdersLimit) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
+  if(orders.length >= window.adminOrdersLimit && !searchVal) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
 };
 
 window.refundOrderStock = async (order) => {
@@ -309,11 +366,12 @@ window.refundOrderStock = async (order) => {
         if (prod) {
             if (variantId && prod.variants) {
                 const vIndex = prod.variants.findIndex(v => (v.id || v.nameEn) === variantId);
-                if (vIndex !== -1 && prod.variants[vIndex].stockQuantity !== undefined) {
+                if (vIndex !== -1 && prod.variants[vIndex].stockQuantity !== undefined && prod.variants[vIndex].stockQuantity !== null) {
                     prod.variants[vIndex].stockQuantity += qty; 
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { variants: prod.variants });
+                    let updatePayload = { variants: prod.variants };
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), updatePayload);
                 }
-            } else if (prod.stockQuantity !== undefined) {
+            } else if (prod.stockQuantity !== undefined && prod.stockQuantity !== null) {
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + qty, inStock: true });
             }
         }
@@ -329,6 +387,7 @@ window.deleteAdminOrder = async (orderId) => {
   } catch(e) { window.showToast('فشل الحذف', 'error'); } 
 };
 
+// 🛡️ تسليم الأكواد من الخزنة المعزولة `vault/{productId}`
 window.updateOrderStatus = async (orderId, status) => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
@@ -342,6 +401,7 @@ window.updateOrderStatus = async (orderId, status) => {
         await updateDoc(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
         window.showToast('تم التحديث والإلغاء!', 'success');
     } else if (status === 'completed' && order) {
+
         let multiCodesArr = [];
         let itemsList = order.items ? order.items : (order.productIds ? order.productIds.map(id => ({ id })) : []);
 
@@ -354,25 +414,27 @@ window.updateOrderStatus = async (orderId, status) => {
 
         await runTransaction(db, async (transaction) => {
             if (!codeToDeliver && itemsList.length > 0) {
-                const sfDocs = {};
                 const uniquePids = [...new Set(itemsList.map(i => i.id))];
+                const vaultSnapshots = {};
                 for (const pid of uniquePids) {
-                    const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
-                    sfDocs[pid] = { ref: prodRef, docSnap: await transaction.get(prodRef) };
+                    const vaultRef = doc(db, 'artifacts', appId, 'public', 'data', 'vault', pid);
+                    vaultSnapshots[pid] = { ref: vaultRef, snap: await transaction.get(vaultRef) };
                 }
 
                 for (const key of Object.keys(groupedItems)) {
                     const req = groupedItems[key];
-                    const { ref, docSnap } = sfDocs[req.id];
-                    if (!docSnap.exists()) continue;
+                    const vaultInfo = vaultSnapshots[req.id];
+                    if (!vaultInfo || !vaultInfo.snap.exists()) continue;
 
-                    const data = docSnap.data();
-                    let targetCodesStr = ""; let isVariant = false; let vIndex = -1;
+                    const vData = vaultInfo.snap.data();
+                    let targetCodesStr = ""; let isVariant = false; let vIdKey = "";
 
-                    if (req.variantId && data.variants) {
-                        vIndex = data.variants.findIndex(v => (v.id || v.nameEn) === req.variantId);
-                        if (vIndex !== -1) { targetCodesStr = data.variants[vIndex].vaultCodes || ""; isVariant = true; }
-                    } else { targetCodesStr = data.vaultCodes || ""; }
+                    if (req.variantId && vData.variantsVaultCodes && vData.variantsVaultCodes[req.variantId]) {
+                        targetCodesStr = vData.variantsVaultCodes[req.variantId];
+                        isVariant = true; vIdKey = req.variantId;
+                    } else {
+                        targetCodesStr = vData.generalVaultCodes || "";
+                    }
 
                     if (targetCodesStr) {
                         let codes = targetCodesStr.split('\n').map(c => c.trim()).filter(c => c);
@@ -382,16 +444,16 @@ window.updateOrderStatus = async (orderId, status) => {
                             multiCodesArr.push(`${req.title}: ${extractedCode}`);
                         }
                         if (isVariant) {
-                            data.variants[vIndex].vaultCodes = codes.join('\n');
-                            transaction.update(ref, { variants: data.variants });
+                            vData.variantsVaultCodes[vIdKey] = codes.join('\n');
+                            transaction.update(vaultInfo.ref, { variantsVaultCodes: vData.variantsVaultCodes });
                         } else {
-                            transaction.update(ref, { vaultCodes: codes.join('\n') });
+                            transaction.update(vaultInfo.ref, { generalVaultCodes: codes.join('\n') });
                         }
                     }
                 }
                 if (multiCodesArr.length > 0) codeToDeliver = multiCodesArr.join(' || ');
             }
-            transaction.update(orderRef, { status, deliveredCode: codeToDeliver, seen: false, updatedAt: serverTimestamp() });
+            transaction.update(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
         });
         window.showToast('تم التحديث وتسليم الكود!', 'success');
     }
@@ -417,9 +479,9 @@ window.saveProduct = async () => {
   let price = Number(document.getElementById('newProdPrice').value) || 0; const oldPrice = Number(document.getElementById('newProdOldPrice').value) || 0;
   const stockQuantity = document.getElementById('newProdStock').value ? Number(document.getElementById('newProdStock').value) : undefined;
   let deliveryTime = document.getElementById('newProdDeliveryTime').value;
-  const externalLink = document.getElementById('newProdExternalLink').value.trim(), vaultCodes = document.getElementById('newProdVault').value || '';
+  const externalLink = document.getElementById('newProdExternalLink').value.trim();
+  const generalVaultCodes = document.getElementById('newProdVault').value || '';
   
-  // حقول الباندل الجديدة
   const bundleProductId = document.getElementById('newProdBundleId').value.trim();
   const bundleDiscount = Number(document.getElementById('newProdBundleDiscount').value) || 0;
 
@@ -432,11 +494,16 @@ window.saveProduct = async () => {
   const crossSellIds = document.getElementById('newProdCrossSell').value.split(',').map(id => id.trim()).filter(id => id);
 
   const variants = [];
+  const variantsVaultMap = {};
   document.querySelectorAll('#variantsList .variant-row').forEach(row => {
+    const vId = row.dataset.variantId || `v_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const nameAr = row.querySelector('.var-ar').value.trim(), nameEn = row.querySelector('.var-en').value.trim();
     const vPrice = Number(row.querySelector('.var-price').value), vOld = Number(row.querySelector('.var-old').value) || 0;
     const vStock = row.querySelector('.var-stock').value, vVault = row.querySelector('.var-vault').value;
-    if(nameAr && vPrice > 0) variants.push({ nameAr, nameEn, price: vPrice, oldPrice: vOld, stockQuantity: vStock !== '' ? Number(vStock) : undefined, vaultCodes: vVault });
+    if(nameAr && vPrice > 0) {
+        variants.push({ id: vId, nameAr, nameEn, price: vPrice, oldPrice: vOld, stockQuantity: vStock !== '' ? Number(vStock) : undefined });
+        if (vVault) variantsVaultMap[vId] = vVault;
+    }
   });
   if (variants.length > 0) { price = Math.min(...variants.map(v => v.price)); }
   if (!titleAr || price <= 0) return window.showToast('تأكد من الاسم والسعر!', 'error');
@@ -444,6 +511,7 @@ window.saveProduct = async () => {
   const btn = document.getElementById('saveProductBtn'); const origText = btn.textContent; btn.textContent = 'جاري الرفع والحفظ ⏳...'; btn.disabled = true;
 
   try {
+    const targetProductId = window.editingProductId || Date.now().toString();
     const oldP = window.editingProductId ? window.storeState.products.find(p => p.id === window.editingProductId) : null;
     let imgUrl = oldP ? oldP.imgUrl : ''; let bannerUrl = oldP ? oldP.bannerUrl : ''; let gallery = window.tempGalleryUrls || [];
     const coverInput = document.getElementById('newProdImgFileInput'); if (coverInput && coverInput.files[0]) imgUrl = await window.uploadImageToImgBB(coverInput.files[0]) || imgUrl;
@@ -451,26 +519,73 @@ window.saveProduct = async () => {
     const galleryInput = document.getElementById('newProdGallery');
     if (galleryInput && galleryInput.files.length > 0) { for (let i = 0; i < galleryInput.files.length; i++) { const url = await window.uploadImageToImgBB(galleryInput.files[i]); if (url) gallery.push(url); } }
 
-    const prodData = { isActive, isFeatured, requireData, titleAr, titleEn, category, platform, tags, price, oldPrice, inStock: stockQuantity === undefined || stockQuantity > 0, stockQuantity, deliveryTime, externalLink, vaultCodes, bundleProductId, bundleDiscount, quickInfo, trailerUrl, imgUrl, bannerUrl, gallery, descAr, descEn, reqAr, reqEn, faqText, badgeAr, badgeEn, crossSellIds, variants };
+    // 🛡️ حفظ الأكواد السرية حصرياً في كولكشن Vault المعزول وعدم حفظها أبداً في مستند المنتج العام
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vault', targetProductId), {
+        generalVaultCodes: generalVaultCodes,
+        variantsVaultCodes: variantsVaultMap
+    });
 
-    if (window.editingProductId) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); window.showToast('✏️ تم التعديل!', 'success'); } 
-    else { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); window.showToast('📦 تمت الإضافة بنجاح!', 'success'); }
+    const prodData = { isActive, isFeatured, requireData, titleAr, titleEn, category, platform, tags, price, oldPrice, inStock: stockQuantity === undefined || stockQuantity > 0, stockQuantity, deliveryTime, externalLink, bundleProductId, bundleDiscount, quickInfo, trailerUrl, imgUrl, bannerUrl, gallery, descAr, descEn, reqAr, reqEn, faqText, badgeAr, badgeEn, crossSellIds, variants };
+
+    if (window.editingProductId) { 
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); 
+        window.showToast('✏️ تم التعديل!', 'success'); 
+    } else { 
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', targetProductId), prodData); 
+        window.showToast('📦 تمت الإضافة بنجاح!', 'success'); 
+    }
     window.cancelEdit();
   } catch (e) { console.error(e); window.showToast('فشل العملية', 'error'); } finally { btn.textContent = origText; btn.disabled = false; }
 };
 
-window.editProduct = (id) => {
+window.editProduct = async (id) => {
   const p = window.storeState.products.find(x => x.id === id); if(!p) return;
   document.getElementById('newProdActive').checked = p.isActive !== false; document.getElementById('newProdFeatured').checked = p.isFeatured === true; document.getElementById('newProdRequireData').checked = p.requireData !== false;
   const setVal = (elmId, val) => { const el = document.getElementById(elmId); if (el) el.value = val ?? ''; };
   setVal('newProdTitleAr', p.titleAr || p.title); setVal('newProdTitleEn', p.titleEn || p.title);
   setVal('newProdCat', p.category || 'games'); setVal('newProdPlatform', p.platform); setVal('newProdTags', p.tags ? p.tags.join(', ') : '');
-  setVal('newProdPrice', p.price); setVal('newProdOldPrice', p.oldPrice); setVal('newProdStock', p.stockQuantity !== undefined ? p.stockQuantity : '');
-  setVal('newProdDeliveryTime', p.deliveryTime); setVal('newProdExternalLink', p.externalLink); setVal('newProdVault', p.vaultCodes); setVal('newProdTrailer', p.trailerUrl);
+  setVal('newProdPrice', p.price); setVal('newProdOldPrice', p.oldPrice); setVal('newProdStock', p.stockQuantity !== undefined && p.stockQuantity !== null ? p.stockQuantity : '');
+  setVal('newProdExternalLink', p.externalLink); setVal('newProdTrailer', p.trailerUrl);
   setVal('newProdBundleId', p.bundleProductId); setVal('newProdBundleDiscount', p.bundleDiscount);
   setVal('newProdDescAr', p.descAr); setVal('newProdDescEn', p.descEn); setVal('newProdReqAr', p.reqAr); setVal('newProdReqEn', p.reqEn);
   setVal('newProdFaq', p.faqText); setVal('newProdBadgeAr', p.badgeAr); setVal('newProdBadgeEn', p.badgeEn); setVal('newProdCrossSell', p.crossSellIds ? p.crossSellIds.join(', ') : '');
-  if(p.quickInfo) { setVal('qiAccountCustom', (p.quickInfo.accountAr || '') + (p.quickInfo.accountEn ? ' | ' + p.quickInfo.accountEn : '')); setVal('qiWarrantyCustom', (p.quickInfo.warrantyAr || '') + (p.quickInfo.warrantyEn ? ' | ' + p.quickInfo.warrantyEn : '')); setVal('qiRegionCustom', (p.quickInfo.regionAr || '') + (p.quickInfo.regionEn ? ' | ' + p.quickInfo.regionEn : '')); }
+
+  // جلب الأكواد السرية من الخزنة المعزولة `vault/{productId}`
+  try {
+      const vaultSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vault', id));
+      if (vaultSnap.exists()) {
+          const vData = vaultSnap.data();
+          setVal('newProdVault', vData.generalVaultCodes || '');
+          if (p.variants) {
+              p.variants.forEach(v => {
+                  if (vData.variantsVaultCodes && vData.variantsVaultCodes[v.id]) {
+                      v.vaultCodes = vData.variantsVaultCodes[v.id];
+                  }
+              });
+          }
+      }
+  } catch(e) {}
+
+  // معالجة القوائم المنسدلة والحقول المخصصة لتجنب ظهورها فارغة
+  const handleDropdownCustom = (selectId, inputId, val) => {
+      const selectEl = document.getElementById(selectId);
+      const inputEl = document.getElementById(inputId);
+      if(!selectEl || !inputEl) return;
+      let matched = false;
+      for(let opt of selectEl.options) {
+          if(opt.value === val) { selectEl.value = val; inputEl.style.display = 'none'; matched = true; break; }
+      }
+      if(!matched && val) { selectEl.value = 'other'; inputEl.style.display = 'block'; inputEl.value = val; }
+  };
+
+  if(p.deliveryTime) {
+      handleDropdownCustom('newProdDeliverySelect', 'newProdDeliveryTime', p.deliveryTime);
+  }
+  if(p.quickInfo) {
+      handleDropdownCustom('qiAccountSelect', 'qiAccountCustom', (p.quickInfo.accountAr || '') + (p.quickInfo.accountEn ? ' | ' + p.quickInfo.accountEn : ''));
+      handleDropdownCustom('qiWarrantySelect', 'qiWarrantyCustom', (p.quickInfo.warrantyAr || '') + (p.quickInfo.warrantyEn ? ' | ' + p.quickInfo.warrantyEn : ''));
+      handleDropdownCustom('qiRegionSelect', 'qiRegionCustom', (p.quickInfo.regionAr || '') + (p.quickInfo.regionEn ? ' | ' + p.quickInfo.regionEn : ''));
+  }
   
   const list = document.getElementById('variantsList'); if (list) { list.replaceChildren(); if (p.variants) p.variants.forEach(v => window.addVariantInput(v)); }
   const coverBox = document.getElementById('previewCover'); if (coverBox && p.imgUrl) coverBox.innerHTML = `<img src="${p.imgUrl}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
@@ -482,23 +597,42 @@ window.editProduct = (id) => {
 window.cancelEdit = () => {
   window.editingProductId = null; window.tempGalleryUrls = [];
   document.getElementById('saveProductBtn').innerHTML = '➕ إضافة المنتج ونشره'; document.getElementById('cancelEditBtn').style.display = 'none';
-  document.querySelectorAll('#productFormSection input[type="text"], #productFormSection input[type="number"], #productFormSection textarea, #productFormSection select').forEach(el => el.value = '');
+  document.querySelectorAll('#productFormSection input[type="text"], #productFormSection input[type="number"], #productFormSection textarea, #productFormSection select').forEach(el => { if(el.id !== 'newProdCat' && el.id !== 'newProdPlatform') el.value = ''; });
   document.querySelectorAll('#productFormSection input[type="checkbox"]').forEach(el => el.checked = true); document.getElementById('newProdFeatured').checked = false;
   document.getElementById('variantsList').replaceChildren(); document.getElementById('previewCover').innerHTML = '<span>معاينة الغلاف</span>'; document.getElementById('previewBanner').innerHTML = '<span>معاينة البانر</span>'; document.getElementById('previewGallery').innerHTML = '';
 };
 
 window.renderAdminProducts = () => {
-  const list = document.getElementById('adminProductsList'); if (!list) return; list.replaceChildren();
-  window.storeState.products.forEach(p => {
+  const list = document.getElementById('adminProductsList'); 
+  const searchInput = document.getElementById('adminProductSearch');
+  if (!list) return; list.replaceChildren();
+  
+  const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  const products = window.storeState.products || [];
+
+  const filteredProds = products.filter(p => {
+      if(!searchVal) return true;
+      const title = String(p.titleAr || p.title || '').toLowerCase();
+      const id = String(p.id || '').toLowerCase();
+      return title.includes(searchVal) || id.includes(searchVal);
+  });
+
+  if (!filteredProds.length) {
+      list.innerHTML = '<p style="color:var(--text-muted); font-size:13px; text-align:center; padding:15px;">لا توجد منتجات مطابقة للبحث.</p>';
+      return;
+  }
+
+  filteredProds.forEach(p => {
     let statusText = p.isActive === false ? '<span style="color:var(--text-muted);">[مخفي]</span>' : '<span style="color:var(--success);">[مفعل]</span>';
     let featuredText = p.isFeatured ? '<span style="color:var(--accent-neon);">⭐ تثبيت</span>' : '';
-    let stockText = (p.variants && p.variants.length > 0) ? (p.variants.some(v => v.stockQuantity === undefined || v.stockQuantity > 0) ? `متاح (باقات)` : 'باقات نفذت') : (p.inStock && (p.stockQuantity === undefined || p.stockQuantity > 0) ? `متاح (${p.stockQuantity !== undefined ? p.stockQuantity : '∞'})` : 'نفذت الكمية');
+    let stockText = (p.variants && p.variants.length > 0) ? (p.variants.some(v => v.stockQuantity === undefined || v.stockQuantity === null || v.stockQuantity > 0) ? `متاح (باقات)` : 'باقات نفذت') : (p.inStock && (p.stockQuantity === undefined || p.stockQuantity === null || p.stockQuantity > 0) ? `متاح (${p.stockQuantity !== undefined && p.stockQuantity !== null ? p.stockQuantity : '∞'})` : 'نفذت الكمية');
     const title = p.titleAr || p.title || '';
     list.insertAdjacentHTML('beforeend', `<div class="admin-item-row"><span style="flex:1; line-height:1.6;">${statusText} ${featuredText} <strong>${window.sanitizeText(title)}</strong> - ${p.price}EGP <br><small><strong>المخزون:</strong> ${stockText}</small></span><div style="display:flex; gap:8px;"><button class="submit-btn" style="padding:6px 12px; font-size:12px; flex:0;" onclick="window.editProduct('${p.id}')">تعديل</button><button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button></div></div>`);
   });
 };
 
-window.deleteProduct = async (id) => { if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return window.showToast('غير مصرح', 'error'); try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); window.showToast('تم الحذف', 'success'); } catch (e) { window.showToast('فشل الحذف', 'error'); } };
+window.deleteProduct = async (id) => { if (!window.checkIsAdmin() || !confirm('تأكيد الحذف؟')) return window.showToast('غير مصرح', 'error'); try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vault', id)); window.showToast('تم الحذف', 'success'); } catch (e) { window.showToast('فشل الحذف', 'error'); } };
+
 window.addSlide = async () => { 
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح!', 'error');
   const title = document.getElementById('slideTitleInput').value.trim(), desc = document.getElementById('slideDescInput').value.trim(), link = document.getElementById('slideLinkInput').value.trim(), fileInput = document.getElementById('slideImgFileInput');
@@ -507,14 +641,11 @@ window.addSlide = async () => {
   const btn = document.getElementById('saveSlideBtn'); const origText = btn.textContent; btn.textContent = 'جاري الإضافة ⏳...'; btn.disabled = true;
   try { const imgUrl = await window.uploadImageToImgBB(fileInput.files[0]); if (!imgUrl) throw new Error("فشل الرفع"); const slides = window.storeState.slides ? [...window.storeState.slides] : []; slides.push({ title, desc, link, imgUrl }); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true }); window.showToast('تمت الإضافة!', 'success'); document.getElementById('slideTitleInput').value = ''; document.getElementById('slideDescInput').value = ''; document.getElementById('slideLinkInput').value = ''; document.getElementById('slideImgFileInput').value = ''; window.storeState.slides = slides; window.renderAdminSlides(); window.renderPromoSlider(); } catch(e) { window.showToast('فشل الإضافة', 'error'); } finally { btn.textContent = origText; btn.disabled = false; }
 };
+
 window.deleteSlide = async (idx) => { if (!window.checkIsAdmin()) return; try { const slides = [...window.storeState.slides]; slides.splice(idx, 1); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true }); window.storeState.slides = slides; window.renderAdminSlides(); window.renderPromoSlider(); window.showToast('تم الحذف', 'success'); } catch(e) {} };
+
 window.renderAdminSlides = () => { const list = document.getElementById('adminSlidesList'); if(list) { if (!window.storeState.slides || window.storeState.slides.length === 0) { list.innerHTML = '<div style="background: rgba(255,204,0,0.1); border: 1px solid #ffcc00; padding: 15px; border-radius: 8px; color: #ffcc00; text-align: center; font-size: 13px; margin-top:15px;">⚠️ السلايدر فارغ!</div>'; } else { list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row"><span style="flex:1;"><strong>${window.sanitizeText(s.title)}</strong><br><small style="color:var(--accent-neon);">${s.link ? '🔗 ' + window.sanitizeText(s.link) : 'بدون توجيه'}</small></span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); } } };
-window.renderAdminUsers = () => {
-    const list = document.getElementById('adminUsersList'); if(!list) return;
-    const users = window.storeState.users || [];
-    if (!users.length) { list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:20px;">لا يوجد مستخدمين مسجلين حتى الآن.</p>'; return; }
-    list.innerHTML = users.map(u => `<div class="admin-item-row" style="display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:var(--accent-neon);">${window.sanitizeText(u.name || 'مستخدم')}</strong><br><small style="color:var(--text-muted);">${window.sanitizeText(u.email || '')}</small></div><small style="color:var(--text-muted);">${window.formatDate(u.createdAt)}</small></div>`).join('');
-};
 
 window.saveGeneralSettings = async () => { if (!window.checkIsAdmin()) return window.showToast('غير مصرح!', 'error'); try { const rates = { SAR: Number(document.getElementById('admRateSAR').value), AED: Number(document.getElementById('admRateAED').value), USD: Number(document.getElementById('admRateUSD').value) }; const payments = { instapay: document.getElementById('admInstapay').value, vodafone: document.getElementById('admVodafone').value, orange: document.getElementById('admOrange').value, cryptoTRC20: document.getElementById('admCryptoTRC20').value, cryptoBEP20: document.getElementById('admCryptoBEP20').value }; const whatsapp = document.getElementById('admWhatsapp').value; const promos = []; document.querySelectorAll('#promosList .promo-row').forEach(row => { const code = row.querySelector('.promo-code').value.trim(); const discount = Number(row.querySelector('.promo-disc').value); const expiry = row.querySelector('.promo-exp').value; const productId = row.querySelector('.promo-prod').value.trim(); if(code && discount > 0) promos.push({ code, discount, expiry, productId }); }); const bannerAr = document.getElementById('admBannerAr').value; const bannerExpiry = document.getElementById('admBannerExpiry').value; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { rates, payments, promos, whatsapp, bannerAr, bannerExpiry }, { merge: true }); window.showToast('تم حفظ الإعدادات!', 'success'); } catch(e) { window.showToast('خطأ في الحفظ', 'error'); } };
+
 window.saveSeoSettings = async () => { if (!window.checkIsAdmin()) return window.showToast('غير مصرح!', 'error'); try { const seo = { title: document.getElementById('seoTitle').value.trim(), desc: document.getElementById('seoDesc').value.trim(), keywords: document.getElementById('seoKeywords').value.trim() }; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { seo }, { merge: true }); window.showToast('✅ تم حفظ السيو!', 'success'); if(seo.title) { document.getElementById('metaTitle').textContent = seo.title; document.getElementById('metaOgTitle').content = seo.title; } if(seo.desc) { document.getElementById('metaDesc').content = seo.desc; document.getElementById('metaOgDesc').content = seo.desc; } if(seo.keywords) document.getElementById('metaKeywords').content = seo.keywords; } catch (e) { window.showToast('خطأ في الحفظ', 'error'); } };
