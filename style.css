@@ -89,6 +89,7 @@ body:after {
   text-align: center; 
   width: 100%;
   animation: slideDown .3s ease forwards; 
+  pointer-events: auto;
 }
 
 .toast-msg.error { 
@@ -180,6 +181,7 @@ body:after {
   transition: all 0.3s; 
   padding: 5px 0; 
   position: relative; 
+  text-decoration: none;
 }
 
 .nav-link:hover, .nav-link.active { 
@@ -951,7 +953,7 @@ html[dir="rtl"] .search-input {
   box-shadow: 0 15px 40px rgba(0,0,0,0.5); 
 }
 
-/* التحديث: صندوق الصورة التفاعلي */
+/* صندوق الصورة التفاعلي */
 .interactive-main-box {
   position: relative;
   background: #060609;
@@ -1090,6 +1092,15 @@ html[dir="rtl"] .right-arrow { right: auto; left: 15px; transform: translateY(-5
   color: var(--accent-neon);
   border-color: var(--accent-neon);
   box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* تنسيق بوكس عرض الباندل الجديد */
+.bundle-offer-box {
+  background: linear-gradient(135deg, rgba(181, 0, 255, 0.08) 0%, rgba(0, 242, 255, 0.05) 100%);
+  border: 1px dashed var(--accent-purple);
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
 }
 
 @keyframes shakeAlert {
