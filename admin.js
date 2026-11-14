@@ -5,8 +5,11 @@ import { doc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp, runTran
 const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
 window.tempGalleryUrls = [];
 
-window.uploadImageToImgBB = async (file) => {
-    if (!window.checkIsAdmin()) { window.showToast('غير مصرح برفع الصور!', 'error'); return null; }
+window.uploadImageToImgBB = async (file, isCustomer = false) => {
+    if (!isCustomer && (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID)) { 
+        window.showToast('غير مصرح برفع الصور!', 'error'); 
+        return null; 
+    }
     const formData = new FormData(); formData.append('image', file);
     try {
         const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
@@ -129,6 +132,15 @@ window.injectAdminDashboard = () => {
             <button type="button" class="submit-btn" style="background:transparent; border:1px dashed var(--accent-neon); color:var(--accent-neon); width:100%;" onclick="window.addVariantInput()">+ إضافة باقة / نسخة جديدة</button>
         </div>
 
+        <!-- 🎁 قسم إعداد عروض الباندل (Bundle) للأدمن -->
+        <div class="admin-sub-section" style="border-color: var(--accent-purple);">
+            <h5 style="color: var(--accent-purple);">🎁 إعداد عرض الباندل المزدوج (Bundle Deal)</h5>
+            <div class="grid-2">
+                <div class="form-group"><label>ID المنتج الثاني المرتبط بالعرض</label><input type="text" id="newProdBundleId" placeholder="مثال: 174000123"></div>
+                <div class="form-group"><label>نسبة الخصم المشترك (%)</label><input type="number" id="newProdBundleDiscount" placeholder="مثال: 15"></div>
+            </div>
+        </div>
+
         <div class="admin-sub-section">
             <h5>📦 التوصيل والاستلام</h5>
             <div class="toggle-row" style="margin-bottom:15px;"><label class="switch"><input type="checkbox" id="newProdRequireData" checked><span class="slider"></span></label><span>يطلب بيانات العميل (آيدي/إيميل) وقت الدفع</span></div>
@@ -140,7 +152,7 @@ window.injectAdminDashboard = () => {
                 </div>
                 <div class="form-group"><label>رابط تسليم خارجي (للبرامج)</label><input type="text" id="newProdExternalLink" placeholder="https://..."></div>
             </div>
-            <div class="form-group" style="margin-bottom:0;"><label>🏦 الخزنة العامة (للمنتج بدون باقات)</label><textarea id="newProdVault" style="font-family: monospace; direction: ltr;" rows="3" placeholder="كود في كل سطر..."></textarea></div>
+            <div class="form-group" style="margin-bottom:0;"><label>🏦 خزنة الأكواد السرية المعزولة (كود في كل سطر)</label><textarea id="newProdVault" style="font-family: monospace; direction: ltr;" rows="3" placeholder="أكواد التفعيل هنا..."></textarea></div>
         </div>
 
         <div class="admin-sub-section">
@@ -186,7 +198,7 @@ window.injectAdminDashboard = () => {
     <div id="tab-settings" class="tab-content">
       <div class="admin-section" style="border-color: var(--accent-neon); background: rgba(0,242,255,0.02);"><h4 style="color: var(--accent-neon);">🎁 إعدادات الكوبونات الديناميكية</h4><div id="promosList" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 15px;"></div><button type="button" class="submit-btn" style="background:transparent; border:1px dashed var(--accent-neon); color:var(--accent-neon); width:100%;" onclick="window.addPromoInput()">+ إضافة كوبون جديد</button></div>
       <div class="admin-section"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h4 style="margin:0;">💱 أسعار الصرف</h4><button type="button" id="autoCurrencyBtn" onclick="window.autoUpdateCurrencies()" class="submit-btn" style="padding:6px 12px; font-size:12px;">تحديث 🔄</button></div><div class="grid-2"><div class="form-group"><label>SAR</label><input type="number" step="0.001" id="admRateSAR"></div><div class="form-group"><label>AED</label><input type="number" step="0.001" id="admRateAED"></div><div class="form-group"><label>USD</label><input type="number" step="0.0001" id="admRateUSD"></div></div></div>
-      <div class="admin-section"><h4>📢 الدفع والواتساب</h4><div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div><div class="grid-2"><div class="form-group"><label>إنستا باي</label><input type="text" id="admInstapay"></div><div class="form-group"><label>فودافون كاش</label><input type="text" id="admVodafone"></div><div class="form-group"><label>USDT (TRC20)</label><input type="text" id="admCryptoTRC20"></div><div class="form-group"><label>USDT (BEP20)</label><input type="text" id="admCryptoBEP20"></div></div><button type="button" id="saveConfigBtn" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ الإعدادات</button></div>
+      <div class="admin-section"><h4>📢 الدفع والواتساب</h4><div class="form-group"><label>رقم الواتساب</label><input type="text" id="admWhatsapp"></div><div class="grid-2"><div class="form-group"><label>إنستا باي</label><input type="text" id="admInstapay"></div><div class="form-group"><label>فودافون كاش</label><input type="text" id="admVodafone"></div><div class="form-group"><label>أورنج كاش</label><input type="text" id="admOrange"></div><div class="form-group"><label>USDT (TRC20)</label><input type="text" id="admCryptoTRC20"></div><div class="form-group"><label>USDT (BEP20)</label><input type="text" id="admCryptoBEP20"></div></div><button type="button" id="saveConfigBtn" class="submit-btn" style="width:100%; margin-top:15px;" onclick="window.saveGeneralSettings()">💾 حفظ الإعدادات</button></div>
     </div>
     
     <div id="tab-seo" class="tab-content"><div class="admin-section"><h4>🔍 مدير السيو (SEO)</h4><div class="form-group"><label>عنوان الموقع</label><input type="text" id="seoTitle"></div><div class="form-group"><label>الوصف</label><textarea id="seoDesc" rows="3"></textarea></div><div class="form-group"><label>كلمات مفتاحية</label><textarea id="seoKeywords" rows="2"></textarea></div><button type="button" class="submit-btn" style="width:100%;" onclick="window.saveSeoSettings()">💾 حفظ</button></div></div>
@@ -201,8 +213,9 @@ window.loadAdminData = () => {
   setVal('admBannerAr', s.bannerAr); setVal('admBannerExpiry', s.bannerExpiry); setVal('admWhatsapp', s.whatsapp);
   if (s.heroConfig) { setVal('heroTitleAr', s.heroConfig.titleAr); setVal('heroTitleEn', s.heroConfig.titleEn); setVal('heroDescAr', s.heroConfig.descAr); setVal('heroDescEn', s.heroConfig.descEn); setVal('heroBtnAr', s.heroConfig.btnTextAr); setVal('heroBtnEn', s.heroConfig.btnTextEn); }
   const promosList = document.getElementById('promosList'); if (promosList) { promosList.replaceChildren(); if (s.promos) s.promos.forEach(p => window.addPromoInput(p)); }
-  if (s.payments) { setVal('admInstapay', s.payments.instapay); setVal('admVodafone', s.payments.vodafone); setVal('admCryptoTRC20', s.payments.cryptoTRC20); setVal('admCryptoBEP20', s.payments.cryptoBEP20); }
+  if (s.payments) { setVal('admInstapay', s.payments.instapay); setVal('admVodafone', s.payments.vodafone); setVal('admOrange', s.payments.orange); setVal('admCryptoTRC20', s.payments.cryptoTRC20); setVal('admCryptoBEP20', s.payments.cryptoBEP20); }
   if (s.rates) { setVal('admRateSAR', s.rates.SAR); setVal('admRateAED', s.rates.AED); setVal('admRateUSD', s.rates.USD); }
+  if (s.seo) { setVal('seoTitle', s.seo.title); setVal('seoDesc', s.seo.desc); setVal('seoKeywords', s.seo.keywords); }
   window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminSlides(); window.renderAdminStats();
 };
 
@@ -316,7 +329,6 @@ window.deleteAdminOrder = async (orderId) => {
   } catch(e) { window.showToast('فشل الحذف', 'error'); } 
 };
 
-// 🛡️ [إصلاح الثغرة رقم 1]: تسليم أكواد الخزنة الصحيحة حسب الباقة
 window.updateOrderStatus = async (orderId, status) => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
@@ -330,7 +342,6 @@ window.updateOrderStatus = async (orderId, status) => {
         await updateDoc(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
         window.showToast('تم التحديث والإلغاء!', 'success');
     } else if (status === 'completed' && order) {
-
         let multiCodesArr = [];
         let itemsList = order.items ? order.items : (order.productIds ? order.productIds.map(id => ({ id })) : []);
 
@@ -380,7 +391,7 @@ window.updateOrderStatus = async (orderId, status) => {
                 }
                 if (multiCodesArr.length > 0) codeToDeliver = multiCodesArr.join(' || ');
             }
-            transaction.update(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
+            transaction.update(orderRef, { status, deliveredCode: codeToDeliver, seen: false, updatedAt: serverTimestamp() });
         });
         window.showToast('تم التحديث وتسليم الكود!', 'success');
     }
@@ -407,6 +418,11 @@ window.saveProduct = async () => {
   const stockQuantity = document.getElementById('newProdStock').value ? Number(document.getElementById('newProdStock').value) : undefined;
   let deliveryTime = document.getElementById('newProdDeliveryTime').value;
   const externalLink = document.getElementById('newProdExternalLink').value.trim(), vaultCodes = document.getElementById('newProdVault').value || '';
+  
+  // حقول الباندل الجديدة
+  const bundleProductId = document.getElementById('newProdBundleId').value.trim();
+  const bundleDiscount = Number(document.getElementById('newProdBundleDiscount').value) || 0;
+
   let qiAccount = document.getElementById('qiAccountCustom').value, qiWarranty = document.getElementById('qiWarrantyCustom').value, qiRegion = document.getElementById('qiRegionCustom').value;
   const quickInfo = { accountAr: qiAccount.split('|')[0]?.trim() || '', accountEn: qiAccount.split('|')[1]?.trim() || qiAccount, warrantyAr: qiWarranty.split('|')[0]?.trim() || '', warrantyEn: qiWarranty.split('|')[1]?.trim() || qiWarranty, regionAr: qiRegion.split('|')[0]?.trim() || '', regionEn: qiRegion.split('|')[1]?.trim() || qiRegion };
   const trailerUrl = document.getElementById('newProdTrailer').value.trim();
@@ -435,7 +451,7 @@ window.saveProduct = async () => {
     const galleryInput = document.getElementById('newProdGallery');
     if (galleryInput && galleryInput.files.length > 0) { for (let i = 0; i < galleryInput.files.length; i++) { const url = await window.uploadImageToImgBB(galleryInput.files[i]); if (url) gallery.push(url); } }
 
-    const prodData = { isActive, isFeatured, requireData, titleAr, titleEn, category, platform, tags, price, oldPrice, inStock: stockQuantity === undefined || stockQuantity > 0, stockQuantity, deliveryTime, externalLink, vaultCodes, quickInfo, trailerUrl, imgUrl, bannerUrl, gallery, descAr, descEn, reqAr, reqEn, faqText, badgeAr, badgeEn, crossSellIds, variants };
+    const prodData = { isActive, isFeatured, requireData, titleAr, titleEn, category, platform, tags, price, oldPrice, inStock: stockQuantity === undefined || stockQuantity > 0, stockQuantity, deliveryTime, externalLink, vaultCodes, bundleProductId, bundleDiscount, quickInfo, trailerUrl, imgUrl, bannerUrl, gallery, descAr, descEn, reqAr, reqEn, faqText, badgeAr, badgeEn, crossSellIds, variants };
 
     if (window.editingProductId) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); window.showToast('✏️ تم التعديل!', 'success'); } 
     else { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', Date.now().toString()), prodData); window.showToast('📦 تمت الإضافة بنجاح!', 'success'); }
@@ -451,6 +467,7 @@ window.editProduct = (id) => {
   setVal('newProdCat', p.category || 'games'); setVal('newProdPlatform', p.platform); setVal('newProdTags', p.tags ? p.tags.join(', ') : '');
   setVal('newProdPrice', p.price); setVal('newProdOldPrice', p.oldPrice); setVal('newProdStock', p.stockQuantity !== undefined ? p.stockQuantity : '');
   setVal('newProdDeliveryTime', p.deliveryTime); setVal('newProdExternalLink', p.externalLink); setVal('newProdVault', p.vaultCodes); setVal('newProdTrailer', p.trailerUrl);
+  setVal('newProdBundleId', p.bundleProductId); setVal('newProdBundleDiscount', p.bundleDiscount);
   setVal('newProdDescAr', p.descAr); setVal('newProdDescEn', p.descEn); setVal('newProdReqAr', p.reqAr); setVal('newProdReqEn', p.reqEn);
   setVal('newProdFaq', p.faqText); setVal('newProdBadgeAr', p.badgeAr); setVal('newProdBadgeEn', p.badgeEn); setVal('newProdCrossSell', p.crossSellIds ? p.crossSellIds.join(', ') : '');
   if(p.quickInfo) { setVal('qiAccountCustom', (p.quickInfo.accountAr || '') + (p.quickInfo.accountEn ? ' | ' + p.quickInfo.accountEn : '')); setVal('qiWarrantyCustom', (p.quickInfo.warrantyAr || '') + (p.quickInfo.warrantyEn ? ' | ' + p.quickInfo.warrantyEn : '')); setVal('qiRegionCustom', (p.quickInfo.regionAr || '') + (p.quickInfo.regionEn ? ' | ' + p.quickInfo.regionEn : '')); }
@@ -492,5 +509,12 @@ window.addSlide = async () => {
 };
 window.deleteSlide = async (idx) => { if (!window.checkIsAdmin()) return; try { const slides = [...window.storeState.slides]; slides.splice(idx, 1); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { slides }, { merge: true }); window.storeState.slides = slides; window.renderAdminSlides(); window.renderPromoSlider(); window.showToast('تم الحذف', 'success'); } catch(e) {} };
 window.renderAdminSlides = () => { const list = document.getElementById('adminSlidesList'); if(list) { if (!window.storeState.slides || window.storeState.slides.length === 0) { list.innerHTML = '<div style="background: rgba(255,204,0,0.1); border: 1px solid #ffcc00; padding: 15px; border-radius: 8px; color: #ffcc00; text-align: center; font-size: 13px; margin-top:15px;">⚠️ السلايدر فارغ!</div>'; } else { list.innerHTML = window.storeState.slides.map((s,i) => `<div class="admin-item-row"><span style="flex:1;"><strong>${window.sanitizeText(s.title)}</strong><br><small style="color:var(--accent-neon);">${s.link ? '🔗 ' + window.sanitizeText(s.link) : 'بدون توجيه'}</small></span><button class="delete-btn" onclick="window.deleteSlide(${i})">حذف 🗑️</button></div>`).join(''); } } };
-window.saveGeneralSettings = async () => { if (!window.checkIsAdmin()) return window.showToast('غير مصرح!', 'error'); try { const rates = { SAR: Number(document.getElementById('admRateSAR').value), AED: Number(document.getElementById('admRateAED').value), USD: Number(document.getElementById('admRateUSD').value) }; const payments = { instapay: document.getElementById('admInstapay').value, vodafone: document.getElementById('admVodafone').value, cryptoTRC20: document.getElementById('admCryptoTRC20').value, cryptoBEP20: document.getElementById('admCryptoBEP20').value }; const whatsapp = document.getElementById('admWhatsapp').value; const promos = []; document.querySelectorAll('#promosList .promo-row').forEach(row => { const code = row.querySelector('.promo-code').value.trim(); const discount = Number(row.querySelector('.promo-disc').value); const expiry = row.querySelector('.promo-exp').value; const productId = row.querySelector('.promo-prod').value.trim(); if(code && discount > 0) promos.push({ code, discount, expiry, productId }); }); const bannerAr = document.getElementById('admBannerAr').value; const bannerExpiry = document.getElementById('admBannerExpiry').value; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { rates, payments, promos, whatsapp, bannerAr, bannerExpiry }, { merge: true }); window.showToast('تم حفظ الإعدادات!', 'success'); } catch(e) { window.showToast('خطأ في الحفظ', 'error'); } };
+window.renderAdminUsers = () => {
+    const list = document.getElementById('adminUsersList'); if(!list) return;
+    const users = window.storeState.users || [];
+    if (!users.length) { list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:20px;">لا يوجد مستخدمين مسجلين حتى الآن.</p>'; return; }
+    list.innerHTML = users.map(u => `<div class="admin-item-row" style="display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:var(--accent-neon);">${window.sanitizeText(u.name || 'مستخدم')}</strong><br><small style="color:var(--text-muted);">${window.sanitizeText(u.email || '')}</small></div><small style="color:var(--text-muted);">${window.formatDate(u.createdAt)}</small></div>`).join('');
+};
+
+window.saveGeneralSettings = async () => { if (!window.checkIsAdmin()) return window.showToast('غير مصرح!', 'error'); try { const rates = { SAR: Number(document.getElementById('admRateSAR').value), AED: Number(document.getElementById('admRateAED').value), USD: Number(document.getElementById('admRateUSD').value) }; const payments = { instapay: document.getElementById('admInstapay').value, vodafone: document.getElementById('admVodafone').value, orange: document.getElementById('admOrange').value, cryptoTRC20: document.getElementById('admCryptoTRC20').value, cryptoBEP20: document.getElementById('admCryptoBEP20').value }; const whatsapp = document.getElementById('admWhatsapp').value; const promos = []; document.querySelectorAll('#promosList .promo-row').forEach(row => { const code = row.querySelector('.promo-code').value.trim(); const discount = Number(row.querySelector('.promo-disc').value); const expiry = row.querySelector('.promo-exp').value; const productId = row.querySelector('.promo-prod').value.trim(); if(code && discount > 0) promos.push({ code, discount, expiry, productId }); }); const bannerAr = document.getElementById('admBannerAr').value; const bannerExpiry = document.getElementById('admBannerExpiry').value; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { rates, payments, promos, whatsapp, bannerAr, bannerExpiry }, { merge: true }); window.showToast('تم حفظ الإعدادات!', 'success'); } catch(e) { window.showToast('خطأ في الحفظ', 'error'); } };
 window.saveSeoSettings = async () => { if (!window.checkIsAdmin()) return window.showToast('غير مصرح!', 'error'); try { const seo = { title: document.getElementById('seoTitle').value.trim(), desc: document.getElementById('seoDesc').value.trim(), keywords: document.getElementById('seoKeywords').value.trim() }; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), { seo }, { merge: true }); window.showToast('✅ تم حفظ السيو!', 'success'); if(seo.title) { document.getElementById('metaTitle').textContent = seo.title; document.getElementById('metaOgTitle').content = seo.title; } if(seo.desc) { document.getElementById('metaDesc').content = seo.desc; document.getElementById('metaOgDesc').content = seo.desc; } if(seo.keywords) document.getElementById('metaKeywords').content = seo.keywords; } catch (e) { window.showToast('خطأ في الحفظ', 'error'); } };
