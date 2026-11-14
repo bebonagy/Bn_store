@@ -1,7 +1,7 @@
 // auth.js
 import { auth, db, appId, ADMIN_UID } from './firebase-config.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { setDoc, getDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { setDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export let currentUserProfile = null;
 export const checkIsAdmin = () => Boolean(auth.currentUser && auth.currentUser.uid === ADMIN_UID);
@@ -17,45 +17,31 @@ const hashOTP = async (otp, email) => {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-export const initAuth = (translations, getCurrentLang, onUserChangeCallback) => {
-  const getLang = () => (typeof getCurrentLang === 'function' ? getCurrentLang() : getCurrentLang) || 'ar';
-
+export const initAuth = (translations, currentLang, onUserChangeCallback) => {
+  
+  // 🛡️ [إصلاح مشكلة ضياع المفضلة]: جلب بيانات المستخدم كاملة من Firestore (بما فيها الـ wishlist) عند تسجيل الدخول
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      let wishlist = [];
-      let dbName = user.displayName || 'مستخدم';
-      let language = null;
-
+      let userData = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم', photoURL: user.photoURL || '', wishlist: [] };
       try {
-        const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const uData = userSnap.data();
-          wishlist = Array.isArray(uData.wishlist) ? uData.wishlist : [];
-          if (uData.name) dbName = uData.name;
-          if (uData.language) language = uData.language;
+        const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          userData = { ...userData, ...data, name: data.name || user.displayName || 'مستخدم' };
         } else {
-          // إنشاء مستند للمستخدم تلقائياً إذا لم يكن موجوداً لضمان عمل المفضلة بدون أخطاء
-          await setDoc(userRef, {
-            uid: user.uid,
-            name: dbName,
-            email: user.email || '',
+          await setDoc(userDocRef, { 
+            uid: user.uid, 
+            name: user.displayName || 'مستخدم', 
+            email: user.email, 
             wishlist: [],
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp() 
           }, { merge: true });
         }
       } catch (err) {
-        console.warn("User profile fetch warning:", err);
+        console.error("Error fetching user profile:", err);
       }
-
-      currentUserProfile = { 
-        uid: user.uid, 
-        email: user.email, 
-        name: dbName, 
-        photoURL: user.photoURL || '',
-        wishlist,
-        language
-      };
+      currentUserProfile = userData;
       if (onUserChangeCallback) onUserChangeCallback(user, currentUserProfile);
     } else {
       currentUserProfile = null;
@@ -98,19 +84,12 @@ export const initAuth = (translations, getCurrentLang, onUserChangeCallback) => 
   document.getElementById('doLoginBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value.trim(), pass = document.getElementById('loginPass').value;
     if (!email || !pass) return window.showToast('أدخل البريد وكلمة المرور!', 'error');
-    const btn = document.getElementById('doLoginBtn');
-    const origText = btn.textContent;
-    btn.textContent = 'جاري الدخول ⏳...';
-    btn.disabled = true;
     try { 
         await signInWithEmailAndPassword(auth, email, pass); 
         authModal.style.display = 'none'; 
         window.showToast('تم تسجيل الدخول بنجاح!', 'success'); 
     } catch (e) { 
         window.showToast('البيانات غير صحيحة!', 'error'); 
-    } finally {
-        btn.textContent = origText;
-        btn.disabled = false;
     }
   });
 
@@ -126,7 +105,7 @@ export const initAuth = (translations, getCurrentLang, onUserChangeCallback) => 
     e.preventDefault();
     document.getElementById('authViewReset').style.display = 'none';
     document.getElementById('authViewLogin').style.display = 'block';
-    document.getElementById('authModalTitle').textContent = translations[getLang()].auth_title;
+    document.getElementById('authModalTitle').textContent = translations[currentLang].auth_title;
   });
 
   document.getElementById('doSendResetBtn')?.addEventListener('click', async () => {
@@ -137,24 +116,12 @@ export const initAuth = (translations, getCurrentLang, onUserChangeCallback) => 
       window.showToast('✉️ تم إرسال رابط استعادة كلمة المرور بنجاح!', 'success');
       document.getElementById('authViewReset').style.display = 'none';
       document.getElementById('authViewLogin').style.display = 'block';
-      document.getElementById('authModalTitle').textContent = translations[getLang()].auth_title;
+      document.getElementById('authModalTitle').textContent = translations[currentLang].auth_title;
     } catch(err) { window.showToast('حدث خطأ، تأكد من صحة البريد.', 'error'); }
   });
 
-  document.getElementById('showRegisterBtn')?.addEventListener('click', (e) => { 
-    e.preventDefault();
-    document.getElementById('authViewLogin').style.display = 'none'; 
-    document.getElementById('authViewRegister').style.display = 'block'; 
-    document.getElementById('authModalTitle').textContent = translations[getLang()].create_account; 
-  });
-  
-  document.getElementById('showLoginBtn')?.addEventListener('click', (e) => { 
-    e.preventDefault();
-    document.getElementById('authViewLogin').style.display = 'block'; 
-    document.getElementById('authViewRegister').style.display = 'none'; 
-    document.getElementById('authViewOTP').style.display = 'none'; 
-    document.getElementById('authModalTitle').textContent = translations[getLang()].btn_login; 
-  });
+  document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; document.getElementById('authModalTitle').textContent = translations[currentLang].create_account; });
+  document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'block'; document.getElementById('authViewRegister').style.display = 'none'; document.getElementById('authViewOTP').style.display = 'none'; document.getElementById('authModalTitle').textContent = translations[currentLang].btn_login; });
   
   document.getElementById('backToRegFromOTP')?.addEventListener('click', () => { 
     sessionStorage.removeItem('bn_temp_reg'); 
@@ -162,7 +129,6 @@ export const initAuth = (translations, getCurrentLang, onUserChangeCallback) => 
     document.getElementById('authViewOTP').style.display = 'none'; 
     document.getElementById('authViewRegister').style.display = 'block'; 
     
-    // إعادة إخفاء حقل الاستعادة عند التراجع
     document.getElementById('recoveryPassGroup').style.display = 'none';
     document.getElementById('regPassRecovery').value = '';
     const msgDisplay = document.getElementById('otpMessageDisplay');
@@ -175,7 +141,6 @@ export const initAuth = (translations, getCurrentLang, onUserChangeCallback) => 
   document.getElementById('doRegisterBtn')?.addEventListener('click', async () => {
     const name = document.getElementById('regName').value.trim(), email = document.getElementById('regEmail').value.trim(), pass = document.getElementById('regPass').value;
     if (!name || !email || !pass) return window.showToast('أكمل جميع البيانات!', 'error');
-    if (pass.length < 6) return window.showToast('كلمة المرور يجب أن تكون 6 أحرف على الأقل!', 'error');
     if (pass !== document.getElementById('regPassConfirm').value) return window.showToast('كلمة المرور غير متطابقة!', 'error');
     
     const btn = document.getElementById('doRegisterBtn'); const origText = btn.textContent;
@@ -251,11 +216,11 @@ export const initAuth = (translations, getCurrentLang, onUserChangeCallback) => 
       });
       
       document.getElementById('authModal').style.display = 'none'; 
-      window.showToast('🎉 تم إنشاء الحساب وتفعيله بنجاح!', 'success');
+      window.showToast('🎉 تم إنشاء الحساب وتفعليه بنجاح!', 'success');
       
       if (typeof emailjs !== 'undefined') {
         const welcomeMessage = `حسابك دلوقتي جاهز ومفعل بنجاح.<br>تقدر تتصفح أحدث العروض، وتضيف منتجاتك المفضلة، وتتابع طلباتك بكل سهولة وأمان.<br><br><div class="btn-container"><a href="https://bn-max.com" class="btn">تصفح العروض الآن 🚀</a></div>`;
-        emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: tempRegistrationData.name, to_email: tempRegistrationData.email, custom_message: welcomeMessage }).catch(() => {});
+        emailjs.send("service_01wl99f", "template_gx1ra8k", { to_name: tempRegistrationData.name, to_email: tempRegistrationData.email, custom_message: welcomeMessage }).catch(err => console.log("Welcome Email Error"));
       }
       
       sessionStorage.removeItem('bn_temp_reg'); 
