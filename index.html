@@ -3,29 +3,126 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title id="metaTitle">BN MAX | Digital Marketplace</title>
+<title id="metaTitle">BN MAX | متجر الخدمات الرقمية وشحن الألعاب ومفاتيح التفعيل</title>
 
-<!-- 🌐 تخصيص روابط المشاركة (Open Graph SEO) -->
+<!-- 🚀 تسريع فتح الموقع لأول مرة (Preconnect & DNS-Prefetch) -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+<link rel="dns-prefetch" href="https://i.ibb.co">
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link rel="dns-prefetch" href="https://upload.wikimedia.org">
+<link rel="canonical" id="canonicalLink" href="https://bn-max.com/">
+
+<!-- 🌐 تخصيص روابط المشاركة (Open Graph & Twitter Cards SEO) -->
 <meta property="og:title" id="metaOgTitle" content="BN MAX | Digital Marketplace">
-<meta property="og:description" id="metaOgDesc" content="وجهتك الأولى لشحن الألعاب، والخدمات الرقمية بأفضل وأرخص الأسعار.">
-<meta property="og:image" content="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200">
-<meta property="og:url" content="https://bn-max.com/">
+<meta property="og:description" id="metaOgDesc" content="وجهتك الأولى لشحن الألعاب، الاشتراكات، البرامج، والمفاتيح الرقمية بأفضل وأرخص الأسعار في مصر والوطن العربي.">
+<meta property="og:image" id="metaOgImage" content="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200">
+<meta property="og:url" id="metaOgUrl" content="https://bn-max.com/">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="BN MAX">
+<meta name="twitter:card" content="summary_large_image">
 
-<!-- 🛡️ سياسة أمان المحتوى (CSP) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com https://i.ibb.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com https://api.imgbb.com https://bn-store-4f0c0.firebaseapp.com; frame-src 'self' https://www.youtube.com https://bn-store-4f0c0.firebaseapp.com https://*.firebaseapp.com;">
+<!-- 🛡️ سياسة أمان المحتوى المحدثة (CSP) لدعم اليوتيوب وويكيبيديا بالكامل -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://images.unsplash.com https://firebasestorage.googleapis.com https://cdn.jsdelivr.net https://api.emailjs.com https://i.ibb.co https://upload.wikimedia.org; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.emailjs.com https://open.er-api.com https://api.imgbb.com https://bn-store-4f0c0.firebaseapp.com https://www.gstatic.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://youtu.be https://bn-store-4f0c0.firebaseapp.com https://*.firebaseapp.com;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
-<meta name="description" id="metaDesc" content="BN MAX - متجرك الأفضل للخدمات الرقمية وشحن الألعاب.">
-<meta name="keywords" id="metaKeywords" content="العاب, شحن, خدمات رقمية, مفاتيح العاب, BN MAX">
+<meta name="description" id="metaDesc" content="BN MAX - متجرك الرقمي الأول لشراء الألعاب، المفاتيح الرقمية، الاشتراكات، البرامج، وبطاقات الهدايا بتسليم فوري وضمان كامل.">
+<meta name="keywords" id="metaKeywords" content="BN MAX, العاب, شحن العاب, خدمات رقمية, مفاتيح العاب, اشتراكات, برامج, بطاقات هدايا, ستيم, بلايستيشن, اكس بوكس">
+<meta name="robots" content="index, follow">
 <meta name="theme-color" content="#00f2ff">
+
+<!-- 🔍 البيانات المنظمة لجوجل (Google Sitelinks & Search Box Schema) ليظهر مثل أمازون -->
+<script type="application/ld+json" id="siteSchemaJson">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://bn-max.com/#organization",
+      "name": "BN MAX",
+      "url": "https://bn-max.com/",
+      "logo": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600",
+      "description": "وجهتك الأولى لشحن الألعاب، والخدمات الرقمية بأفضل وأرخص الأسعار.",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+201200898990",
+        "contactType": "customer service",
+        "availableLanguage": ["Arabic", "English"]
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://bn-max.com/#website",
+      "url": "https://bn-max.com/",
+      "name": "BN MAX | Digital Marketplace",
+      "publisher": { "@id": "https://bn-max.com/#organization" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://bn-max.com/?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "ItemList",
+      "name": "أقسام متجر BN MAX الرئيسية",
+      "itemListElement": [
+        {
+          "@type": "SiteNavigationElement",
+          "position": 1,
+          "name": "الألعاب (Games)",
+          "description": "أحدث ألعاب الكمبيوتر والكونسول بأرخص الأسعار",
+          "url": "https://bn-max.com/?cat=games"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 2,
+          "name": "المفاتيح الرقمية (Digital Keys)",
+          "description": "مفاتيح تفعيل أصلية للألعاب والأنظمة بتسليم فوري",
+          "url": "https://bn-max.com/?cat=keys"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 3,
+          "name": "البرامج (Software)",
+          "description": "برامج الكمبيوتر، الحماية، والتصميم والذكاء الاصطناعي",
+          "url": "https://bn-max.com/?cat=software"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 4,
+          "name": "الاشتراكات (Subscriptions)",
+          "description": "اشتراكات المنصات الترفيهية وخدمات الذكاء الاصطناعي",
+          "url": "https://bn-max.com/?cat=subs"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 5,
+          "name": "بطاقات الهدايا (Gift Cards)",
+          "description": "بطاقات شحن المتاجر والألعاب العالمية",
+          "url": "https://bn-max.com/?cat=gifts"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 6,
+          "name": "العروض والخصومات (Deals)",
+          "description": "أقوى العروض والخصومات الحصرية اليومية",
+          "url": "https://bn-max.com/?cat=deals"
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<!-- 🔍 حاوية سكيما المنتج الديناميكية (تتحدث تلقائياً عند فتح أي منتج) -->
+<script type="application/ld+json" id="productSchemaJson"></script>
 
 <link rel="stylesheet" href="style.css">
 
-<!-- 🌟 مكتبات إضافية -->
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<!-- 🛡️ تم نقل EmailJS Init لملف الجافاسكريبت لزيادة الحماية -->
+<!-- 🌟 مكتبات إضافية محملة بـ defer لعدم تعطيل سرعة فتح الموقع -->
+<script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script defer type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <!-- 🛡️ حماية ضد الـ Clickjacking -->
 <style id="antiClickjack">body{display:none !important;}</style>
@@ -52,19 +149,20 @@
         <span class="logo-sub">DIGITAL MARKETPLACE</span>
       </div>
 
-      <nav class="top-nav-links">
-        <button class="nav-link active" data-target="homeView" data-i18n="nav_home">Home</button>
-        <button class="nav-link" data-cat="games" data-i18n="nav_games">Games</button>
-        <button class="nav-link" data-cat="keys" data-i18n="nav_keys">Digital Keys</button>
-        <button class="nav-link" data-cat="software" data-i18n="nav_software">Software</button>
-        <button class="nav-link" data-cat="subs" data-i18n="nav_subs">Subscriptions</button>
-        <button class="nav-link" data-cat="gifts" data-i18n="nav_gifts">Gift Cards</button>
-        <button class="nav-link" data-cat="deals" data-i18n="nav_deals">Deals</button>
+      <!-- 🔗 تحويل أزرار التنقل إلى روابط حقيقية <a> ليقوم جوجل بفهرستها كـ Sitelinks مثل أمازون -->
+      <nav class="top-nav-links" aria-label="الأقسام الرئيسية">
+        <a href="https://bn-max.com/" class="nav-link active" data-cat="all" data-target="homeView" data-i18n="nav_home">Home</a>
+        <a href="https://bn-max.com/?cat=games" class="nav-link" data-cat="games" data-i18n="nav_games">Games</a>
+        <a href="https://bn-max.com/?cat=keys" class="nav-link" data-cat="keys" data-i18n="nav_keys">Digital Keys</a>
+        <a href="https://bn-max.com/?cat=software" class="nav-link" data-cat="software" data-i18n="nav_software">Software</a>
+        <a href="https://bn-max.com/?cat=subs" class="nav-link" data-cat="subs" data-i18n="nav_subs">Subscriptions</a>
+        <a href="https://bn-max.com/?cat=gifts" class="nav-link" data-cat="gifts" data-i18n="nav_gifts">Gift Cards</a>
+        <a href="https://bn-max.com/?cat=deals" class="nav-link" data-cat="deals" data-i18n="nav_deals">Deals</a>
       </nav>
 
       <div class="header-actions">
         <button type="button" class="share-store-btn" id="shareBtn" title="مشاركة المتجر">🔗</button>
-        <select id="currencySelect" class="currency-dropdown">
+        <select id="currencySelect" class="currency-dropdown" aria-label="اختر العملة">
           <option value="EGP">EGP</option>
           <option value="SAR">SAR</option>
           <option value="AED">AED</option>
@@ -72,7 +170,7 @@
         </select>
         <button type="button" id="langSwitchBtn" class="action-icon">🌐 EN ∨</button>
         <div id="authHeaderButtons" class="auth-header-group">
-          <button type="button" class="action-icon" id="cartBtnNav">
+          <button type="button" class="action-icon" id="cartBtnNav" aria-label="سلة المشتريات">
             🛒 <span id="cartCountBadge" class="badge" style="display:none;">0</span>
           </button>
           <button type="button" class="action-icon login-btn-nav" id="loginBtnNav">
@@ -96,14 +194,14 @@
 
   <!-- 📱 هيدر الموبايل -->
   <div class="mobile-header-wrapper" style="display: none;">
-    <button type="button" class="mobile-menu-btn" onclick="document.querySelector('.desktop-header-wrapper').classList.toggle('show-mobile-menu')">≡</button>
+    <button type="button" class="mobile-menu-btn" id="mobileMenuToggleBtn" onclick="document.querySelector('.desktop-header-wrapper').classList.toggle('show-mobile-menu')" aria-label="القائمة">≡</button>
     
     <div class="logo mobile-logo" onclick="window.navigate('home')">
       BN <span class="max-glow">MAX</span>
     </div>
     
     <div style="display:flex; gap:10px; align-items:center;">
-      <button type="button" class="action-icon mobile-cart-btn" onclick="document.getElementById('cartBtnNav').click()" style="position:relative;">
+      <button type="button" class="action-icon mobile-cart-btn" onclick="document.getElementById('cartBtnNav').click()" style="position:relative;" aria-label="السلة">
         🛒 <span id="cartCountBadgeMobile" class="badge" style="display:none;">0</span>
       </button>
     </div>
@@ -144,7 +242,7 @@
 
     <div class="section-header section-header-top">
       <h2 class="section-title"><span data-i18n="best_sellers">🔥 Best Sellers</span> <span style="font-size:12px; color:var(--text-muted); font-weight:normal; margin-inline-start: 10px;" data-i18n="best_sellers_sub">Our most popular products</span></h2>
-      <select id="sortSelect" class="search-input sort-dropdown">
+      <select id="sortSelect" class="search-input sort-dropdown" aria-label="ترتيب المنتجات">
         <option value="default" data-i18n="sort_default">الترتيب الافتراضي</option>
         <option value="price_asc" data-i18n="sort_cheap">الأرخص أولاً</option>
         <option value="price_desc" data-i18n="sort_expensive">الأغلى أولاً</option>
@@ -157,7 +255,7 @@
 
     <!-- شبكة المنتجات -->
     <div class="product-grid" id="productGrid"></div>
-    <div class="pagination-container" id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; margin-bottom: 40px;"></div>
+    <div class="pagination-container" id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; margin-bottom: 40px; flex-wrap: wrap;"></div>
 
     <section class="promo-banners-grid">
       <div class="promo-banner-card promo-banner-1">
@@ -185,7 +283,7 @@
     <div class="product-details-container" style="flex-direction: column;">
       <div class="details-main-row">
         
-        <!-- 🖼️ التحديث الجديد: قسم الصورة الرئيسية التفاعلية واليوتيوب -->
+        <!-- 🖼️ قسم الصورة الرئيسية التفاعلية واليوتيوب -->
         <div class="details-left-col">
           <div class="main-image-container interactive-main-box">
             <button type="button" id="prevGalleryBtn" class="nav-arrow left-arrow" style="display:none;">❮</button>
@@ -223,6 +321,9 @@
             <label class="variants-label" data-i18n="select_variant">اختر الباقة / النسخة:</label>
             <div id="detailVariants" class="variants-flex"></div>
           </div>
+
+          <!-- 🎁 قسم عرض الباندل الجديد (منتجين معاً بخصم خاص) -->
+          <div id="detailBundleContainer" class="bundle-offer-box" style="display:none;"></div>
 
           <!-- صندوق المعلومات السريعة -->
           <div id="detailQuickInfo" class="quick-info-container" style="display:none;">
@@ -269,7 +370,7 @@
         </div>
       </div>
 
-      <div class="related-section">
+      <div class="related-section" id="relatedSectionWrapper">
         <h3 style="color: var(--accent-neon); margin-bottom: 15px; font-size: 18px;" data-i18n="you_may_like">🔥 قد يعجبك أيضاً</h3>
         <div id="relatedProductsGrid" class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; min-height: unset; margin-bottom: 0;"></div>
       </div>
@@ -309,6 +410,7 @@
         <button class="tab-btn active" data-target="tab-dashboard">📊 الرئيسية</button>
         <button class="tab-btn" data-target="tab-orders">📦 الطلبات</button>
         <button class="tab-btn" data-target="tab-products">🛒 المنتجات</button>
+        <button class="tab-btn" data-target="tab-users">👥 المستخدمين</button>
         <button class="tab-btn" data-target="tab-settings">⚙️ الإعدادات</button>
         <button class="tab-btn" data-target="tab-seo">🔍 السيو (SEO)</button>
       </div>
@@ -318,13 +420,15 @@
   </div>
 </main>
 
-<!-- الفوتر -->
+<!-- الفوتر مع روابط الأقسام لتقوية الـ SEO الداخلي -->
 <footer class="main-footer footer-container">
   <div class="footer-links footer-links-row">
-    <a href="#" class="footer-link" data-i18n="ft_about">About Us</a>
+    <a href="https://bn-max.com/?cat=games" class="footer-link footer-cat-link" data-cat="games" data-i18n="nav_games">Games</a>
+    <a href="https://bn-max.com/?cat=keys" class="footer-link footer-cat-link" data-cat="keys" data-i18n="nav_keys">Digital Keys</a>
+    <a href="https://bn-max.com/?cat=software" class="footer-link footer-cat-link" data-cat="software" data-i18n="nav_software">Software</a>
+    <a href="https://bn-max.com/?cat=subs" class="footer-link footer-cat-link" data-cat="subs" data-i18n="nav_subs">Subscriptions</a>
+    <a href="https://bn-max.com/?cat=gifts" class="footer-link footer-cat-link" data-cat="gifts" data-i18n="nav_gifts">Gift Cards</a>
     <a href="#" id="footerContactBtn" class="footer-link" data-i18n="ft_contact">Contact</a>
-    <a href="#" class="footer-link" data-i18n="ft_terms">Terms & Conditions</a>
-    <a href="#" class="footer-link" data-i18n="ft_privacy">Privacy Policy</a>
   </div>
   <div class="copyright" style="font-size: 13px; color: var(--text-muted);">
     <span data-i18n="ft_copy">© 2026 BN MAX. All rights reserved.</span> <span style="color: var(--accent-neon); font-style: italic; margin-inline-start: 10px;" data-i18n="ft_slogan">Your Digital World... Our Mission 🚀</span>
@@ -333,7 +437,7 @@
 
 <!-- 📱 شريط التنقل السفلي للموبايل -->
 <nav class="mobile-bottom-nav" style="display: none;">
-  <button class="bottom-nav-item active" onclick="window.navigate('home'); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+  <button class="bottom-nav-item active" onclick="window.selectCategory('all', true); document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
     <span class="icon">🏠</span>
     <span class="text" data-i18n="nav_home">Home</span>
   </button>
@@ -492,7 +596,7 @@
         
         <div class="form-group"><label>رقم العملية (Transaction ID)</label><input type="text" id="transactionIdInput" required placeholder="أدخل رقم العملية لتأكيد التحويل"></div>
 
-        <!-- 🛡️ التحديث الجديد: قسم بيانات الاستلام واخد ID عشان الجافاسكريبت يتحكم فيه يخفيه أو يظهره -->
+        <!-- قسم بيانات الاستلام -->
         <div class="form-group" id="customerDataGroup">
           <label data-i18n="receive_data">بيانات الاستلام</label>
           <input type="text" id="customerData" placeholder="أدخل الآيدي أو الإيميل">
@@ -503,15 +607,15 @@
           <input type="file" id="receiptFileInput" accept="image/*" required class="file-input-styled">
           <img id="receiptPreview" loading="lazy" src="" alt="معاينة الإيصال" style="display:none; width:100%; max-height:200px; object-fit:contain; margin-top:10px; border-radius:8px; border:1px solid var(--border-color);">
         </div>
-        <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+        <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
           <button type="submit" id="confirmOrderBtn" class="submit-btn" style="flex: 1; position:relative; display:flex; justify-content:center; align-items:center; gap:8px;">
             <span id="confirmBtnText" data-i18n="btn_confirm_order">تأكيد الطلب</span>
             <span id="confirmSpinner" class="spinner" style="display:none;"></span>
           </button>
           <button type="button" class="cancel-btn close-modal-btn" style="flex: 1; margin-top: 0;" data-i18n="btn_cancel">إلغاء</button>
-           <button type="button" id="whatsappCheckoutBtn" class="submit-btn whatsapp-checkout-btn">
-           <span>💬 تأكيد وإرسال عبر الواتساب</span>
-           </button>
+          <button type="button" id="whatsappCheckoutBtn" class="submit-btn whatsapp-checkout-btn" style="flex-basis: 100%; margin-top: 5px;">
+            <span>💬 تأكيد وإرسال عبر الواتساب</span>
+          </button>
         </div>
       </form>
     </div>
