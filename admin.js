@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp,
 const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
 window.tempGalleryUrls = [];
 
-// 🛡️ [إصلاح رفع الإيصال]: يعتمد الآن بسلاسة على window.auth الذي تم ربطه في firebase-config.js
+// 🛡️ [إصلاح رفع الإيصال والصور]: يعتمد الآن بسلاسة على window.auth المعرّف في firebase-config.js
 window.uploadImageToImgBB = async (file, isReceipt = false) => {
     if (!isReceipt && !window.checkIsAdmin()) { window.showToast('غير مصرح برفع الصور!', 'error'); return null; }
     if (isReceipt && !window.auth?.currentUser) { window.showToast('يجب تسجيل الدخول لرفع الإيصال!', 'error'); return null; }
@@ -58,13 +58,13 @@ window.addVariantInput = (v = {id: '', nameAr: '', nameEn: '', price: '', oldPri
         <button type="button" class="delete-btn" onclick="this.parentElement.parentElement.remove()" style="padding: 4px 10px; font-size:11px;">حذف ✕</button>
     </div>
     <div class="grid-2">
-        <div class="form-group" style="margin-bottom:10px;"><label>الاسم (عربي)</label><input type="text" class="var-ar" placeholder="مثال: شهر" value="${v.nameAr}"></div>
-        <div class="form-group" style="margin-bottom:10px;"><label>الاسم (En)</label><input type="text" class="var-en" placeholder="1 Month" value="${v.nameEn}"></div>
+        <div class="form-group" style="margin-bottom:10px;"><label>الاسم (عربي)</label><input type="text" class="var-ar" placeholder="مثال: شهر" value="${window.sanitizeText(v.nameAr, 100)}"></div>
+        <div class="form-group" style="margin-bottom:10px;"><label>الاسم (En)</label><input type="text" class="var-en" placeholder="1 Month" value="${window.sanitizeText(v.nameEn, 100)}"></div>
         <div class="form-group" style="margin-bottom:10px;"><label>السعر (EGP)</label><input type="number" class="var-price" value="${v.price}"></div>
         <div class="form-group" style="margin-bottom:10px;"><label>السعر القديم (اختياري)</label><input type="number" class="var-old" placeholder="لعمل خصم" value="${v.oldPrice || ''}"></div>
         <div class="form-group" style="margin-bottom:10px;"><label>الكمية (اختياري)</label><input type="number" class="var-stock" placeholder="غير محدود" value="${v.stockQuantity !== undefined && v.stockQuantity !== null ? v.stockQuantity : ''}"></div>
     </div>
-    <div class="form-group" style="margin-bottom:0;"><label>🏦 خزنة الأكواد الخاصة بالباقة (كود في كل سطر)</label><textarea class="var-vault" style="font-family: monospace; direction: ltr; background: rgba(0,0,0,0.5);" rows="2" placeholder="أكواد هذه الباقة فقط...">${v.vaultCodes || ''}</textarea></div>
+    <div class="form-group" style="margin-bottom:0;"><label>🏦 خزنة الأكواد الخاصة بالباقة (كود في كل سطر)</label><textarea class="var-vault" style="font-family: monospace; direction: ltr; background: rgba(0,0,0,0.5);" rows="2" placeholder="أكواد هذه الباقة فقط...">${window.sanitizeText(v.vaultCodes || '', 50000)}</textarea></div>
   `;
   list.appendChild(div);
 };
@@ -73,10 +73,10 @@ window.addPromoInput = (p = {code: '', discount: '', expiry: '', productId: ''})
   const list = document.getElementById('promosList'); if(!list) return;
   const div = document.createElement('div'); div.className = 'admin-item-row promo-row'; div.style.alignItems = 'flex-end';
   div.innerHTML = `
-    <div class="form-group" style="margin-bottom:0; flex:1;"><label>الكود</label><input type="text" class="promo-code" placeholder="MAX50" value="${p.code}"></div>
+    <div class="form-group" style="margin-bottom:0; flex:1;"><label>الكود</label><input type="text" class="promo-code" placeholder="MAX50" value="${window.sanitizeText(p.code, 50)}"></div>
     <div class="form-group" style="margin-bottom:0; flex:1;"><label>الخصم (%)</label><input type="number" class="promo-disc" placeholder="10" value="${p.discount}"></div>
     <div class="form-group" style="margin-bottom:0; flex:1.5;"><label>ينتهي في</label><input type="datetime-local" class="promo-exp" style="background:#0b0b12; color:#fff; padding:10px; border-radius:5px; border:1px solid var(--border-color); width:100%;" value="${p.expiry}"></div>
-    <div class="form-group" style="margin-bottom:0; flex:1.5;"><label>ID المنتج (للكل = فارغ)</label><input type="text" class="promo-prod" placeholder="فارغ = الكل" value="${p.productId || ''}" style="background:rgba(0,242,255,0.05);"></div>
+    <div class="form-group" style="margin-bottom:0; flex:1.5;"><label>ID المنتج (للكل = فارغ)</label><input type="text" class="promo-prod" placeholder="فارغ = الكل" value="${window.sanitizeText(p.productId || '', 100)}" style="background:rgba(0,242,255,0.05);"></div>
     <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="margin-bottom:2px; padding: 13px 15px;">✕</button>`;
   list.appendChild(div);
 };
@@ -128,7 +128,7 @@ window.injectAdminDashboard = () => {
 
         <div class="admin-sub-section" style="border-color: var(--accent-neon);">
             <h5 style="color: var(--accent-neon);">💰 التسعير والباقات (Variants)</h5>
-            <p style="font-size:11px; color:var(--text-muted); margin-bottom:15px;">إذا أضفت باقات، سيتم عرض سعر أرخص باقة كسعر أساسي للمنتج.</p>
+            <p style="font-size:11px; color:var(--text-muted); margin-bottom:15px;">إذا أضفت باقات، سيتم عرض سعر أرخص باقة كسعر أساسي للمنتج تلقائياً.</p>
             <div class="grid-2" id="mainPriceFields">
               <div class="form-group"><label>السعر الأساسي (EGP)</label><input type="number" id="newProdPrice"></div>
               <div class="form-group"><label>السعر القديم (EGP)</label><input type="number" id="newProdOldPrice"></div>
@@ -334,11 +334,11 @@ window.renderAdminOrders = () => {
     const safeSender = window.sanitizeText(o.senderInfo); const safeTxId = window.sanitizeText(o.transactionId || 'غير مسجل');
     const safeCustomerData = window.sanitizeText(o.customerData); const safePaymentMethod = window.sanitizeText(o.paymentMethod || 'EGP');
     const discountBadge = o.discountApplied > 0 ? `<span style="color:var(--success); font-weight:bold;">[خصم ${o.discountApplied}%]</span>` : '';
-    const receiptView = o.receiptImage ? `<div style="margin-top:8px;"><a href="${window.sanitizeText(o.receiptImage)}" target="_blank" style="color:var(--accent-neon); text-decoration:underline;">📄 عرض الإيصال</a></div>` : '';
+    const receiptView = o.receiptImage ? `<div style="margin-top:8px;"><a href="${window.sanitizeText(o.receiptImage)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-neon); text-decoration:underline;">📄 عرض الإيصال</a></div>` : '';
     const deleteBtn = isArchived ? `<button onclick="window.deleteAdminOrder('${o.id}')" style="position:absolute; bottom:10px; left:10px; background:rgba(255,68,68,0.2); color:var(--danger); border:1px solid var(--danger); padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">حذف نهائي 🗑️</button>` : '';
 
-    let html = `<div class="admin-item-row" style="flex-direction:column; align-items:flex-start; position:relative; padding-bottom: ${isArchived ? '35px' : '10px'}"><span style="position:absolute; top:10px; left:10px; font-size:11px; color:var(--text-muted);">${window.formatDate(o.createdAt)}</span><div style="width:100%; margin-bottom:8px; line-height:1.6; padding-left: 100px;"><strong>الطلب:</strong> <span style="color:var(--accent-neon);">${safeProductName}</span> | <strong>الإيميل:</strong> ${safeEmail}<br><small><strong>السعر:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${o.finalPriceEGP ? `(≈ ${o.finalPriceEGP} EGP)` : ''} ${discountBadge}</small><br><small><strong>طريقة الدفع:</strong> ${safePaymentMethod} | <strong>محول من:</strong> ${safeSender} | <strong style="color:var(--accent-neon);">رقم العملية:</strong> ${safeTxId}<br><strong style="color:var(--accent-neon);">بيانات الاستلام:</strong> ${safeCustomerData} <button onclick="window.copyCustomerData('${safeCustomerData}')" style="background:var(--accent-neon); color:#000; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">نسخ</button></small><br>${receiptView}<small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>${isArchived && o.deliveredCode ? `<small style="display:block; color:var(--success);"><strong>الكود المُسلم:</strong> ${window.sanitizeText(o.deliveredCode)}</small>` : ''}</div>${deleteBtn}`;
-    if (!isArchived) html += `<div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px; border-top:1px dashed var(--border-color); padding-top:10px;"><input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل هنا..." value="${window.sanitizeText(o.deliveredCode || '')}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b12; color:#fff; border:1px solid var(--border-color);"><button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button><button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button></div>`;
+    let html = `<div class="admin-item-row" style="flex-direction:column; align-items:flex-start; position:relative; padding-bottom: ${isArchived ? '35px' : '10px'}"><span style="position:absolute; top:10px; left:10px; font-size:11px; color:var(--text-muted);">${window.formatDate(o.createdAt)}</span><div style="width:100%; margin-bottom:8px; line-height:1.6; padding-left: 100px;"><strong>الطلب:</strong> <span style="color:var(--accent-neon);">${safeProductName}</span> | <strong>الإيميل:</strong> ${safeEmail}<br><small><strong>السعر:</strong> <span style="color:var(--accent-neon);">${o.finalPrice} ${o.currency || 'EGP'}</span> ${o.finalPriceEGP ? `(≈ ${o.finalPriceEGP} EGP)` : ''} ${discountBadge}</small><br><small><strong>طريقة الدفع:</strong> ${safePaymentMethod} | <strong>محول من:</strong> ${safeSender} | <strong style="color:var(--accent-neon);">رقم العملية:</strong> ${safeTxId}<br><strong style="color:var(--accent-neon);">بيانات الاستلام:</strong> ${safeCustomerData} <button onclick="window.copyCustomerData('${safeCustomerData}')" style="background:var(--accent-neon); color:#000; border:none; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">نسخ</button></small><br>${receiptView}<small style="display:block; margin-top:5px;"><strong>الحالة:</strong> <span style="color:${o.status==='completed'?'var(--success)':o.status==='cancelled'?'var(--danger)':'#ffcc00'}">${o.status}</span></small>${isArchived && o.deliveredCode ? `<small style="display:block; color:var(--success);"><strong>الكود المُسلم:</strong> ${window.sanitizeText(o.deliveredCode, 2000)}</small>` : ''}</div>${deleteBtn}`;
+    if (!isArchived) html += `<div style="display:flex; gap:8px; width:100%; flex-wrap:wrap; margin-top:5px; border-top:1px dashed var(--border-color); padding-top:10px;"><input type="text" id="code_${o.id}" placeholder="اكتب كود التفعيل هنا..." value="${window.sanitizeText(o.deliveredCode || '', 1000)}" style="flex:1; padding:8px; border-radius:5px; background:#0b0b12; color:#fff; border:1px solid var(--border-color);"><button class="submit-btn" style="padding:8px 12px; flex:0;" onclick="window.updateOrderStatus('${o.id}', 'completed')">إكمال ✅</button><button class="cancel-btn" style="padding:8px 12px; flex:0; border-color:var(--danger); color:var(--danger);" onclick="window.updateOrderStatus('${o.id}', 'cancelled')">إلغاء ❌</button></div>`;
     html += `</div>`; return html;
   };
   pendingOrders.forEach(o => pendingList.insertAdjacentHTML('beforeend', createOrderHTML(o, false)));
@@ -346,6 +346,7 @@ window.renderAdminOrders = () => {
   if(orders.length >= window.adminOrdersLimit && !searchVal) archivedList.insertAdjacentHTML('beforeend', `<button type="button" class="load-more-btn" style="width:100%; padding:10px; background:transparent; color:var(--accent-neon); border:1px dashed var(--accent-neon); cursor:pointer;" onclick="window.loadMoreAdminOrders()">عرض المزيد ⬇️</button>`);
 };
 
+// 🛡️ دالة استرجاع المخزون عند إلغاء أو حذف الطلب مع إعادة تفعيل الحقل inStock بدقة
 window.refundOrderStock = async (order) => {
     if (!order) return;
     let itemsToRefund = [];
@@ -365,13 +366,26 @@ window.refundOrderStock = async (order) => {
         if (prod) {
             if (variantId && prod.variants) {
                 const vIndex = prod.variants.findIndex(v => (v.id || v.nameEn) === variantId);
-                if (vIndex !== -1 && prod.variants[vIndex].stockQuantity !== undefined && prod.variants[vIndex].stockQuantity !== null) {
-                    prod.variants[vIndex].stockQuantity += qty; 
-                    let updatePayload = { variants: prod.variants };
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), updatePayload);
+                if (vIndex !== -1) {
+                    if (prod.variants[vIndex].stockQuantity !== undefined && prod.variants[vIndex].stockQuantity !== null) {
+                        prod.variants[vIndex].stockQuantity += qty; 
+                    }
+                    const anyVarAvailable = prod.variants.some(v => v.stockQuantity === null || v.stockQuantity === undefined || v.stockQuantity > 0);
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { 
+                        variants: prod.variants,
+                        inStock: anyVarAvailable
+                    });
                 }
             } else if (prod.stockQuantity !== undefined && prod.stockQuantity !== null) {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { stockQuantity: prod.stockQuantity + qty, inStock: true });
+                const newStock = prod.stockQuantity + qty;
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { 
+                    stockQuantity: newStock, 
+                    inStock: newStock > 0 
+                });
+            } else if (prod.stockQuantity === null || prod.stockQuantity === undefined) {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id), { 
+                    inStock: true 
+                });
             }
         }
     }
@@ -395,9 +409,11 @@ window.updateOrderStatus = async (orderId, status) => {
     const order = window.storeState.orders.find(o => o.id === orderId);
 
     if (status === 'cancelled') {
-        await window.refundOrderStock(order);
+        if (order && order.status !== 'cancelled') {
+            await window.refundOrderStock(order);
+        }
         await updateDoc(orderRef, { status, deliveredCode: codeToDeliver, updatedAt: serverTimestamp() });
-        window.showToast('تم التحديث والإلغاء!', 'success');
+        window.showToast('تم التحديث والإلغاء واسترجاع المخزون!', 'success');
     } else if (status === 'completed' && order) {
 
         let multiCodesArr = [];
@@ -476,7 +492,7 @@ window.saveProduct = async () => {
   const tags = document.getElementById('newProdTags').value.split(',').map(t => t.trim()).filter(t => t);
   let price = Number(document.getElementById('newProdPrice').value) || 0; const oldPrice = Number(document.getElementById('newProdOldPrice').value) || 0;
   
-  // 🛡️ [إصلاح الكمية]: إذا ترك الأدمن خانة الكمية فارغة لتعود "غير محدودة"، يتم إرسال null بدلاً من undefined لكي تقبلها دالة updateDoc في فايربيز وتتخلص من الرقم القديم بأمان
+  // 🛡️ [إصلاح الكمية]: إرسال null عند ترك الخانة فارغة لتعود "غير محدودة" بشكل متوافق مع Firebase
   const stockInputVal = document.getElementById('newProdStock').value;
   const stockQuantity = stockInputVal !== '' ? Number(stockInputVal) : null;
 
@@ -526,7 +542,14 @@ window.saveProduct = async () => {
         variantsVaultCodes: variantsVaultMap
     });
 
-    const prodData = { isActive, isFeatured, requireData, titleAr, titleEn, category, platform, tags, price, oldPrice, inStock: stockQuantity === null || stockQuantity > 0, stockQuantity, deliveryTime, externalLink, bundleProductId, bundleDiscount, quickInfo, trailerUrl, imgUrl, bannerUrl, gallery, descAr, descEn, reqAr, reqEn, faqText, badgeAr, badgeEn, crossSellIds, variants };
+    let computedInStock = true;
+    if (variants.length > 0) {
+        computedInStock = variants.some(v => v.stockQuantity === null || v.stockQuantity === undefined || v.stockQuantity > 0);
+    } else if (stockQuantity !== null) {
+        computedInStock = stockQuantity > 0;
+    }
+
+    const prodData = { isActive, isFeatured, requireData, titleAr, titleEn, category, platform, tags, price, oldPrice, inStock: computedInStock, stockQuantity, deliveryTime, externalLink, bundleProductId, bundleDiscount, quickInfo, trailerUrl, imgUrl, bannerUrl, gallery, descAr, descEn, reqAr, reqEn, faqText, badgeAr, badgeEn, crossSellIds, variants };
 
     if (window.editingProductId) { 
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); 
@@ -627,7 +650,6 @@ window.renderAdminProducts = () => {
     let stockText = (p.variants && p.variants.length > 0) ? (p.variants.some(v => v.stockQuantity === undefined || v.stockQuantity === null || v.stockQuantity > 0) ? `متاح (باقات)` : 'باقات نفذت') : (p.inStock && (p.stockQuantity === undefined || p.stockQuantity === null || p.stockQuantity > 0) ? `متاح (${p.stockQuantity !== undefined && p.stockQuantity !== null ? p.stockQuantity : '∞'})` : 'نفذت الكمية');
     const title = p.titleAr || p.title || '';
     
-    // 🎁 [تسهيل الباندل]: إضافة عرض الـ ID وزر نسخ سريع بجانب اسم المنتج في لوحة التحكم
     list.insertAdjacentHTML('beforeend', `<div class="admin-item-row"><span style="flex:1; line-height:1.6;">${statusText} ${featuredText} <strong>${window.sanitizeText(title)}</strong> <small style="color:var(--accent-neon); font-family:monospace;">(ID: ${p.id})</small> <button type="button" onclick="navigator.clipboard.writeText('${p.id}').then(()=>window.showToast('تم نسخ الـ ID بنجاح 📋','success'))" style="background:var(--card-bg); color:var(--accent-neon); border:1px solid var(--border-color); padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer; margin-inline-start:5px;">نسخ ID 📋</button> - ${p.price} EGP <br><small><strong>المخزون:</strong> ${stockText}</small></span><div style="display:flex; gap:8px;"><button class="submit-btn" style="padding:6px 12px; font-size:12px; flex:0;" onclick="window.editProduct('${p.id}')">تعديل</button><button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button></div></div>`);
   });
 };
