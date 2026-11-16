@@ -19,7 +19,7 @@ const hashOTP = async (otp, email) => {
 
 export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   
-  // 🛡️ [إصلاح مشكلة ضياع المفضلة]: جلب بيانات المستخدم كاملة من Firestore (بما فيها الـ wishlist) عند تسجيل الدخول
+  // 🛡️ جلب بيانات المستخدم كاملة من Firestore (بما فيها الـ wishlist) عند تسجيل الدخول
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       let userData = { uid: user.uid, email: user.email, name: user.displayName || 'مستخدم', photoURL: user.photoURL || '', wishlist: [] };
@@ -54,6 +54,9 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   document.getElementById('loginBtnNav')?.addEventListener('click', () => { 
       if (currentUserProfile) { 
           document.getElementById('userAccountModal').style.display = 'flex'; 
+          // 🔴 [إصلاح النقطة الحمراء]: تحديث عرض الطلبات وتعليم الطلبات المكتملة كمقروءة فور فتح العميل لحسابه فعلياً
+          if (typeof window.renderUserOrders === 'function') window.renderUserOrders();
+          if (typeof window.markOrdersAsSeen === 'function') window.markOrdersAsSeen();
       } else { 
           authModal.style.display = 'flex'; 
           
@@ -84,12 +87,18 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   document.getElementById('doLoginBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value.trim(), pass = document.getElementById('loginPass').value;
     if (!email || !pass) return window.showToast('أدخل البريد وكلمة المرور!', 'error');
+    const btn = document.getElementById('doLoginBtn');
+    const origText = btn.textContent;
+    btn.disabled = true;
     try { 
         await signInWithEmailAndPassword(auth, email, pass); 
         authModal.style.display = 'none'; 
         window.showToast('تم تسجيل الدخول بنجاح!', 'success'); 
     } catch (e) { 
         window.showToast('البيانات غير صحيحة!', 'error'); 
+    } finally {
+        btn.textContent = origText;
+        btn.disabled = false;
     }
   });
 
@@ -111,17 +120,37 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   document.getElementById('doSendResetBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('resetEmailInput').value.trim();
     if (!email) return window.showToast('أدخل البريد الإلكتروني أولاً!', 'error');
+    const btn = document.getElementById('doSendResetBtn');
+    const origText = btn.textContent;
+    btn.disabled = true;
     try {
       await sendPasswordResetEmail(auth, email);
       window.showToast('✉️ تم إرسال رابط استعادة كلمة المرور بنجاح!', 'success');
       document.getElementById('authViewReset').style.display = 'none';
       document.getElementById('authViewLogin').style.display = 'block';
       document.getElementById('authModalTitle').textContent = translations[currentLang].auth_title;
-    } catch(err) { window.showToast('حدث خطأ، تأكد من صحة البريد.', 'error'); }
+    } catch(err) { 
+      window.showToast('حدث خطأ، تأكد من صحة البريد.', 'error'); 
+    } finally {
+      btn.textContent = origText;
+      btn.disabled = false;
+    }
   });
 
-  document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'none'; document.getElementById('authViewRegister').style.display = 'block'; document.getElementById('authModalTitle').textContent = translations[currentLang].create_account; });
-  document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('authViewLogin').style.display = 'block'; document.getElementById('authViewRegister').style.display = 'none'; document.getElementById('authViewOTP').style.display = 'none'; document.getElementById('authModalTitle').textContent = translations[currentLang].btn_login; });
+  document.getElementById('showRegisterBtn')?.addEventListener('click', (e) => { 
+    e.preventDefault();
+    document.getElementById('authViewLogin').style.display = 'none'; 
+    document.getElementById('authViewRegister').style.display = 'block'; 
+    document.getElementById('authModalTitle').textContent = translations[currentLang].create_account; 
+  });
+  
+  document.getElementById('showLoginBtn')?.addEventListener('click', (e) => { 
+    e.preventDefault();
+    document.getElementById('authViewLogin').style.display = 'block'; 
+    document.getElementById('authViewRegister').style.display = 'none'; 
+    document.getElementById('authViewOTP').style.display = 'none'; 
+    document.getElementById('authModalTitle').textContent = translations[currentLang].btn_login; 
+  });
   
   document.getElementById('backToRegFromOTP')?.addEventListener('click', () => { 
     sessionStorage.removeItem('bn_temp_reg'); 
@@ -139,8 +168,11 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
   });
 
   document.getElementById('doRegisterBtn')?.addEventListener('click', async () => {
-    const name = document.getElementById('regName').value.trim(), email = document.getElementById('regEmail').value.trim(), pass = document.getElementById('regPass').value;
+    const name = window.sanitizeText ? window.sanitizeText(document.getElementById('regName').value.trim(), 100) : document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const pass = document.getElementById('regPass').value;
     if (!name || !email || !pass) return window.showToast('أكمل جميع البيانات!', 'error');
+    if (pass.length < 6) return window.showToast('كلمة المرور يجب أن تكون 6 أحرف على الأقل!', 'error');
     if (pass !== document.getElementById('regPassConfirm').value) return window.showToast('كلمة المرور غير متطابقة!', 'error');
     
     const btn = document.getElementById('doRegisterBtn'); const origText = btn.textContent;
@@ -216,7 +248,7 @@ export const initAuth = (translations, currentLang, onUserChangeCallback) => {
       });
       
       document.getElementById('authModal').style.display = 'none'; 
-      window.showToast('🎉 تم إنشاء الحساب وتفعليه بنجاح!', 'success');
+      window.showToast('🎉 تم إنشاء الحساب وتفعيله بنجاح!', 'success');
       
       if (typeof emailjs !== 'undefined') {
         const welcomeMessage = `حسابك دلوقتي جاهز ومفعل بنجاح.<br>تقدر تتصفح أحدث العروض، وتضيف منتجاتك المفضلة، وتتابع طلباتك بكل سهولة وأمان.<br><br><div class="btn-container"><a href="https://bn-max.com" class="btn">تصفح العروض الآن 🚀</a></div>`;
