@@ -18,3 +18,5 @@ export const db = getFirestore(app);
 
 export const appId = "bn-store-main-app";
 export const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
+
+window.auth = auth;
