@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# منع محركات البحث من دخول لوحة التحكم الخاصة بالأدمن للأمان
+Disallow: /?admin=true
+
+# رابط خريطة الموقع لمساعدة جوجل على الأرشفة السريعة
+Sitemap: https://bn-max.com/sitemap.xml
