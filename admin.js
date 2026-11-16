@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, serverTimestamp,
 const IMGBB_API_KEY = "84cc90fc7047a2277b2080e5e79b23d2";
 window.tempGalleryUrls = [];
 
-// 🛡️ السماح للعملاء المسجلين برفع صور الإيصالات، وللأدمن برفع صور المنتجات
+// 🛡️ [إصلاح رفع الإيصال]: يعتمد الآن بسلاسة على window.auth الذي تم ربطه في firebase-config.js
 window.uploadImageToImgBB = async (file, isReceipt = false) => {
     if (!isReceipt && !window.checkIsAdmin()) { window.showToast('غير مصرح برفع الصور!', 'error'); return null; }
     if (isReceipt && !window.auth?.currentUser) { window.showToast('يجب تسجيل الدخول لرفع الإيصال!', 'error'); return null; }
@@ -248,7 +248,6 @@ window.loadAdminData = async () => {
   if (s.payments) { setVal('admInstapay', s.payments.instapay); setVal('admVodafone', s.payments.vodafone); setVal('admOrange', s.payments.orange); setVal('admCryptoTRC20', s.payments.cryptoTRC20); setVal('admCryptoBEP20', s.payments.cryptoBEP20); }
   if (s.rates) { setVal('admRateSAR', s.rates.SAR); setVal('admRateAED', s.rates.AED); setVal('admRateUSD', s.rates.USD); }
   
-  // جلب إعدادات SEO من الكنفج
   try {
       const cfgSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'));
       if (cfgSnap.exists() && cfgSnap.data().seo) {
@@ -387,7 +386,6 @@ window.deleteAdminOrder = async (orderId) => {
   } catch(e) { window.showToast('فشل الحذف', 'error'); } 
 };
 
-// 🛡️ تسليم الأكواد من الخزنة المعزولة `vault/{productId}`
 window.updateOrderStatus = async (orderId, status) => {
   if (!window.checkIsAdmin()) return window.showToast('غير مصرح لك بتنفيذ هذا الإجراء!', 'error');
   const codeInput = document.getElementById(`code_${orderId}`); if(!codeInput) return;
@@ -477,7 +475,11 @@ window.saveProduct = async () => {
   const category = document.getElementById('newProdCat').value || 'games', platform = document.getElementById('newProdPlatform').value || '';
   const tags = document.getElementById('newProdTags').value.split(',').map(t => t.trim()).filter(t => t);
   let price = Number(document.getElementById('newProdPrice').value) || 0; const oldPrice = Number(document.getElementById('newProdOldPrice').value) || 0;
-  const stockQuantity = document.getElementById('newProdStock').value ? Number(document.getElementById('newProdStock').value) : undefined;
+  
+  // 🛡️ [إصلاح الكمية]: إذا ترك الأدمن خانة الكمية فارغة لتعود "غير محدودة"، يتم إرسال null بدلاً من undefined لكي تقبلها دالة updateDoc في فايربيز وتتخلص من الرقم القديم بأمان
+  const stockInputVal = document.getElementById('newProdStock').value;
+  const stockQuantity = stockInputVal !== '' ? Number(stockInputVal) : null;
+
   let deliveryTime = document.getElementById('newProdDeliveryTime').value;
   const externalLink = document.getElementById('newProdExternalLink').value.trim();
   const generalVaultCodes = document.getElementById('newProdVault').value || '';
@@ -501,7 +503,7 @@ window.saveProduct = async () => {
     const vPrice = Number(row.querySelector('.var-price').value), vOld = Number(row.querySelector('.var-old').value) || 0;
     const vStock = row.querySelector('.var-stock').value, vVault = row.querySelector('.var-vault').value;
     if(nameAr && vPrice > 0) {
-        variants.push({ id: vId, nameAr, nameEn, price: vPrice, oldPrice: vOld, stockQuantity: vStock !== '' ? Number(vStock) : undefined });
+        variants.push({ id: vId, nameAr, nameEn, price: vPrice, oldPrice: vOld, stockQuantity: vStock !== '' ? Number(vStock) : null });
         if (vVault) variantsVaultMap[vId] = vVault;
     }
   });
@@ -519,13 +521,12 @@ window.saveProduct = async () => {
     const galleryInput = document.getElementById('newProdGallery');
     if (galleryInput && galleryInput.files.length > 0) { for (let i = 0; i < galleryInput.files.length; i++) { const url = await window.uploadImageToImgBB(galleryInput.files[i]); if (url) gallery.push(url); } }
 
-    // 🛡️ حفظ الأكواد السرية حصرياً في كولكشن Vault المعزول وعدم حفظها أبداً في مستند المنتج العام
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vault', targetProductId), {
         generalVaultCodes: generalVaultCodes,
         variantsVaultCodes: variantsVaultMap
     });
 
-    const prodData = { isActive, isFeatured, requireData, titleAr, titleEn, category, platform, tags, price, oldPrice, inStock: stockQuantity === undefined || stockQuantity > 0, stockQuantity, deliveryTime, externalLink, bundleProductId, bundleDiscount, quickInfo, trailerUrl, imgUrl, bannerUrl, gallery, descAr, descEn, reqAr, reqEn, faqText, badgeAr, badgeEn, crossSellIds, variants };
+    const prodData = { isActive, isFeatured, requireData, titleAr, titleEn, category, platform, tags, price, oldPrice, inStock: stockQuantity === null || stockQuantity > 0, stockQuantity, deliveryTime, externalLink, bundleProductId, bundleDiscount, quickInfo, trailerUrl, imgUrl, bannerUrl, gallery, descAr, descEn, reqAr, reqEn, faqText, badgeAr, badgeEn, crossSellIds, variants };
 
     if (window.editingProductId) { 
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', window.editingProductId), prodData); 
@@ -550,7 +551,6 @@ window.editProduct = async (id) => {
   setVal('newProdDescAr', p.descAr); setVal('newProdDescEn', p.descEn); setVal('newProdReqAr', p.reqAr); setVal('newProdReqEn', p.reqEn);
   setVal('newProdFaq', p.faqText); setVal('newProdBadgeAr', p.badgeAr); setVal('newProdBadgeEn', p.badgeEn); setVal('newProdCrossSell', p.crossSellIds ? p.crossSellIds.join(', ') : '');
 
-  // جلب الأكواد السرية من الخزنة المعزولة `vault/{productId}`
   try {
       const vaultSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vault', id));
       if (vaultSnap.exists()) {
@@ -566,7 +566,6 @@ window.editProduct = async (id) => {
       }
   } catch(e) {}
 
-  // معالجة القوائم المنسدلة والحقول المخصصة لتجنب ظهورها فارغة
   const handleDropdownCustom = (selectId, inputId, val) => {
       const selectEl = document.getElementById(selectId);
       const inputEl = document.getElementById(inputId);
@@ -627,7 +626,9 @@ window.renderAdminProducts = () => {
     let featuredText = p.isFeatured ? '<span style="color:var(--accent-neon);">⭐ تثبيت</span>' : '';
     let stockText = (p.variants && p.variants.length > 0) ? (p.variants.some(v => v.stockQuantity === undefined || v.stockQuantity === null || v.stockQuantity > 0) ? `متاح (باقات)` : 'باقات نفذت') : (p.inStock && (p.stockQuantity === undefined || p.stockQuantity === null || p.stockQuantity > 0) ? `متاح (${p.stockQuantity !== undefined && p.stockQuantity !== null ? p.stockQuantity : '∞'})` : 'نفذت الكمية');
     const title = p.titleAr || p.title || '';
-    list.insertAdjacentHTML('beforeend', `<div class="admin-item-row"><span style="flex:1; line-height:1.6;">${statusText} ${featuredText} <strong>${window.sanitizeText(title)}</strong> - ${p.price}EGP <br><small><strong>المخزون:</strong> ${stockText}</small></span><div style="display:flex; gap:8px;"><button class="submit-btn" style="padding:6px 12px; font-size:12px; flex:0;" onclick="window.editProduct('${p.id}')">تعديل</button><button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button></div></div>`);
+    
+    // 🎁 [تسهيل الباندل]: إضافة عرض الـ ID وزر نسخ سريع بجانب اسم المنتج في لوحة التحكم
+    list.insertAdjacentHTML('beforeend', `<div class="admin-item-row"><span style="flex:1; line-height:1.6;">${statusText} ${featuredText} <strong>${window.sanitizeText(title)}</strong> <small style="color:var(--accent-neon); font-family:monospace;">(ID: ${p.id})</small> <button type="button" onclick="navigator.clipboard.writeText('${p.id}').then(()=>window.showToast('تم نسخ الـ ID بنجاح 📋','success'))" style="background:var(--card-bg); color:var(--accent-neon); border:1px solid var(--border-color); padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer; margin-inline-start:5px;">نسخ ID 📋</button> - ${p.price} EGP <br><small><strong>المخزون:</strong> ${stockText}</small></span><div style="display:flex; gap:8px;"><button class="submit-btn" style="padding:6px 12px; font-size:12px; flex:0;" onclick="window.editProduct('${p.id}')">تعديل</button><button class="delete-btn" onclick="window.deleteProduct('${p.id}')">حذف</button></div></div>`);
   });
 };
 
