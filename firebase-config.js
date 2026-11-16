@@ -19,4 +19,5 @@ export const db = getFirestore(app);
 export const appId = "bn-store-main-app";
 export const ADMIN_UID = "CLdxfaDVBGMzQke9sjBXPIctBFQ2";
 
+// 🛡️ [إصلاح أساسي]: ربط كائن الـ auth بالـ window لضمان قراءة حالة تسجيل الدخول في ملف admin.js وباقي الوظائف
 window.auth = auth;
