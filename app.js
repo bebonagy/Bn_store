@@ -57,7 +57,7 @@ window.showToast = (msg, type = 'normal') => {
   container.appendChild(toast); setTimeout(() => toast.remove(), 3500);
 };
 
-// 🔄 نظام التوجيه والـ History المتقدم لعدم خروج العميل عند الضغط على "رجوع"
+// 🔄 [إصلاح السيو والشير]: تحديث روابط الـ Canonical والـ Open Graph ديناميكياً مع كل تنقل لمنع مشاكل إعادة التوجيه في جوجل
 window.navigate = (view, id = null, pushState = true) => {
     if (view === 'admin' && !window.checkIsAdmin()) { window.showToast('غير مصرح', 'error'); view = 'home'; }
     const homeView = document.getElementById('homeView'); const productDetailsView = document.getElementById('productDetailsView'); const adminView = document.getElementById('adminView');
@@ -69,7 +69,37 @@ window.navigate = (view, id = null, pushState = true) => {
     if (view === 'admin') { if(header) header.style.display = 'none'; if(footer) footer.style.display = 'none'; } 
     else { if(header) header.style.display = 'flex'; if(footer) footer.style.display = 'block'; }
 
-    if (view === 'home') document.title = 'BN MAX | Digital Marketplace'; else if (view === 'admin') document.title = 'لوحة التحكم | BN MAX';
+    let canonicalUrl = "https://bn-max.com/";
+    let ogUrl = "https://bn-max.com/";
+    let pageTitle = 'BN MAX | Digital Marketplace - متجر الألعاب والاشتراكات والخدمات الرقمية';
+
+    if (view === 'details' && id) {
+        canonicalUrl = `https://bn-max.com/?product=${id}`;
+        ogUrl = canonicalUrl;
+        const prod = window.storeState.products.find(p => p.id === id);
+        if (prod) {
+            const prodTitle = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
+            pageTitle = `${prodTitle} | BN MAX`;
+        }
+    } else if (view === 'admin') {
+        canonicalUrl = `https://bn-max.com/?admin=true`;
+        ogUrl = canonicalUrl;
+        pageTitle = 'لوحة التحكم | BN MAX';
+    } else {
+        let params = [];
+        if (currentCategory && currentCategory !== 'all') params.push(`cat=${currentCategory}`);
+        if (currentPage > 1) params.push(`page=${currentPage}`);
+        if (params.length > 0) {
+            canonicalUrl += '?' + params.join('&');
+            ogUrl = canonicalUrl;
+        }
+    }
+
+    const canonicalEl = document.getElementById('canonicalLink');
+    if (canonicalEl) canonicalEl.setAttribute('href', canonicalUrl);
+    const ogUrlEl = document.getElementById('metaOgUrl');
+    if (ogUrlEl) ogUrlEl.setAttribute('content', ogUrl);
+    document.title = pageTitle;
     
     if (pushState) {
         let url = window.location.pathname;
@@ -102,12 +132,23 @@ window.addEventListener('popstate', (e) => {
     } else { handleUrlRouting(); }
 });
 
+// 🔍 [إصلاح البحث المباشر من جوجل]: دعم استقبال باراميتر ?search= وقت فتح الموقع
 const handleUrlRouting = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('product')) {
         window.openProductDetails(params.get('product'), false);
     } else if (params.has('admin')) {
         window.navigate('admin', null, false);
+    } else if (params.has('search')) {
+        const searchVal = params.get('search');
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = searchVal;
+        currentCategory = 'all';
+        currentPlatformFilter = 'all';
+        currentPage = 1;
+        window.renderCategoriesBar();
+        window.renderProducts();
+        window.navigate('home', null, false);
     } else {
         currentCategory = params.get('cat') || 'all';
         currentPage = Number(params.get('page')) || 1;
@@ -268,7 +309,7 @@ window.renderProducts = () => {
       const convertedOld = (prod.oldPrice && prod.oldPrice > displayPrice) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
       
       const hasVariants = prod.variants && prod.variants.length > 0;
-      let inStock = hasVariants ? prod.variants.some(v => v.stockQuantity === undefined || v.stockQuantity > 0) : (prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0));
+      let inStock = hasVariants ? prod.variants.some(v => v.stockQuantity === null || v.stockQuantity === undefined || v.stockQuantity > 0) : (prod.inStock && (prod.stockQuantity === null || prod.stockQuantity === undefined || prod.stockQuantity > 0));
   
       const isWished = window.storeState.wishlist.includes(prod.id);
       const discountPercent = (prod.oldPrice && prod.oldPrice > displayPrice) ? Math.round(((prod.oldPrice - displayPrice) / prod.oldPrice) * 100) : 0;
@@ -387,7 +428,6 @@ document.getElementById('prevGalleryBtn')?.addEventListener('click', () => { if 
 document.getElementById('nextGalleryBtn')?.addEventListener('click', () => { if (currentGalleryItems.length > 1) { let newIdx = (currentGalleryIndex + 1) % currentGalleryItems.length; window.updateMainDisplay(newIdx); } });
 document.getElementById('detailMainImage')?.addEventListener('click', () => { const item = currentGalleryItems[currentGalleryIndex]; if (item && item.type === 'image') { document.getElementById('lightboxImg').src = item.url; document.getElementById('lightboxModal').style.display = 'flex'; } });
 
-// 🛡️ دالة استخراج وتطهير رابط يوتيوب لاستخلاص الـ ID بدقة
 const parseYouTubeId = (url) => {
     if (!url) return '';
     let videoId = '';
@@ -409,9 +449,7 @@ window.openProductDetails = (id, pushState = true) => {
     const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
     const desc = currentLang === 'ar' ? (prod.descAr || prod.desc) : (prod.descEn || prod.desc);
     const badge = currentLang === 'ar' ? (prod.badgeAr || prod.badge) : (prod.badgeEn || prod.badge);
-    document.title = `${title} | BN MAX`;
 
-    // 📦 تحديث سكيما المنتج الديناميكية لمحركات البحث (Product Schema JSON-LD)
     const schemaScript = document.getElementById('dynamicProductSchema');
     if (schemaScript) {
         const prodPrice = (prod.variants && prod.variants.length > 0) ? prod.variants[0].price : prod.price;
@@ -432,7 +470,7 @@ window.openProductDetails = (id, pushState = true) => {
     }
 
     const currency = document.getElementById('currencySelect').value; const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
-    let inStock = prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0);
+    let inStock = prod.inStock && (prod.stockQuantity === null || prod.stockQuantity === undefined || prod.stockQuantity > 0);
   
     document.getElementById('detailTitle').textContent = title;
     document.getElementById('detailBadge').textContent = badge;
@@ -472,10 +510,10 @@ window.openProductDetails = (id, pushState = true) => {
     let currentDisplayPrice = prod.price;
     if (prod.variants && prod.variants.length > 0) {
         variantsContainer.style.display = 'block'; variantsList.innerHTML = '';
-        inStock = prod.variants.some(v => v.stockQuantity === undefined || v.stockQuantity > 0);
+        inStock = prod.variants.some(v => v.stockQuantity === null || v.stockQuantity === undefined || v.stockQuantity > 0);
         if (addBtn && inStock) { addBtn.textContent = translations[currentLang].btn_select_variant; addBtn.classList.add('requires-variant'); buyNowBtn.style.display = 'block'; buyNowBtn.classList.add('requires-variant'); }
         prod.variants.forEach((v) => {
-            const vInStock = v.stockQuantity === undefined || v.stockQuantity > 0;
+            const vInStock = v.stockQuantity === null || v.stockQuantity === undefined || v.stockQuantity > 0;
             const btn = document.createElement('button'); btn.className = `variant-btn`; btn.textContent = currentLang === 'ar' ? v.nameAr : v.nameEn;
             if (!vInStock) { btn.style.opacity = '0.5'; btn.style.textDecoration = 'line-through'; btn.title = translations[currentLang].out_of_stock; }
             btn.onclick = () => {
@@ -486,25 +524,34 @@ window.openProductDetails = (id, pushState = true) => {
                 const vOld = v.oldPrice && v.oldPrice > v.price ? (currency === 'EGP' ? v.oldPrice.toFixed(0) : (v.oldPrice / rate).toFixed(2)) : '';
                 document.getElementById('detailOldPrice').textContent = vOld ? `${vOld} ${currency}` : ''; 
                 const stockEl = document.getElementById('detailStock');
-                if (stockEl) { stockEl.textContent = (v.stockQuantity !== undefined) ? `${v.stockQuantity} ${translations[currentLang].piece}` : translations[currentLang].available; stockEl.style.color = 'var(--success)'; }
+                if (stockEl) { stockEl.textContent = (v.stockQuantity !== null && v.stockQuantity !== undefined) ? `${v.stockQuantity} ${translations[currentLang].piece}` : translations[currentLang].available; stockEl.style.color = 'var(--success)'; }
                 if (addBtn) { addBtn.textContent = translations[currentLang].btn_add_to_cart; addBtn.classList.remove('requires-variant'); addBtn.classList.remove('shake-alert'); }
                 if (buyNowBtn) { buyNowBtn.classList.remove('requires-variant'); buyNowBtn.classList.remove('shake-alert'); }
+                
+                // تحديث صندوق الباندل إن وجد عند تغيير الباقة ليعكس السعر الجديد بدقة
+                if (prod.bundleProductId && prod.bundleDiscount > 0) {
+                    window.renderBundleOfferBox(prod);
+                }
             };
             variantsList.appendChild(btn);
         });
     } else { variantsContainer.style.display = 'none'; if(addBtn) addBtn.classList.remove('requires-variant'); if(buyNowBtn) { buyNowBtn.style.display = 'block'; buyNowBtn.classList.remove('requires-variant'); } }
   
-    // 🎁 رندر عرض الباندل المزدوج (Bundle Offer) إن وجد
-    const bundleBox = document.getElementById('detailBundleContainer');
-    if (bundleBox) {
-        if (prod.bundleProductId && prod.bundleDiscount > 0) {
-            const bundleTargetProd = window.storeState.products.find(x => x.id === prod.bundleProductId && x.inStock);
+    // 🎁 رندر عرض الباندل المزدوج ( Bundle Offer) مع دعم الباقات المختارة
+    window.renderBundleOfferBox = (product) => {
+        const bundleBox = document.getElementById('detailBundleContainer');
+        if (!bundleBox) return;
+        if (product.bundleProductId && product.bundleDiscount > 0) {
+            const bundleTargetProd = window.storeState.products.find(x => x.id === product.bundleProductId && x.inStock);
             if (bundleTargetProd) {
                 const targetTitle = currentLang === 'ar' ? (bundleTargetProd.titleAr || bundleTargetProd.title) : (bundleTargetProd.titleEn || bundleTargetProd.title);
-                const basePrice = (prod.variants && prod.variants.length > 0) ? prod.variants[0].price : prod.price;
+                
+                // استخدام السعر الأساسي أو سعر الباقة المختارة حالياً
+                const basePrice = window.currentSelectedVariant ? window.currentSelectedVariant.price : ((product.variants && product.variants.length > 0) ? product.variants[0].price : product.price);
                 const targetPrice = (bundleTargetProd.variants && bundleTargetProd.variants.length > 0) ? bundleTargetProd.variants[0].price : bundleTargetProd.price;
+                
                 const combinedOriginal = basePrice + targetPrice;
-                const discountAmount = combinedOriginal * (prod.bundleDiscount / 100);
+                const discountAmount = combinedOriginal * (product.bundleDiscount / 100);
                 const combinedFinal = combinedOriginal - discountAmount;
                 const convOrig = currency === 'EGP' ? combinedOriginal.toFixed(0) : (combinedOriginal / rate).toFixed(2);
                 const convFinal = currency === 'EGP' ? combinedFinal.toFixed(0) : (combinedFinal / rate).toFixed(2);
@@ -513,12 +560,12 @@ window.openProductDetails = (id, pushState = true) => {
                 bundleBox.innerHTML = `
                   <div class="bundle-header">
                     <span style="font-size: 13px; font-weight: bold; color: #fff;">🎁 عرض التوفير الثنائي (Bundle Deal)</span>
-                    <span class="bundle-badge-tag">وفر ${prod.bundleDiscount}%</span>
+                    <span class="bundle-badge-tag">وفر ${product.bundleDiscount}%</span>
                   </div>
                   <div class="bundle-items-row">
                     <div class="bundle-prod-mini">
-                       <img src="${prod.imgUrl || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100'}" alt="1">
-                       <span class="bundle-prod-mini-title">${title}</span>
+                       <img src="${product.imgUrl || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100'}" alt="1">
+                       <span class="bundle-prod-mini-title">${title} ${window.currentSelectedVariant ? '(' + (currentLang==='ar'?window.currentSelectedVariant.nameAr:window.currentSelectedVariant.nameEn) + ')' : ''}</span>
                     </div>
                     <span class="bundle-plus-sign">+</span>
                     <div class="bundle-prod-mini" style="cursor:pointer;" onclick="window.openProductDetails('${bundleTargetProd.id}')">
@@ -531,12 +578,13 @@ window.openProductDetails = (id, pushState = true) => {
                        <span style="font-size: 12px; color: var(--text-muted); text-decoration: line-through; margin-inline-end: 8px;">${convOrig} ${currency}</span>
                        <span style="font-size: 18px; font-weight: 900; color: var(--accent-neon);">${convFinal} ${currency}</span>
                      </div>
-                     <button type="button" class="submit-btn" style="padding: 8px 16px; font-size: 12px;" onclick="window.addBundleToCart('${prod.id}', '${bundleTargetProd.id}', ${prod.bundleDiscount})">🛒 أضف العرض للسلة</button>
+                     <button type="button" class="submit-btn" style="padding: 8px 16px; font-size: 12px;" onclick="window.addBundleToCart('${product.id}', '${bundleTargetProd.id}', ${product.bundleDiscount})">🛒 أضف العرض للسلة</button>
                   </div>
                 `;
             } else { bundleBox.style.display = 'none'; }
         } else { bundleBox.style.display = 'none'; }
-    }
+    };
+    window.renderBundleOfferBox(prod);
 
     const convertedPrice = currency === 'EGP' ? currentDisplayPrice.toFixed(0) : (currentDisplayPrice / rate).toFixed(2);
     const convertedOld = (!prod.variants || prod.variants.length === 0) && (prod.oldPrice && prod.oldPrice > currentDisplayPrice) ? (currency === 'EGP' ? prod.oldPrice.toFixed(0) : (prod.oldPrice / rate).toFixed(2)) : '';
@@ -568,7 +616,6 @@ window.openProductDetails = (id, pushState = true) => {
         document.querySelectorAll('.faq-question').forEach(btn => { btn.onclick = () => { btn.classList.toggle('active'); btn.nextElementSibling.classList.toggle('open'); }; });
     } else { faqContainer.style.display = 'none'; }
 
-    // ملء قسم "قد يعجبك أيضاً" (Related Products) تلقائياً
     const relatedGrid = document.getElementById('relatedProductsGrid');
     const relatedWrapper = document.getElementById('relatedSectionWrapper');
     if (relatedGrid && relatedWrapper) {
@@ -591,7 +638,7 @@ window.openProductDetails = (id, pushState = true) => {
     if (stockEl && addBtn && buyNowBtn) {
       if (inStock) {
         let qtyText = translations[currentLang].available;
-        if (window.currentSelectedVariant && window.currentSelectedVariant.stockQuantity !== undefined) qtyText = `${window.currentSelectedVariant.stockQuantity} ${translations[currentLang].piece}`; else if (!window.currentSelectedVariant && prod.stockQuantity !== undefined) qtyText = `${prod.stockQuantity} ${translations[currentLang].piece}`;
+        if (window.currentSelectedVariant && window.currentSelectedVariant.stockQuantity !== null && window.currentSelectedVariant.stockQuantity !== undefined) qtyText = `${window.currentSelectedVariant.stockQuantity} ${translations[currentLang].piece}`; else if (!window.currentSelectedVariant && prod.stockQuantity !== null && prod.stockQuantity !== undefined) qtyText = `${prod.stockQuantity} ${translations[currentLang].piece}`;
         stockEl.textContent = qtyText; stockEl.style.color = 'var(--success)';
         if (!prod.variants || prod.variants.length === 0) { addBtn.textContent = translations[currentLang].btn_add_to_cart; addBtn.disabled = false; buyNowBtn.disabled = false; }
         addBtn.classList.remove('out-of-stock-badge'); buyNowBtn.classList.remove('out-of-stock-badge');
@@ -619,49 +666,55 @@ window.addToCartDirect = (prodId, event) => {
     const addBtn = document.getElementById('detailAddToCartBtn');
     if (!event && addBtn && addBtn.classList.contains('requires-variant') && window.currentProductId === prodId) { addBtn.classList.remove('shake-alert'); void addBtn.offsetWidth; addBtn.classList.add('shake-alert'); document.getElementById('detailBuyNowBtn')?.classList.add('shake-alert'); window.showToast('الرجاء اختيار الباقة أولاً!', 'error'); return; }
     if (prod && prod.inStock) {
-        const variantId = window.currentSelectedVariant ? (window.currentSelectedVariant.id || window.currentSelectedVariant.nameEn) : (prod.variants && prod.variants.length > 0 ? (prod.variants[0].id || prod.variants[0].nameEn) : null);
+        const variantId = window.currentSelectedVariant ? (window.currentSelectedVariant.id || window.currentSelectedVariant.nameEn) : null;
         const existingItem = window.storeState.cart.find(item => item.id === prod.id && item.variantId === variantId);
         if (existingItem) { existingItem.quantity = (existingItem.quantity || 1) + 1; } else {
             let cartItem = JSON.parse(JSON.stringify(prod)); cartItem.cartItemId = Date.now() + Math.random(); cartItem.quantity = 1;
-            if (!event && window.currentSelectedVariant && window.currentProductId === prodId) { cartItem.price = window.currentSelectedVariant.price; cartItem.titleAr = (prod.titleAr || prod.title) + ` - ${window.currentSelectedVariant.nameAr}`; cartItem.titleEn = (prod.titleEn || prod.title) + ` - ${window.currentSelectedVariant.nameEn}`; cartItem.variantId = variantId; } else if (prod.variants && prod.variants.length > 0) { cartItem.price = prod.variants[0].price; cartItem.titleAr = (prod.titleAr || prod.title) + ` - ${prod.variants[0].nameAr}`; cartItem.titleEn = (prod.titleEn || prod.title) + ` - ${prod.variants[0].nameEn}`; cartItem.variantId = variantId; }
+            if (!event && window.currentSelectedVariant && window.currentProductId === prodId) { 
+                cartItem.price = window.currentSelectedVariant.price; 
+                cartItem.titleAr = (prod.titleAr || prod.title) + ` - ${window.currentSelectedVariant.nameAr}`; 
+                cartItem.titleEn = (prod.titleEn || prod.title) + ` - ${window.currentSelectedVariant.nameEn}`; 
+                cartItem.variantId = variantId; 
+            } else if (prod.variants && prod.variants.length > 0) { 
+                // إذا لم يتم اختيار باقة يدوياً وتم الضغط مباشرة، نأخذ الباقة الأولى كافتراضي
+                const defaultVar = prod.variants[0];
+                cartItem.price = defaultVar.price; 
+                cartItem.titleAr = (prod.titleAr || prod.title) + ` - ${defaultVar.nameAr}`; 
+                cartItem.titleEn = (prod.titleEn || prod.title) + ` - ${defaultVar.nameEn}`; 
+                cartItem.variantId = defaultVar.id || defaultVar.nameEn; 
+            }
             window.storeState.cart.push(cartItem); 
         }
         window.updateCartBadge(); window.showToast('🛒 ' + translations[currentLang].btn_add_to_cart, 'success'); 
     }
 };
 
+// 🎁 [إصلاح الباندل مع الباقات]: دعم الباقة المختارة حالياً عند إضافة عرض الباندل للسلة
 window.addBundleToCart = (prodId1, prodId2, discountPercent) => {
     const p1 = window.storeState.products.find(x => x.id === prodId1);
     const p2 = window.storeState.products.find(x => x.id === prodId2);
     if (!p1 || !p2) return;
     
-    // إضافة المنتج الأول
     let item1 = JSON.parse(JSON.stringify(p1));
     item1.cartItemId = Date.now() + Math.random(); item1.quantity = 1;
-    if (p1.variants && p1.variants.length > 0) {
-        item1.price = p1.variants[0].price * (1 - discountPercent/100);
-        item1.titleAr = (p1.titleAr || p1.title) + ` [باندل مخفض]`;
-        item1.titleEn = (p1.titleEn || p1.title) + ` [Bundle]`;
-        item1.variantId = p1.variants[0].id || p1.variants[0].nameEn;
-    } else {
-        item1.price = p1.price * (1 - discountPercent/100);
-        item1.titleAr = (p1.titleAr || p1.title) + ` [باندل مخفض]`;
-        item1.titleEn = (p1.titleEn || p1.title) + ` [Bundle]`;
-    }
+    
+    const activeVar = window.currentSelectedVariant && window.currentProductId === prodId1 ? window.currentSelectedVariant : (p1.variants && p1.variants.length > 0 ? p1.variants[0] : null);
+    let baseItemPrice = activeVar ? activeVar.price : p1.price;
 
-    // إضافة المنتج الثاني
+    item1.price = baseItemPrice * (1 - discountPercent / 100);
+    item1.titleAr = (p1.titleAr || p1.title) + (activeVar ? ` - ${activeVar.nameAr}` : '') + ` [باندل مخفض]`;
+    item1.titleEn = (p1.titleEn || p1.title) + (activeVar ? ` - ${activeVar.nameEn}` : '') + ` [Bundle]`;
+    if (activeVar) item1.variantId = activeVar.id || activeVar.nameEn;
+
     let item2 = JSON.parse(JSON.stringify(p2));
     item2.cartItemId = Date.now() + Math.random() + 1; item2.quantity = 1;
-    if (p2.variants && p2.variants.length > 0) {
-        item2.price = p2.variants[0].price * (1 - discountPercent/100);
-        item2.titleAr = (p2.titleAr || p2.title) + ` [باندل مخفض]`;
-        item2.titleEn = (p2.titleEn || p2.title) + ` [Bundle]`;
-        item2.variantId = p2.variants[0].id || p2.variants[0].nameEn;
-    } else {
-        item2.price = p2.price * (1 - discountPercent/100);
-        item2.titleAr = (p2.titleAr || p2.title) + ` [باندل مخفض]`;
-        item2.titleEn = (p2.titleEn || p2.title) + ` [Bundle]`;
-    }
+    const targetVar = p2.variants && p2.variants.length > 0 ? p2.variants[0] : null;
+    let targetBasePrice = targetVar ? targetVar.price : p2.price;
+
+    item2.price = targetBasePrice * (1 - discountPercent / 100);
+    item2.titleAr = (p2.titleAr || p2.title) + (targetVar ? ` - ${targetVar.nameAr}` : '') + ` [باندل مخفض]`;
+    item2.titleEn = (p2.titleEn || p2.title) + (targetVar ? ` - ${targetVar.nameEn}` : '') + ` [Bundle]`;
+    if (targetVar) item2.variantId = targetVar.id || targetVar.nameEn;
 
     window.storeState.cart.push(item1, item2);
     window.updateCartBadge();
@@ -731,6 +784,15 @@ window.renderUserOrders = () => {
        div.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong>${o.productName} (${o.finalPrice} ${o.currency || 'EGP'})</strong></div><div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">${window.formatDate(o.createdAt)}</div>${trackerHTML}${deliveryDataHTML}`;
        list.appendChild(div);
     });
+
+    // 🔴 [إصلاح النقطة الحمراء]: بمجرد فتح العميل لطلباته ورؤيتها، يتم تحديث localStorage وإخفاء النقطة الحمراء
+    const completedIds = myOrders.filter(o => o.status === 'completed').map(o => o.id);
+    localStorage.setItem('bn_seen_orders', JSON.stringify(completedIds));
+    const notifDot = document.getElementById('notificationDot');
+    if (notifDot) {
+        const hasPendingAdmin = window.checkIsAdmin() && window.storeState.orders.some(o => o.status === 'pending');
+        notifDot.style.display = hasPendingAdmin ? 'inline-block' : 'none';
+    }
 };
 
 window.renderUserWishlist = () => {
@@ -748,6 +810,7 @@ window.renderUserWishlist = () => {
     });
 };
 
+// 🎁 [إصلاح خصم الباندل وقت الدفع]: احترام السعر المخفض المخزن في السلة للباندل وعدم إرجاعه للسعر الأصلي
 const updateCheckoutPriceDisplay = () => {
     const targetCart = window.isBuyNowCheckout ? [window.buyNowItem] : window.storeState.cart;
     if (!targetCart || !targetCart.length) return;
@@ -762,11 +825,18 @@ const updateCheckoutPriceDisplay = () => {
       const dbProd = window.storeState.products.find(x => x.id === p.id);
       if (dbProd) {
           if (dbProd.requireData !== false) requiresData = true;
-          let realPriceEGP = dbProd.price;
-          if (p.variantId && dbProd.variants) {
-              const dbVar = dbProd.variants.find(v => (v.id || v.nameEn) === p.variantId);
-              if (dbVar) realPriceEGP = dbVar.price;
+          let realPriceEGP = p.price; 
+          const isBundleItem = (p.titleAr && p.titleAr.includes('[باندل مخفض]')) || (p.titleEn && p.titleEn.includes('[Bundle]'));
+
+          if (!isBundleItem) {
+              if (p.variantId && dbProd.variants) {
+                  const dbVar = dbProd.variants.find(v => (v.id || v.nameEn) === p.variantId);
+                  if (dbVar) realPriceEGP = dbVar.price;
+              } else {
+                  realPriceEGP = dbProd.price;
+              }
           }
+
           const itemPrice = currency === 'EGP' ? realPriceEGP : (realPriceEGP / rate);
           if (activePromo && (!activePromo.productId || activePromo.productId === p.id)) { totalDiscountVal += (itemPrice * qty) * (activePromo.discount / 100); }
           totalPrice += (itemPrice * qty); 
@@ -804,7 +874,7 @@ const updatePaymentInfoBox = () => {
     const addressDisplay = document.getElementById('paymentAddressDisplay'); if (addressDisplay) addressDisplay.textContent = targetVal;
 };
 
-// 🛡️ عملية الدفع المحمية بالكامل داخل الـ Transaction مع إصلاح خطأ undefined المخزون
+// 🛡️ [عملية الدفع المحمية]: الحفاظ على سعر الباندل المخفض ومعالجة خصم المخزون بدقة داخل الـ Transaction
 const processCheckout = async (isWhatsApp) => {
     const targetCart = window.isBuyNowCheckout ? [window.buyNowItem] : window.storeState.cart;
     if (!currentUserProfile || !targetCart || !targetCart.length) return;
@@ -843,7 +913,7 @@ const processCheckout = async (isWhatsApp) => {
             productTitles.push(`${title} (x${qty})`);
             for(let i=0; i<qty; i++) {
                 productIds.push(p.id);
-                cartItemsDetails.push({ id: p.id, variantId: p.variantId || null, price: p.price, title });
+                cartItemsDetails.push({ id: p.id, variantId: p.variantId || null, price: p.price, title, titleAr: p.titleAr });
             }
         }
         
@@ -863,7 +933,7 @@ const processCheckout = async (isWhatsApp) => {
         await runTransaction(db, async (transaction) => {
             let groupedProducts = {};
             for(const p of cartItemsDetails) {
-                if(!groupedProducts[p.id]) groupedProducts[p.id] = { ref: doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id), variantsToUpdate: {}, mainQty: 0, title: p.title };
+                if(!groupedProducts[p.id]) groupedProducts[p.id] = { ref: doc(db, 'artifacts', appId, 'public', 'data', 'products', p.id), variantsToUpdate: {}, mainQty: 0, title: p.title, customPrice: p.price, isBundle: p.titleAr && p.titleAr.includes('[باندل مخفض]') };
                 if(p.variantId) groupedProducts[p.id].variantsToUpdate[p.variantId] = (groupedProducts[p.id].variantsToUpdate[p.variantId] || 0) + 1;
                 else groupedProducts[p.id].mainQty += 1;
             }
@@ -887,7 +957,7 @@ const processCheckout = async (isWhatsApp) => {
                          const qtyNeeded = req.variantsToUpdate[vId];
                          const vIndex = data.variants.findIndex(v => (v.id || v.nameEn) === vId);
                          if (vIndex !== -1) {
-                             const secureVariantPrice = data.variants[vIndex].price;
+                             const secureVariantPrice = req.isBundle ? req.customPrice : data.variants[vIndex].price;
                              secureTotalRealPriceEGP += (secureVariantPrice * qtyNeeded);
                              if (activePromo && (!activePromo.productId || activePromo.productId === pid)) {
                                  secureTotalDiscountValEGP += (secureVariantPrice * qtyNeeded) * (activePromo.discount / 100);
@@ -905,7 +975,7 @@ const processCheckout = async (isWhatsApp) => {
                  }
                  
                  if(req.mainQty > 0) {
-                     const secureMainPrice = data.price;
+                     const secureMainPrice = req.isBundle ? req.customPrice : data.price;
                      secureTotalRealPriceEGP += (secureMainPrice * req.mainQty);
                      if (activePromo && (!activePromo.productId || activePromo.productId === pid)) {
                          secureTotalDiscountValEGP += (secureMainPrice * req.mainQty) * (activePromo.discount / 100);
@@ -918,9 +988,8 @@ const processCheckout = async (isWhatsApp) => {
                      }
                  }
 
-                 // بناء كائن التحديث بأمان لمنع إرسال قيم undefined تسبب فشل المعاملة في فايربيز
                  let updatePayload = {};
-                 if (data.stockQuantity !== undefined) {
+                 if (data.stockQuantity !== undefined && data.stockQuantity !== null) {
                      updatePayload.stockQuantity = data.stockQuantity;
                      updatePayload.inStock = data.inStock !== undefined ? data.inStock : (data.stockQuantity > 0);
                  }
@@ -991,7 +1060,6 @@ const loadSeoFromDB = (data) => {
 const initApp = () => {
     applyLanguage();
     
-    // ⚡ الاستماع للمنتجات وحفظها في الكاش المحلي
     onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), snap => {
       const products = []; snap.forEach(doc => products.push({ id: doc.id, ...doc.data() })); 
       window.storeState.products = products; 
@@ -1012,7 +1080,6 @@ const initApp = () => {
         if(data.slides) window.storeState.slides = data.slides; if(data.categories) window.storeState.categories = data.categories;
         loadSeoFromDB(data); initCountdown(window.storeState.bannerExpiry); updatePaymentInfoBox(); window.renderPromoSlider(); window.renderCategoriesBar();
         
-        // ⚡ تحديث نص الإعلان الفلاش سيل `#flashBannerText` فوراً
         const flashText = document.getElementById('flashBannerText');
         if (flashText && data.bannerAr) flashText.textContent = data.bannerAr;
 
@@ -1029,8 +1096,9 @@ const initApp = () => {
            const ords = []; snap.forEach(d => ords.push({id: d.id, ...d.data()})); window.storeState.orders = ords.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
            window.renderUserOrders(); 
            
-           // تفعيل نقطة الإشعارات الحمراء (`notificationDot`)
-           const hasCompleted = ords.some(o => o.status === 'completed' && !o.seen);
+           // 🔴 [إصلاح النقطة الحمراء]: التحقق من الطلبات المكتملة التي لم يتم رؤيتها بعد
+           const seenOrders = JSON.parse(localStorage.getItem('bn_seen_orders') || '[]');
+           const hasCompleted = ords.some(o => o.status === 'completed' && !seenOrders.includes(o.id));
            const hasPendingAdmin = window.checkIsAdmin() && ords.some(o => o.status === 'pending');
            const notifDot = document.getElementById('notificationDot');
            if (notifDot) notifDot.style.display = (hasCompleted || hasPendingAdmin) ? 'inline-block' : 'none';
@@ -1081,7 +1149,6 @@ const initApp = () => {
       if (!initialAuthDone) { initialAuthDone = true; handleUrlRouting(); }
     });
   
-    // ربط الأقسام في الهيدر والفوتر بـ History Routing الحقيقي
     document.querySelectorAll('.nav-link, [data-cat-link]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
