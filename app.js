@@ -11,7 +11,8 @@ if (typeof emailjs !== 'undefined') {
 }
 
 window.checkIsAdmin = checkIsAdmin;
-window.sanitizeText = (val, maxLen = 500) => String(val ?? '').replace(/[<>]/g, '').trim().slice(0, maxLen);
+// 🛡️ تقوية التعقيم لإزالة علامات HTML وعلامات التنصيص لمنع XSS
+window.sanitizeText = (val, maxLen = 500) => String(val ?? '').replace(/[<>'"]/g, '').trim().slice(0, maxLen);
 
 // 🛡️ تأمين النصوص ضد الـ XSS قبل تحويل الروابط إلى عناصر <a> قابلة للنقر
 const linkify = (text) => {
@@ -25,7 +26,18 @@ window.formatDate = (timestamp) => {
   return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-// ⚡ نظام الكاش الفوري (Instant LocalStorage Cache) لتحميل الموقع في جزء من الثانية
+// 🎉 دالة الاحتفال بالكونفيتي عند إتمام الطلب بنجاح
+const triggerOrderCelebration = () => {
+    if (typeof confetti === 'function') {
+        confetti({ particleCount: 110, spread: 80, origin: { y: 0.6 }, colors: ['#00f2ff', '#b500ff', '#00ff66', '#ffffff'] });
+        setTimeout(() => {
+            confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 } });
+            confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 } });
+        }, 250);
+    }
+};
+
+// ⚡ نظام الكاش الفوري (Instant LocalStorage Cache)
 const loadCachedState = () => {
   try {
     const cachedProds = localStorage.getItem('bn_cache_products');
@@ -41,7 +53,14 @@ window.storeState = {
   bannerAr: "", bannerExpiry: "", whatsapp: "201200898990", heroConfig: { titleAr: "", titleEn: "", descAr: "", descEn: "", btnTextAr: "Shop Now", btnTextEn: "Shop Now", bgUrl: "" },
   rates: { SAR: 13.0, AED: 13.5, USD: 50.0 }, payments: { instapay: "", vodafone: "", orange: "", cryptoTRC20: "", cryptoBEP20: "" },
   promos: [], products: [], orders: [], reviews: [], slides: [], users: [],
-  categories: [ { id: 'games', name: 'Games' }, { id: 'keys', name: 'Digital Keys' }, { id: 'software', name: 'Software' }, { id: 'subs', name: 'Subscriptions' }, { id: 'gifts', name: 'Gift Cards' }, { id: 'deals', name: 'Deals' } ],
+  categories: [
+    { id: 'games', nameAr: 'ألعاب', name: 'Games', icon: '🎮' },
+    { id: 'keys', nameAr: 'مفاتيح رقمية', name: 'Digital Keys', icon: '🔑' },
+    { id: 'software', nameAr: 'برامج', name: 'Software', icon: '💻' },
+    { id: 'subs', nameAr: 'اشتراكات', name: 'Subscriptions', icon: '📺' },
+    { id: 'gifts', nameAr: 'بطاقات هدايا', name: 'Gift Cards', icon: '🎁' },
+    { id: 'deals', nameAr: 'عروض', name: 'Deals', icon: '🔥' }
+  ],
   wishlist: [], cart: []
 };
 
@@ -50,7 +69,8 @@ loadCachedState();
 let currentUserProfile = null; window.editingProductId = null; window.adminOrdersLimit = 20;
 window.currentProductId = null; window.currentSelectedVariant = null; 
 let activePromo = null; let unsubscribeOrders = null; let unsubscribeReviews = null; let unsubscribeUsers = null;
-let countdownInterval = null; let currentSlideIndex = 0; let slideInterval = null; let isDataLoaded = window.storeState.products.length > 0; let initialAuthDone = false; 
+let countdownInterval = null; let currentSlideIndex = 0; let slideInterval = null; let isDataLoaded = window.storeState.products.length > 0; let initialAuthDone = false;
+let pendingProductRouteId = null;
 let currentCategory = 'all'; let currentPlatformFilter = 'all'; let currentPage = 1; const itemsPerPage = 12;
 
 window.isBuyNowCheckout = false; window.buyNowItem = null;
@@ -62,7 +82,7 @@ window.showToast = (msg, type = 'normal') => {
   container.appendChild(toast); setTimeout(() => toast.remove(), 3500);
 };
 
-// 🔄 تحديث روابط الـ Canonical والـ Open Graph ديناميكياً مع كل تنقل لمنع مشاكل إعادة التوجيه في جوجل
+// 🔄 تحديث روابط الـ Canonical والـ Open Graph ديناميكياً
 window.navigate = (view, id = null, pushState = true) => {
     if (view === 'admin' && !window.checkIsAdmin()) { window.showToast('غير مصرح', 'error'); view = 'home'; }
     const homeView = document.getElementById('homeView'); const productDetailsView = document.getElementById('productDetailsView'); const adminView = document.getElementById('adminView');
@@ -137,11 +157,18 @@ window.addEventListener('popstate', (e) => {
     } else { handleUrlRouting(); }
 });
 
-// 🔍 دعم استقبال باراميتر ?search= وقت فتح الموقع
+// 🔍 دعم فتح الروابط المباشرة للمنتجات (?product=ID) حتى لو المنتجات لسه بتتحمل
 const handleUrlRouting = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('product')) {
-        window.openProductDetails(params.get('product'), false);
+        const pid = params.get('product');
+        const found = window.storeState.products.find(p => p.id === pid);
+        if (found) {
+            pendingProductRouteId = null;
+            window.openProductDetails(pid, false);
+        } else {
+            pendingProductRouteId = pid;
+        }
     } else if (params.has('admin')) {
         window.navigate('admin', null, false);
     } else if (params.has('search')) {
@@ -164,8 +191,8 @@ const handleUrlRouting = () => {
 };
 
 const translations = {
-    ar: { nav_home: "الرئيسية", nav_games: "ألعاب", nav_keys: "مفاتيح رقمية", nav_software: "برامج", nav_subs: "اشتراكات", nav_gifts: "بطاقات هدايا", nav_deals: "عروض", nav_account: "حسابي", search_placeholder: "ابحث عن ألعاب، مفاتيح، برامج...", hero_badge: "🛡️ متجرك الرقمي الموثوق", btn_shop_now: "تسوق الآن", hero_stat_1: "تسليم فوري", hero_stat_2: "100% أمان", hero_stat_3: "دعم 24/7", cat_all: "⚡ الكل", best_sellers: "🔥 المنتجات المميزة", best_sellers_sub: "منتجاتنا الأكثر مبيعاً", sort_default: "الترتيب الافتراضي", sort_cheap: "الأرخص أولاً", sort_expensive: "الأغلى أولاً", btn_back: "🔙 رجوع", availability: "التوفر:", faq_title: "💡 أسئلة شائعة", btn_add_to_cart: "🛒 إضافة للسلة", you_may_like: "🔥 قد يعجبك أيضاً", reviews_title: "💬 تقييمات العملاء", add_review: "أضف تقييمك", rating: "التقييم", btn_submit_review: "إرسال التقييم", support: "الدعم الفني", cart_title: "🛒 سلة المشتريات", cart_suggestion: "🔥 ضيف ده لطلبك ووفر:", total: "الإجمالي:", btn_checkout: "إتمام الشراء الآن", auth_title: "تسجيل الدخول / إنشاء حساب", email: "البريد الإلكتروني", password: "كلمة المرور", btn_login: "تسجيل الدخول", forgot_password: "نسيت كلمة المرور؟", no_account: "ليس لديك حساب؟", create_account: "إنشاء حساب جديد", full_name: "الاسم الكامل", confirm_password: "تأكيد كلمة المرور", btn_register: "إنشاء الحساب", have_account: "لديك حساب بالفعل؟", btn_close: "إغلاق", my_account: "👤 حسابي الشخصي", welcome: "مرحباً بك،", tab_orders: "📦 طلباتي", tab_wishlist: "🤍 المفضلة", btn_logout: "تسجيل الخروج", checkout_title: "إتمام الطلب", selected_products: "المنتجات المختارة", promo_code: "كود الخصم (اختياري)", btn_apply: "تطبيق", payment_method: "اختر طريقة الدفع", transfer_to: "يرجى تحويل المبلغ إلى الحساب التالي:", btn_copy: "نسخ", sender_info: "رقم / حساب التحويل", receive_data: "بيانات الاستلام", receipt_img: "صورة إيصال التحويل (سكرين شوت)", btn_confirm_order: "تأكيد الطلب", btn_cancel: "إلغاء", out_of_stock: "نفذت الكمية", details_btn: "عرض التفاصيل", available: "متاح", piece: "قطعة", no_products: "لا توجد منتجات مطابقة حالياً.", promo_1_sub: "عرض لفترة محدودة", promo_1_title: "خصم يصل إلى 50%", promo_1_desc: "على ألعاب ومفاتيح مختارة", promo_2_title: "أحصل على أفضل العروض", promo_2_desc: "عروض حصرية لأعضائنا", btn_join_now: "انضم الآن", promo_3_title: "طلبات الجملة؟", promo_3_desc: "للشركات والموزعين", btn_contact: "تواصل معنا", ft_about: "من نحن", ft_contact: "اتصل بنا", ft_terms: "الشروط والأحكام", ft_privacy: "سياسة الخصوصية", ft_copy: "© 2026 BN MAX. جميع الحقوق محفوظة.", ft_slogan: "عالمك الرقمي... مهمتنا 🚀", reset_pass_desc: "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة.", btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول", nav_categories: "الأقسام", nav_search: "بحث", nav_wishlist: "المفضلة", qi_account: "نوع الحساب", qi_warranty: "الضمان", qi_region: "التفعيل", sys_req: "متطلبات التشغيل", select_variant: "اختر الباقة / النسخة:", btn_select_variant: "⚙️ اختيار الباقة", filter_all: "كل المنصات" },
-    en: { nav_home: "Home", nav_games: "Games", nav_keys: "Digital Keys", nav_software: "Software", nav_subs: "Subscriptions", nav_gifts: "Gift Cards", nav_deals: "Deals", nav_account: "Account", search_placeholder: "Search for games, keys, software...", hero_badge: "🛡️ YOUR TRUSTED DIGITAL STORE", btn_shop_now: "Shop Now", hero_stat_1: "Instant Delivery", hero_stat_2: "100% Secure", hero_stat_3: "24/7 Support", cat_all: "⚡ All", best_sellers: "🔥 Best Sellers", best_sellers_sub: "Our most popular products", sort_default: "Default Sorting", sort_cheap: "Lowest Price", sort_expensive: "Highest Price", btn_back: "🔙 Back", availability: "Availability:", faq_title: "💡 FAQ", btn_add_to_cart: "🛒 Add to Cart", you_may_like: "🔥 You May Also Like", reviews_title: "💬 Reviews", add_review: "Add your review", rating: "Rating", btn_submit_review: "Submit Review", support: "Support", cart_title: "🛒 Shopping Cart", cart_suggestion: "🔥 Add this and save:", total: "Total:", btn_checkout: "Checkout Now", auth_title: "Login / Register", email: "Email", password: "Password", btn_login: "Login", forgot_password: "Forgot Password?", no_account: "Don't have an account?", create_account: "Create an account", full_name: "Full Name", confirm_password: "Confirm Password", btn_register: "Register", have_account: "Already have an account?", btn_close: "Close", my_account: "👤 My Account", welcome: "Welcome,", tab_orders: "📦 My Orders", tab_wishlist: "🤍 Wishlist", btn_logout: "Logout", checkout_title: "Checkout", selected_products: "Selected Products", promo_code: "Promo Code", btn_apply: "Apply", payment_method: "Payment Method", transfer_to: "Please transfer the amount to:", btn_copy: "Copy", sender_info: "Sender Number/Account", receive_data: "Receive Data (ID/Email)", receipt_img: "Transfer Receipt", btn_confirm_order: "Confirm Order", btn_cancel: "Cancel", out_of_stock: "Sold Out", details_btn: "View Details", available: "Available", piece: "pcs", no_products: "No matching products found.", promo_1_sub: "Limited Time Offer", promo_1_title: "Up to 50% OFF", promo_1_desc: "On Selected Games & Keys", promo_2_title: "Get the Best Deals", promo_2_desc: "Exclusive offers for our members", btn_join_now: "Join Now", promo_3_title: "Bulk Orders?", promo_3_desc: "For Businesses & Resellers", btn_contact: "Contact Us", ft_about: "About Us", ft_contact: "Contact", ft_terms: "Terms & Conditions", ft_privacy: "Privacy Policy", ft_copy: "© 2026 BN MAX. All rights reserved.", ft_slogan: "Your Digital World... Our Mission 🚀", reset_pass_desc: "Enter your registered email and we will send you a password reset link.", btn_send_reset: "Send Reset Link", back_to_login: "Back to Login", nav_categories: "Categories", nav_search: "Search", nav_wishlist: "Wishlist", qi_account: "Account Type", qi_warranty: "Warranty", qi_region: "Region", sys_req: "System Requirements", select_variant: "Select Variant:", btn_select_variant: "⚙️ Select Variant", filter_all: "All Platforms" }
+    ar: { nav_home: "الرئيسية", nav_games: "ألعاب", nav_keys: "مفاتيح رقمية", nav_software: "برامج", nav_subs: "اشتراكات", nav_gifts: "بطاقات هدايا", nav_deals: "عروض", nav_bundles: "عروض الباندل", nav_account: "حسابي", search_placeholder: "ابحث عن ألعاب، مفاتيح، برامج...", hero_badge: "🛡️ متجرك الرقمي الموثوق", btn_shop_now: "تسوق الآن", hero_stat_1: "تسليم فوري", hero_stat_2: "100% أمان", hero_stat_3: "دعم 24/7", cat_all: "⚡ الكل", best_sellers: "🔥 المنتجات المميزة", best_sellers_sub: "منتجاتنا الأكثر مبيعاً", sort_default: "الترتيب الافتراضي", sort_cheap: "الأرخص أولاً", sort_expensive: "الأغلى أولاً", btn_back: "🔙 رجوع", availability: "التوفر:", faq_title: "💡 أسئلة شائعة", btn_add_to_cart: "🛒 إضافة للسلة", you_may_like: "🔥 قد يعجبك أيضاً", reviews_title: "💬 تقييمات العملاء", add_review: "أضف تقييمك", rating: "التقييم", btn_submit_review: "إرسال التقييم", support: "الدعم الفني", cart_title: "🛒 سلة المشتريات", cart_suggestion: "🔥 ضيف ده لطلبك ووفر:", total: "الإجمالي:", btn_checkout: "إتمام الشراء الآن", auth_title: "تسجيل الدخول / إنشاء حساب", email: "البريد الإلكتروني", password: "كلمة المرور", btn_login: "تسجيل الدخول", forgot_password: "نسيت كلمة المرور؟", no_account: "ليس لديك حساب؟", create_account: "إنشاء حساب جديد", full_name: "الاسم الكامل", confirm_password: "تأكيد كلمة المرور", btn_register: "إنشاء الحساب", have_account: "لديك حساب بالفعل؟", btn_close: "إغلاق", my_account: "👤 حسابي الشخصي", welcome: "مرحباً بك،", tab_orders: "📦 طلباتي", tab_wishlist: "🤍 المفضلة", btn_logout: "تسجيل الخروج", checkout_title: "إتمام الطلب", selected_products: "المنتجات المختارة", promo_code: "كود الخصم (اختياري)", btn_apply: "تطبيق", payment_method: "اختر طريقة الدفع", transfer_to: "يرجى تحويل المبلغ إلى الحساب التالي:", btn_copy: "نسخ", sender_info: "رقم / حساب التحويل", receive_data: "بيانات الاستلام", receipt_img: "صورة إيصال التحويل (سكرين شوت)", btn_confirm_order: "تأكيد الطلب", btn_cancel: "إلغاء", out_of_stock: "نفذت الكمية", details_btn: "عرض التفاصيل", available: "متاح", piece: "قطعة", no_products: "لا توجد منتجات مطابقة حالياً.", promo_1_sub: "عرض لفترة محدودة", promo_1_title: "خصم يصل إلى 50%", promo_1_desc: "على ألعاب ومفاتيح مختارة", promo_2_title: "أحصل على أفضل العروض", promo_2_desc: "عروض حصرية لأعضائنا", btn_join_now: "انضم الآن", promo_3_title: "طلبات الجملة؟", promo_3_desc: "للشركات والموزعين", btn_contact: "تواصل معنا", ft_about: "من نحن", ft_contact: "اتصل بنا", ft_terms: "الشروط والأحكام", ft_privacy: "سياسة الخصوصية", ft_copy: "© 2026 BN MAX. جميع الحقوق محفوظة.", ft_slogan: "عالمك الرقمي... مهمتنا 🚀", reset_pass_desc: "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لاستعادة كلمة المرور مباشرة.", btn_send_reset: "إرسال رابط الاستعادة", back_to_login: "رجوع لتسجيل الدخول", nav_categories: "الأقسام", nav_search: "بحث", nav_wishlist: "المفضلة", qi_account: "نوع الحساب", qi_warranty: "الضمان", qi_region: "التفعيل", sys_req: "متطلبات التشغيل", select_variant: "اختر الباقة / النسخة:", btn_select_variant: "⚙️ اختيار الباقة", filter_all: "كل المنصات" },
+    en: { nav_home: "Home", nav_games: "Games", nav_keys: "Digital Keys", nav_software: "Software", nav_subs: "Subscriptions", nav_gifts: "Gift Cards", nav_deals: "Deals", nav_bundles: "Bundle Deals", nav_account: "Account", search_placeholder: "Search for games, keys, software...", hero_badge: "🛡️ YOUR TRUSTED DIGITAL STORE", btn_shop_now: "Shop Now", hero_stat_1: "Instant Delivery", hero_stat_2: "100% Secure", hero_stat_3: "24/7 Support", cat_all: "⚡ All", best_sellers: "🔥 Best Sellers", best_sellers_sub: "Our most popular products", sort_default: "Default Sorting", sort_cheap: "Lowest Price", sort_expensive: "Highest Price", btn_back: "🔙 Back", availability: "Availability:", faq_title: "💡 FAQ", btn_add_to_cart: "🛒 Add to Cart", you_may_like: "🔥 You May Also Like", reviews_title: "💬 Reviews", add_review: "Add your review", rating: "Rating", btn_submit_review: "Submit Review", support: "Support", cart_title: "🛒 Shopping Cart", cart_suggestion: "🔥 Add this and save:", total: "Total:", btn_checkout: "Checkout Now", auth_title: "Login / Register", email: "Email", password: "Password", btn_login: "Login", forgot_password: "Forgot Password?", no_account: "Don't have an account?", create_account: "Create an account", full_name: "Full Name", confirm_password: "Confirm Password", btn_register: "Register", have_account: "Already have an account?", btn_close: "Close", my_account: "👤 My Account", welcome: "Welcome,", tab_orders: "📦 My Orders", tab_wishlist: "🤍 Wishlist", btn_logout: "Logout", checkout_title: "Checkout", selected_products: "Selected Products", promo_code: "Promo Code", btn_apply: "Apply", payment_method: "Payment Method", transfer_to: "Please transfer the amount to:", btn_copy: "Copy", sender_info: "Sender Number/Account", receive_data: "Receive Data (ID/Email)", receipt_img: "Transfer Receipt", btn_confirm_order: "Confirm Order", btn_cancel: "Cancel", out_of_stock: "Sold Out", details_btn: "View Details", available: "Available", piece: "pcs", no_products: "No matching products found.", promo_1_sub: "Limited Time Offer", promo_1_title: "Up to 50% OFF", promo_1_desc: "On Selected Games & Keys", promo_2_title: "Get the Best Deals", promo_2_desc: "Exclusive offers for our members", btn_join_now: "Join Now", promo_3_title: "Bulk Orders?", promo_3_desc: "For Businesses & Resellers", btn_contact: "Contact Us", ft_about: "About Us", ft_contact: "Contact", ft_terms: "Terms & Conditions", ft_privacy: "Privacy Policy", ft_copy: "© 2026 BN MAX. All rights reserved.", ft_slogan: "Your Digital World... Our Mission 🚀", reset_pass_desc: "Enter your registered email and we will send you a password reset link.", btn_send_reset: "Send Reset Link", back_to_login: "Back to Login", nav_categories: "Categories", nav_search: "Search", nav_wishlist: "Wishlist", qi_account: "Account Type", qi_warranty: "Warranty", qi_region: "Region", sys_req: "System Requirements", select_variant: "Select Variant:", btn_select_variant: "⚙️ Select Variant", filter_all: "All Platforms" }
 };
 
 let currentLang = localStorage.getItem('bn_lang') || 'en';
@@ -222,38 +249,90 @@ window.renderPromoSlider = () => {
   
 const updateSliderPosition = () => { const track = document.getElementById('sliderTrack'), dots = document.querySelectorAll('.slider-dot'); if (!track || !window.storeState.slides.length) return; track.style.transform = `translateX(-${currentSlideIndex * 100}%)`; dots.forEach((dot, idx) => dot.classList.toggle('active', idx === currentSlideIndex)); };
 
+// 🗂️ رندر الأقسام الديناميكية في شريط الأقسام والهيدر وقائمة إضافة المنتج + فلتر عروض الباندل
 window.renderCategoriesBar = () => {
-    const bar = document.getElementById('categoriesBar'); const selectCat = document.getElementById('newProdCat');
+    const bar = document.getElementById('categoriesBar');
+    const selectCat = document.getElementById('newProdCat');
+    const topNav = document.querySelector('.top-nav-links');
+
+    const getCatIcon = (c) => {
+        if (c.icon) return c.icon;
+        const id = (c.id || '').toLowerCase();
+        if(id.includes('game')) return '🎮'; if(id.includes('key')) return '🔑'; if(id.includes('soft')) return '💻'; if(id.includes('sub')) return '📺'; if(id.includes('gift')) return '🎁'; if(id.includes('deal')) return '🔥';
+        return '✨';
+    };
+
+    const getCatLabel = (c) => {
+        if (currentLang === 'ar') {
+            if (c.nameAr) return c.nameAr;
+            if (c.id === 'games') return translations.ar.nav_games;
+            if (c.id === 'keys') return translations.ar.nav_keys;
+            if (c.id === 'software') return translations.ar.nav_software;
+            if (c.id === 'subs') return translations.ar.nav_subs;
+            if (c.id === 'gifts') return translations.ar.nav_gifts;
+            if (c.id === 'deals') return translations.ar.nav_deals;
+            return c.name;
+        }
+        return c.name || c.nameAr;
+    };
+
+    const selectCategory = (catId) => {
+        currentCategory = catId; currentPlatformFilter = 'all'; currentPage = 1;
+        window.renderCategoriesBar(); window.renderProducts(); window.navigate('home');
+        document.querySelectorAll('.desktop-header-wrapper').forEach(m => m.classList.remove('show-mobile-menu'));
+    };
+
+    const cats = window.storeState.categories || [];
+    const hasAnyBundles = (window.storeState.products || []).some(p => p.isActive !== false && p.bundleProductId && p.bundleDiscount > 0);
+
     if (bar) {
       bar.replaceChildren();
       const allBtn = document.createElement('div'); allBtn.className = `category-box ${currentCategory === 'all' ? 'active' : ''}`; allBtn.dataset.cat = 'all';
       allBtn.innerHTML = `<div class="category-info"><div class="category-icon">⚡</div><div class="category-name">${translations[currentLang].cat_all}</div></div>`;
-      allBtn.onclick = (e) => {
-          e.preventDefault();
-          currentCategory = 'all'; currentPlatformFilter = 'all'; currentPage = 1; 
-          window.renderCategoriesBar(); window.renderProducts(); window.navigate('home');
-          document.querySelectorAll('.desktop-header-wrapper').forEach(m => m.classList.remove('show-mobile-menu'));
-      };
+      allBtn.onclick = (e) => { e.preventDefault(); selectCategory('all'); };
       bar.appendChild(allBtn);
-    }
-    if(selectCat) selectCat.replaceChildren();
-    const getCatIcon = (id) => { id = id.toLowerCase(); if(id.includes('game')) return '🎮'; if(id.includes('key')) return '🔑'; if(id.includes('soft')) return '💻'; if(id.includes('sub')) return '📺'; if(id.includes('gift')) return '🎁'; if(id.includes('deal')) return '🔥'; return '✨'; };
-    const cats = window.storeState.categories || [];
-    cats.forEach(c => {
-      if (bar) {
-        const btn = document.createElement('div'); btn.className = `category-box ${currentCategory === c.id ? 'active' : ''}`; btn.dataset.cat = c.id;
-        let catName = c.name; if (c.id === 'games') catName = translations[currentLang].nav_games; if (c.id === 'keys') catName = translations[currentLang].nav_keys; if (c.id === 'software') catName = translations[currentLang].nav_software; if (c.id === 'subs') catName = translations[currentLang].nav_subs; if (c.id === 'gifts') catName = translations[currentLang].nav_gifts; if (c.id === 'deals') catName = translations[currentLang].nav_deals;
-        btn.innerHTML = `<div class="category-info"><div class="category-icon">${getCatIcon(c.id)}</div><div class="category-name">${catName}</div></div>`;
-        btn.onclick = (e) => {
-          e.preventDefault();
-          currentCategory = c.id; currentPlatformFilter = 'all'; currentPage = 1; 
-          window.renderCategoriesBar(); window.renderProducts(); window.navigate('home');
-          document.querySelectorAll('.desktop-header-wrapper').forEach(m => m.classList.remove('show-mobile-menu'));
-        };
-        bar.appendChild(btn);
+
+      if (hasAnyBundles) {
+          const bBtn = document.createElement('div'); bBtn.className = `category-box ${currentCategory === 'bundles' ? 'active' : ''}`; bBtn.dataset.cat = 'bundles';
+          bBtn.style.borderColor = currentCategory === 'bundles' ? 'var(--accent-purple)' : '';
+          bBtn.innerHTML = `<div class="category-info"><div class="category-icon" style="background:rgba(181,0,255,0.15); color:var(--accent-purple);">🎁</div><div class="category-name">${translations[currentLang].nav_bundles}</div></div>`;
+          bBtn.onclick = (e) => { e.preventDefault(); selectCategory('bundles'); };
+          bar.appendChild(bBtn);
       }
-      if(selectCat) { const opt = document.createElement('option'); opt.value = c.id; opt.textContent = c.name; selectCat.appendChild(opt); }
-    });
+
+      cats.forEach(c => {
+        const btn = document.createElement('div'); btn.className = `category-box ${currentCategory === c.id ? 'active' : ''}`; btn.dataset.cat = c.id;
+        btn.innerHTML = `<div class="category-info"><div class="category-icon">${getCatIcon(c)}</div><div class="category-name">${window.sanitizeText(getCatLabel(c))}</div></div>`;
+        btn.onclick = (e) => { e.preventDefault(); selectCategory(c.id); };
+        bar.appendChild(btn);
+      });
+    }
+
+    if (topNav) {
+      topNav.replaceChildren();
+      const homeA = document.createElement('a');
+      homeA.href = '?'; homeA.className = `nav-link ${currentCategory === 'all' ? 'active' : ''}`; homeA.textContent = translations[currentLang].nav_home;
+      homeA.onclick = (e) => { e.preventDefault(); selectCategory('all'); };
+      topNav.appendChild(homeA);
+
+      cats.forEach(c => {
+          const a = document.createElement('a');
+          a.href = `?cat=${encodeURIComponent(c.id)}`;
+          a.className = `nav-link ${currentCategory === c.id ? 'active' : ''}`;
+          a.textContent = getCatLabel(c);
+          a.onclick = (e) => { e.preventDefault(); selectCategory(c.id); };
+          topNav.appendChild(a);
+      });
+    }
+
+    if (selectCat) {
+      const prevVal = selectCat.value;
+      selectCat.replaceChildren();
+      cats.forEach(c => {
+          const opt = document.createElement('option'); opt.value = c.id; opt.textContent = `${c.nameAr || c.name} (${c.name})`; selectCat.appendChild(opt);
+      });
+      if (prevVal) selectCat.value = prevVal;
+    }
 };
 
 window.renderSkeletons = () => { const grid = document.getElementById('productGrid'); if (!grid) return; grid.innerHTML = Array(4).fill().map(() => `<div class="skeleton-card skeleton" style="height:300px;"><div class="skel-img skeleton" style="background: rgba(255,255,255,0.05); height: 160px; width: 100%;"></div></div>`).join(''); };
@@ -270,7 +349,6 @@ window.renderPlatformFilters = () => {
     } else { container.style.display = 'none'; currentPlatformFilter = 'all'; }
 };
 
-// دالة مساعدة للتحقق الدقيق من توفر المنتج أو أي من باقاته
 const isProductAvailable = (prod) => {
     if (!prod || prod.isActive === false) return false;
     if (prod.variants && prod.variants.length > 0) {
@@ -289,7 +367,11 @@ window.renderProducts = () => {
     
     let filtered = window.storeState.products.filter(prod => {
       if (prod.isActive === false) return false;
-      if (currentCategory !== 'all' && prod.category !== currentCategory) return false;
+      if (currentCategory === 'bundles') {
+          if (!(prod.bundleProductId && prod.bundleDiscount > 0)) return false;
+      } else if (currentCategory !== 'all' && prod.category !== currentCategory) {
+          return false;
+      }
       if (currentCategory === 'games' && currentPlatformFilter !== 'all' && prod.platform !== currentPlatformFilter) return false;
       const title = currentLang === 'ar' ? (prod.titleAr || prod.title) : (prod.titleEn || prod.title);
       const tags = prod.tags ? prod.tags.join(' ').toLowerCase() : '';
@@ -328,6 +410,8 @@ window.renderProducts = () => {
       const isWished = window.storeState.wishlist.includes(prod.id);
       const discountPercent = (prod.oldPrice && prod.oldPrice > displayPrice) ? Math.round(((prod.oldPrice - displayPrice) / prod.oldPrice) * 100) : 0;
       const discountBadgeHTML = discountPercent > 0 ? `<span class="product-discount-badge">-${discountPercent}%</span>` : '';
+      const hasBundle = Boolean(prod.bundleProductId && prod.bundleDiscount > 0);
+      const bundleTagHTML = hasBundle ? `<div style="display:inline-block; margin-bottom:6px; background:rgba(181,0,255,0.18); border:1px solid var(--accent-purple); color:#fff; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:6px;">🎁 ${currentLang==='ar' ? `عرض باندل -${prod.bundleDiscount}%` : `Bundle -${prod.bundleDiscount}%`}</div>` : '';
       
       let ratingVal = 5.0, ratingCount = 0; const prodRevs = window.storeState.reviews.filter(r => r.productId === prod.id);
       if(prodRevs.length > 0) { ratingVal = (prodRevs.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / prodRevs.length).toFixed(1); ratingCount = prodRevs.length; }
@@ -346,6 +430,7 @@ window.renderProducts = () => {
           <div class="product-img" style="border: ${prod.imgUrl ? 'none' : ''}; padding:0; overflow:hidden;">
             ${prod.imgUrl ? `<img src="${prod.imgUrl}" alt="${window.sanitizeText(title)}" loading="lazy" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400';">` : window.sanitizeText(prod.imgText || title)}
           </div>
+          ${bundleTagHTML}
           <h3 class="product-title">${window.sanitizeText(title)}</h3>
           <div class="product-rating">⭐ ${ratingVal} (${ratingCount})</div>
         </div>
@@ -395,24 +480,22 @@ window.updateDetailWishlistBtn = () => {
 };
 
 window.loadProductReviews = (prodId) => {
-    if (unsubscribeReviews) unsubscribeReviews();
     const addReviewBox = document.getElementById('addReviewBox');
     if (addReviewBox) {
       let hasCompletedOrder = false;
       if (currentUserProfile && window.storeState.orders) { hasCompletedOrder = window.storeState.orders.some(o => o.uid === currentUserProfile.uid && o.status === 'completed' && (o.productIds?.includes(prodId) || o.productId === prodId)); }
       addReviewBox.style.display = (hasCompletedOrder || window.checkIsAdmin()) ? 'block' : 'none';
     }
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'reviews'), where('productId', '==', prodId));
-    unsubscribeReviews = onSnapshot(q, (snap) => {
-      const list = document.getElementById('productReviewsList'); if (!list) return; list.replaceChildren();
-      const revs = []; snap.forEach(d => revs.push({ id: d.id, ...d.data() }));
-      window.storeState.reviews = window.storeState.reviews.filter(r => r.productId !== prodId).concat(revs);
-      revs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-      const detailBadge = document.getElementById('detailBadge');
-      if (revs.length > 0) { const avgRating = (revs.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / revs.length).toFixed(1); if(detailBadge && !detailBadge.textContent) detailBadge.textContent = `⭐ ${avgRating} (${revs.length} تقييم)`; }
-      if (!revs.length) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تقييمات لهذا المنتج حتى الآن.</p>'; } 
-      else { revs.forEach(r => { list.innerHTML += `<div style="background: #0b0b12; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; position: relative;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: ${window.checkIsAdmin() ? '50px' : '0'};"><strong style="color: var(--accent-neon);">${window.sanitizeText(r.userName || 'مستخدم')} <span style="font-size:10px; color:var(--text-muted); font-weight:normal; margin-right:5px;">- ${window.formatDate(r.createdAt)}</span></strong><span>${'⭐'.repeat(Number(r.rating) || 5)}</span></div><p style="color: var(--text-main); line-height: 1.5;">${window.sanitizeText(r.comment)}</p>${window.checkIsAdmin() ? `<button onclick="window.deleteReview('${r.id}')" style="position:absolute; left:10px; top:10px; background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; z-index:10;">حذف 🗑️</button>` : ''}</div>`; }); }
-    });
+    const list = document.getElementById('productReviewsList'); if (!list) return; list.replaceChildren();
+    const revs = (window.storeState.reviews || []).filter(r => r.productId === prodId).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    const detailBadge = document.getElementById('detailBadge');
+    if (revs.length > 0 && detailBadge && !detailBadge.textContent) {
+        const avgRating = (revs.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / revs.length).toFixed(1);
+        detailBadge.textContent = `⭐ ${avgRating} (${revs.length} تقييم)`;
+        detailBadge.style.display = 'inline-block';
+    }
+    if (!revs.length) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تقييمات لهذا المنتج حتى الآن.</p>'; } 
+    else { revs.forEach(r => { list.innerHTML += `<div style="background: #0b0b12; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; position: relative;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: ${window.checkIsAdmin() ? '50px' : '0'};"><strong style="color: var(--accent-neon);">${window.sanitizeText(r.userName || 'مستخدم')} <span style="font-size:10px; color:var(--text-muted); font-weight:normal; margin-right:5px;">- ${window.formatDate(r.createdAt)}</span></strong><span>${'⭐'.repeat(Number(r.rating) || 5)}</span></div><p style="color: var(--text-main); line-height: 1.5;">${window.sanitizeText(r.comment)}</p>${window.checkIsAdmin() ? `<button onclick="window.deleteReview('${r.id}')" style="position:absolute; left:10px; top:10px; background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; z-index:10;">حذف 🗑️</button>` : ''}</div>`; }); }
 };
 
 window.deleteReview = async (reviewId) => {
@@ -445,15 +528,10 @@ document.getElementById('detailMainImage')?.addEventListener('click', () => { co
 const parseYouTubeId = (url) => {
     if (!url) return '';
     let videoId = '';
-    if (url.includes('youtu.be/')) {
-        videoId = url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0];
-    } else if (url.includes('youtube.com/embed/')) {
-        videoId = url.split('youtube.com/embed/')[1]?.split('?')[0]?.split('&')[0];
-    } else if (url.includes('youtube.com/shorts/')) {
-        videoId = url.split('youtube.com/shorts/')[1]?.split('?')[0]?.split('&')[0];
-    } else if (url.includes('watch?v=')) {
-        videoId = url.split('watch?v=')[1]?.split('&')[0];
-    }
+    if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0];
+    else if (url.includes('youtube.com/embed/')) videoId = url.split('youtube.com/embed/')[1]?.split('?')[0]?.split('&')[0];
+    else if (url.includes('youtube.com/shorts/')) videoId = url.split('youtube.com/shorts/')[1]?.split('?')[0]?.split('&')[0];
+    else if (url.includes('watch?v=')) videoId = url.split('watch?v=')[1]?.split('&')[0];
     return videoId ? `https://www.youtube-nocookie.com/embed/${videoId}` : '';
 };
 
@@ -488,7 +566,11 @@ window.openProductDetails = (id, pushState = true) => {
     const currency = document.getElementById('currencySelect').value; const rate = currency === 'EGP' ? 1 : (window.storeState.rates[currency] || 1);
   
     document.getElementById('detailTitle').textContent = title;
-    document.getElementById('detailBadge').textContent = badge;
+    const detailBadgeEl = document.getElementById('detailBadge');
+    if (detailBadgeEl) {
+        detailBadgeEl.textContent = badge || '';
+        detailBadgeEl.style.display = badge ? 'inline-block' : 'none';
+    }
     
     currentGalleryItems = [];
     if (prod.trailerUrl) {
@@ -541,17 +623,12 @@ window.openProductDetails = (id, pushState = true) => {
                 if (stockEl) { stockEl.textContent = (v.stockQuantity !== null && v.stockQuantity !== undefined) ? `${v.stockQuantity} ${translations[currentLang].piece}` : translations[currentLang].available; stockEl.style.color = 'var(--success)'; }
                 if (addBtn) { addBtn.textContent = translations[currentLang].btn_add_to_cart; addBtn.classList.remove('requires-variant'); addBtn.classList.remove('shake-alert'); }
                 if (buyNowBtn) { buyNowBtn.classList.remove('requires-variant'); buyNowBtn.classList.remove('shake-alert'); }
-                
-                // تحديث صندوق الباندل إن وجد عند تغيير الباقة ليعكس السعر الجديد بدقة
-                if (prod.bundleProductId && prod.bundleDiscount > 0) {
-                    window.renderBundleOfferBox(prod);
-                }
+                if (prod.bundleProductId && prod.bundleDiscount > 0) { window.renderBundleOfferBox(prod); }
             };
             variantsList.appendChild(btn);
         });
     } else { variantsContainer.style.display = 'none'; if(addBtn) addBtn.classList.remove('requires-variant'); if(buyNowBtn) { buyNowBtn.style.display = 'block'; buyNowBtn.classList.remove('requires-variant'); } }
   
-    // 🎁 رندر عرض الباندل المزدوج (Bundle Offer) مع دعم الباقات المتوفرة
     window.renderBundleOfferBox = (product) => {
         const bundleBox = document.getElementById('detailBundleContainer');
         if (!bundleBox) return;
@@ -559,17 +636,13 @@ window.openProductDetails = (id, pushState = true) => {
             const bundleTargetProd = window.storeState.products.find(x => x.id === product.bundleProductId && isProductAvailable(x));
             if (bundleTargetProd) {
                 const targetTitle = currentLang === 'ar' ? (bundleTargetProd.titleAr || bundleTargetProd.title) : (bundleTargetProd.titleEn || bundleTargetProd.title);
-                
                 const defaultAvailVar1 = (product.variants && product.variants.length > 0) ? (product.variants.find(v => v.stockQuantity === null || v.stockQuantity === undefined || v.stockQuantity > 0) || product.variants[0]) : null;
                 const activeVar1 = window.currentSelectedVariant || defaultAvailVar1;
                 const basePrice = activeVar1 ? activeVar1.price : product.price;
-
                 const availVar2 = (bundleTargetProd.variants && bundleTargetProd.variants.length > 0) ? (bundleTargetProd.variants.find(v => v.stockQuantity === null || v.stockQuantity === undefined || v.stockQuantity > 0) || bundleTargetProd.variants[0]) : null;
                 const targetPrice = availVar2 ? availVar2.price : bundleTargetProd.price;
-                
                 const combinedOriginal = basePrice + targetPrice;
-                const discountAmount = combinedOriginal * (product.bundleDiscount / 100);
-                const combinedFinal = combinedOriginal - discountAmount;
+                const combinedFinal = combinedOriginal - (combinedOriginal * (product.bundleDiscount / 100));
                 const convOrig = currency === 'EGP' ? combinedOriginal.toFixed(0) : (combinedOriginal / rate).toFixed(2);
                 const convFinal = currency === 'EGP' ? combinedFinal.toFixed(0) : (combinedFinal / rate).toFixed(2);
 
@@ -686,7 +759,6 @@ window.addToCartDirect = (prodId, event) => {
     if (!event && addBtn && addBtn.classList.contains('requires-variant') && window.currentProductId === prodId) { addBtn.classList.remove('shake-alert'); void addBtn.offsetWidth; addBtn.classList.add('shake-alert'); document.getElementById('detailBuyNowBtn')?.classList.add('shake-alert'); window.showToast('الرجاء اختيار الباقة أولاً!', 'error'); return; }
     if (prod && isProductAvailable(prod)) {
         const variantId = window.currentSelectedVariant ? (window.currentSelectedVariant.id || window.currentSelectedVariant.nameEn) : null;
-        // عدم دمج المنتج العادي مع نفس المنتج إذا كان مضافاً كباندل مخفض
         const existingItem = window.storeState.cart.find(item => item.id === prod.id && item.variantId === variantId && !item.bundleSourceId);
         if (existingItem) { existingItem.quantity = (existingItem.quantity || 1) + 1; } else {
             let cartItem = JSON.parse(JSON.stringify(prod)); cartItem.cartItemId = Date.now() + Math.random(); cartItem.quantity = 1;
@@ -708,7 +780,6 @@ window.addToCartDirect = (prodId, event) => {
     }
 };
 
-// 🎁 إضافة عرض الباندل مع اختيار أول باقة متاحة في المخزون وربط العنصرين بمعرف باندل آمن
 window.addBundleToCart = (prodId1, prodId2, discountPercent) => {
     const p1 = window.storeState.products.find(x => x.id === prodId1);
     const p2 = window.storeState.products.find(x => x.id === prodId2);
@@ -774,7 +845,6 @@ window.addToCartCross = (id) => { const p = window.storeState.products.find(x =>
 window.removeFromCart = (index) => { 
     const item = window.storeState.cart[index];
     if (!item) return;
-    // إذا كان العنصر جزءاً من باندل مخفض وتم حذفه، يتم حذف طرف الباندل الآخر معه لمنع التحايل بأخذ منتج واحد بسعر الباندل
     if (item.bundlePairId) {
         window.storeState.cart = window.storeState.cart.filter(x => x.bundlePairId !== item.bundlePairId);
     } else if (item.quantity > 1) { 
@@ -815,7 +885,6 @@ window.renderCartModal = () => {
     }
 };
 
-// 🛡️ تأمين نسخ الكود ضد علامات التنصيص والرموز الخاصة عبر فك التشفير الآمن
 window.copyDeliveredCode = (encodedCode) => {
     try {
         const codeText = decodeURIComponent(encodedCode);
@@ -825,7 +894,6 @@ window.copyDeliveredCode = (encodedCode) => {
     }
 };
 
-// 🔴 دالة مستقلة لتعليم الطلبات المكتملة كمقروءة وإطفاء النقطة الحمراء فقط عندما يفتح العميل حسابه فعلياً
 window.markOrdersAsSeen = () => {
     if (!currentUserProfile) return;
     const myOrders = window.storeState.orders.filter(o => o.uid === currentUserProfile.uid);
@@ -857,7 +925,6 @@ window.renderUserOrders = () => {
        list.appendChild(div);
     });
 
-    // إذا كانت نافذة حساب المستخدم مفتوحة حالياً أثناء وصول تحديث الطلب، يتم تعليمه كمقروء فوراً
     if (document.getElementById('userAccountModal')?.style.display === 'flex') {
         window.markOrdersAsSeen();
     }
@@ -879,12 +946,10 @@ window.renderUserWishlist = () => {
     });
 };
 
-// 🛡️ حساب السعر في شاشة الدفع بالاعتماد على بيانات قاعدة البيانات الفعلية للتحقق من صحة الباندل
 const getVerifiedBundleDiscount = (cartItem, allCartItems, productsMap) => {
     const isMarkedBundle = Boolean(cartItem.bundleSourceId || (cartItem.titleAr && cartItem.titleAr.includes('[باندل مخفض]')) || (cartItem.titleEn && cartItem.titleEn.includes('[Bundle]')));
     if (!isMarkedBundle) return 0;
 
-    // البحث عن منتج الباندل الرئيسي الذي يربط هذا العنصر بمنتج آخر موجود حالياً في نفس السلة
     const cartProductIds = new Set(allCartItems.map(i => i.id));
     for (const pid of cartProductIds) {
         const sourceProd = productsMap[pid];
@@ -922,7 +987,6 @@ const updateCheckoutPriceDisplay = () => {
               if (dbVar) realPriceEGP = dbVar.price;
           }
 
-          // التحقق الآمن من خصم الباندل من بيانات المنتج الحقيقية
           const verifiedBundleDisc = getVerifiedBundleDiscount(p, targetCart, productsMap);
           if (verifiedBundleDisc > 0) {
               realPriceEGP = realPriceEGP * (1 - verifiedBundleDisc / 100);
@@ -965,7 +1029,7 @@ const updatePaymentInfoBox = () => {
     const addressDisplay = document.getElementById('paymentAddressDisplay'); if (addressDisplay) addressDisplay.textContent = targetVal;
 };
 
-// 🛡️ [عملية الدفع المؤمّنة بالكامل]: التحقق من الأسعار ونسبة خصم الباندل من داخل Firestore Transaction لمنع أي تلاعب من المتصفح
+// 🛡️ [عملية الدفع المؤمّنة]: التحقق من الأسعار وتوفر المخزون من Firestore (وخصم المخزون يتم من الأدمن وقت إكمال الطلب)
 const processCheckout = async (isWhatsApp) => {
     const targetCart = window.isBuyNowCheckout ? [window.buyNowItem] : window.storeState.cart;
     if (!currentUserProfile || !targetCart || !targetCart.length) return;
@@ -1030,49 +1094,41 @@ const processCheckout = async (isWhatsApp) => {
 
         await runTransaction(db, async (transaction) => {
             const uniqueProductIds = [...new Set(cartItemsDetails.map(item => item.id))];
-            const sfDocs = {};
             const dbProductsData = {};
 
-            // 1. قراءة جميع وثائق المنتجات المطلوبة من الفايربيز أولاً
             for (const pid of uniqueProductIds) {
                 const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', pid);
                 const snap = await transaction.get(prodRef);
                 if (!snap.exists()) throw new Error(`المنتج غير موجود!`);
-                sfDocs[pid] = { ref: prodRef, data: snap.data() };
-                dbProductsData[pid] = sfDocs[pid].data;
-                if (sfDocs[pid].data.externalLink && !finalExternalLink) {
-                    finalExternalLink = sfDocs[pid].data.externalLink;
+                dbProductsData[pid] = snap.data();
+                if (dbProductsData[pid].externalLink && !finalExternalLink) {
+                    finalExternalLink = dbProductsData[pid].externalLink;
                 }
             }
 
             let secureTotalRealPriceEGP = 0;
             let secureTotalDiscountValEGP = 0;
+            const requestedCounts = {};
 
-            // 2. حساب الأسعار الحقيقية وخصم المخزون لكل عنصر في السلة على حدة (لمنع تداخل الباقات أو التلاعب بالسعر)
             for (const item of cartItemsDetails) {
                 const pData = dbProductsData[item.id];
                 let unitPriceEGP = pData.price;
+                const countKey = `${item.id}_${item.variantId || 'main'}`;
+                requestedCounts[countKey] = (requestedCounts[countKey] || 0) + 1;
 
                 if (item.variantId && pData.variants && pData.variants.length > 0) {
-                    const vIndex = pData.variants.findIndex(v => (v.id || v.nameEn) === item.variantId);
-                    if (vIndex === -1) throw new Error('باقة غير صالحة!');
-                    unitPriceEGP = pData.variants[vIndex].price;
-
-                    if (pData.variants[vIndex].stockQuantity !== undefined && pData.variants[vIndex].stockQuantity !== null) {
-                        const newVStock = pData.variants[vIndex].stockQuantity - 1;
-                        if (newVStock < 0) throw new Error(`نفذت كمية الباقة (${pData.variants[vIndex].nameAr || pData.variants[vIndex].nameEn})!`);
-                        pData.variants[vIndex].stockQuantity = newVStock;
+                    const dbVar = pData.variants.find(v => (v.id || v.nameEn) === item.variantId);
+                    if (!dbVar) throw new Error('باقة غير صالحة!');
+                    unitPriceEGP = dbVar.price;
+                    if (dbVar.stockQuantity !== undefined && dbVar.stockQuantity !== null && requestedCounts[countKey] > dbVar.stockQuantity) {
+                        throw new Error(`نفذت كمية الباقة (${dbVar.nameAr || dbVar.nameEn})!`);
                     }
                 } else {
-                    if (pData.stockQuantity !== undefined && pData.stockQuantity !== null) {
-                        const newStock = pData.stockQuantity - 1;
-                        if (newStock < 0) throw new Error(`نفذت الكمية!`);
-                        pData.stockQuantity = newStock;
-                        pData.inStock = newStock > 0;
+                    if (pData.stockQuantity !== undefined && pData.stockQuantity !== null && requestedCounts[countKey] > pData.stockQuantity) {
+                        throw new Error(`نفذت الكمية!`);
                     }
                 }
 
-                // التحقق الأمني من الباندل عبر وثائق الفايربيز الحقيقية (dbProductsData)
                 const verifiedBundleDiscount = getVerifiedBundleDiscount(item, cartItemsDetails, dbProductsData);
                 if (verifiedBundleDiscount > 0) {
                     unitPriceEGP = unitPriceEGP * (1 - verifiedBundleDiscount / 100);
@@ -1083,25 +1139,6 @@ const processCheckout = async (isWhatsApp) => {
 
                 if (activePromo && (!activePromo.productId || activePromo.productId === item.id)) {
                     secureTotalDiscountValEGP += unitPriceEGP * (activePromo.discount / 100);
-                }
-            }
-
-            // 3. تحديث المخزون وحالة التوفر (inStock) لكل منتج في الفايربيز
-            for (const pid of uniqueProductIds) {
-                const { ref, data } = sfDocs[pid];
-                let updatePayload = {};
-
-                if (data.variants && data.variants.length > 0) {
-                    updatePayload.variants = data.variants;
-                    const anyVarAvailable = data.variants.some(v => v.stockQuantity === null || v.stockQuantity === undefined || v.stockQuantity > 0);
-                    updatePayload.inStock = anyVarAvailable;
-                } else if (data.stockQuantity !== undefined && data.stockQuantity !== null) {
-                    updatePayload.stockQuantity = data.stockQuantity;
-                    updatePayload.inStock = data.stockQuantity > 0;
-                }
-
-                if (Object.keys(updatePayload).length > 0) {
-                    transaction.update(ref, updatePayload);
                 }
             }
             
@@ -1122,6 +1159,9 @@ const processCheckout = async (isWhatsApp) => {
         else { window.storeState.cart = []; window.updateCartBadge(); }
 
         document.getElementById('checkoutModal').style.display = 'none'; document.getElementById('checkoutForm').reset(); activePromo = null; 
+
+        // 🎉 تشغيل احتفال الـ Confetti وقت إتمام الطلب
+        triggerOrderCelebration();
 
         if (isWhatsApp) {
             const whatsappNumber = window.storeState.whatsapp || '201200898990';
@@ -1165,12 +1205,33 @@ const loadSeoFromDB = (data) => {
 const initApp = () => {
     applyLanguage();
     
+    // ⭐ جلب جميع التقييمات لعرضها بشكل حقيقي على كروت الصفحة الرئيسية وفي تفاصيل المنتج
+    unsubscribeReviews = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'reviews'), snap => {
+      const allRevs = []; snap.forEach(d => allRevs.push({ id: d.id, ...d.data() }));
+      window.storeState.reviews = allRevs;
+      if (isDataLoaded) window.renderProducts();
+      if (window.currentProductId && document.getElementById('productDetailsView')?.style.display === 'block') {
+          window.loadProductReviews(window.currentProductId);
+      }
+    });
+
     onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), snap => {
       const products = []; snap.forEach(doc => products.push({ id: doc.id, ...doc.data() })); 
       window.storeState.products = products; 
       localStorage.setItem('bn_cache_products', JSON.stringify(products));
       isDataLoaded = true; 
-      window.renderProducts(); if(window.checkIsAdmin()) window.renderAdminProducts();
+      window.renderCategoriesBar();
+      window.renderProducts(); 
+      if(window.checkIsAdmin()) window.renderAdminProducts();
+      // 🔗 فتح رابط المنتج المباشر فور اكتمال تحميل المنتجات
+      if (pendingProductRouteId) {
+          const found = products.find(p => p.id === pendingProductRouteId);
+          if (found) {
+              const targetId = pendingProductRouteId;
+              pendingProductRouteId = null;
+              window.openProductDetails(targetId, false);
+          }
+      }
     });
   
     onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'main'), snap => {
@@ -1182,7 +1243,8 @@ const initApp = () => {
         window.storeState.heroConfig = data.heroConfig || {};
         window.storeState.promos = data.promos || [];
         if(data.promoCode && data.promoDiscount) window.storeState.promos.push({ code: data.promoCode, discount: data.promoDiscount });
-        if(data.slides) window.storeState.slides = data.slides; if(data.categories) window.storeState.categories = data.categories;
+        if(data.slides) window.storeState.slides = data.slides; 
+        if(data.categories && data.categories.length > 0) window.storeState.categories = data.categories;
         loadSeoFromDB(data); initCountdown(window.storeState.bannerExpiry); updatePaymentInfoBox(); window.renderPromoSlider(); window.renderCategoriesBar();
         
         const flashText = document.getElementById('flashBannerText');
@@ -1201,7 +1263,6 @@ const initApp = () => {
            const ords = []; snap.forEach(d => ords.push({id: d.id, ...d.data()})); window.storeState.orders = ords.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
            window.renderUserOrders(); 
            
-           // 🔴 التحقق من الطلبات المكتملة التي لم يرها العميل بعد لإضاءة النقطة الحمراء
            const seenOrders = JSON.parse(localStorage.getItem('bn_seen_orders') || '[]');
            const myCompletedOrders = ords.filter(o => o.uid === userUid && o.status === 'completed');
            const hasUnseenCompleted = myCompletedOrders.some(o => !seenOrders.includes(o.id));
@@ -1255,17 +1316,12 @@ const initApp = () => {
       if (!initialAuthDone) { initialAuthDone = true; handleUrlRouting(); }
     });
   
-    document.querySelectorAll('.nav-link, [data-cat-link]').forEach(btn => {
+    document.querySelectorAll('[data-cat-link]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        const cat = e.target.dataset.cat || e.target.getAttribute('data-cat-link') || 'all'; 
-        document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
-        const targetNav = document.querySelector(`.nav-link[data-cat="${cat}"]`);
-        if(targetNav) targetNav.classList.add('active');
-
+        const cat = e.target.getAttribute('data-cat-link') || 'all'; 
         currentCategory = cat; currentPlatformFilter = 'all'; currentPage = 1; 
         window.renderCategoriesBar(); window.renderProducts(); window.navigate('home', null, true);
-        document.querySelectorAll('.desktop-header-wrapper').forEach(m => m.classList.remove('show-mobile-menu'));
       });
     });
   
@@ -1317,7 +1373,13 @@ const initApp = () => {
         document.getElementById('userWishlistSection').style.display = 'none'; 
         window.markOrdersAsSeen();
     });
-    document.getElementById('tabBtnWishlist')?.addEventListener('click', () => { document.getElementById('tabBtnWishlist').classList.add('active'); document.getElementById('tabBtnOrders').classList.remove('active'); document.getElementById('userWishlistSection').style.display = 'block'; document.getElementById('userWishlistSection').style.display = 'block'; document.getElementById('userOrdersSection').style.display = 'none'; window.renderUserWishlist(); });
+    document.getElementById('tabBtnWishlist')?.addEventListener('click', () => {
+        document.getElementById('tabBtnWishlist').classList.add('active');
+        document.getElementById('tabBtnOrders').classList.remove('active');
+        document.getElementById('userWishlistSection').style.display = 'block';
+        document.getElementById('userOrdersSection').style.display = 'none';
+        window.renderUserWishlist();
+    });
   
     document.getElementById('shopNowBtn')?.addEventListener('click', () => { document.getElementById('productGrid').scrollIntoView({ behavior: 'smooth' }); });
     document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none')));
